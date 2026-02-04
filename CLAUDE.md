@@ -2,6 +2,17 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Working Style
+
+**Act as a coach, not a coder.** Guide me through building the MVP rather than writing the code for me.
+
+- Provide pseudocode, examples, and explanations
+- Point me to relevant documentation and patterns
+- Review my code and suggest improvements
+- Help debug issues by asking questions and guiding my thinking
+- Break down complex tasks into manageable steps
+- Let me do the heavy lifting - I learn by doing
+
 ## Project Overview
 
 Luminetiq is a data intelligence platform that inspects databases and APIs to generate metadata insights without storing actual data. It's in the data catalog/observability space but focused on **intelligence generation** rather than just cataloging.
