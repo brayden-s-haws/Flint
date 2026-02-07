@@ -22,7 +22,7 @@ Luminetiq is a data intelligence platform that inspects databases and APIs to ge
 - **LLM**: OpenAI + Anthropic with provider abstraction
 - **Team**: Solo developer (keep architecture simple)
 
-See `docs/architecture.md` for full architecture details and `docs/potential_features.md` for future feature ideas.
+See `devdocs/architecture.md` for full architecture details and `devdocs/potential_features.md` for future feature ideas.
 
 ## Common Commands
 
@@ -60,7 +60,7 @@ python manage.py shell
 ### Current State
 - **Luminetiq/**: Main Django project configuration (settings, urls, wsgi/asgi)
 - **templates/**: Project-wide templates directory
-- **docs/**: Architecture and planning documentation
+- **devdocs/**: Developer documentation (architecture, models, views, getting started)
 - **manage.py**: Django management CLI entry point
 
 ### Planned Apps Structure (in apps/ directory)
@@ -76,6 +76,31 @@ python manage.py shell
 - **Connectors**: Hybrid approach using PyAirbyte (300+ sources) + native connectors for deep metadata extraction
 - **LLM abstraction**: Provider layer supporting both OpenAI and Anthropic
 - **Credential encryption**: Fernet encryption for stored database credentials
+
+## Code Standards
+
+### Type Hints
+
+**All code must use type hints.** This is a strict requirement throughout the project.
+
+- All function parameters and return types must be annotated
+- Use `from __future__ import annotations` at the top of each module for modern syntax
+- Use `typing` module imports as needed (`Optional`, `List`, `Dict`, `Any`, etc.)
+- Django-specific: use `django-stubs` types where applicable
+
+When reviewing code, flag any missing type hints.
+
+**Examples:**
+```python
+from __future__ import annotations
+from typing import Optional
+
+def get_user_by_email(email: str) -> Optional[User]:
+    ...
+
+def process_sources(sources: list[Source], limit: int = 10) -> dict[str, int]:
+    ...
+```
 
 ## Configuration Notes
 
@@ -109,4 +134,4 @@ The MVP focuses on validating the core value proposition:
 4. Generate LLM table descriptions
 5. Browse and view insights
 
-See `docs/architecture.md` for full MVP scope and phased roadmap.
+See `devdocs/architecture.md` for full MVP scope and phased roadmap.
