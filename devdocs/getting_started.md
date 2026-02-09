@@ -12,8 +12,9 @@ Before writing any code, make sure you have:
 - [ ] Virtual environment created and activated (`.venv/`)
 - [ ] `.env` file created from `.env.example`
 - [ ] Django installed (`pip install django`)
-- [ ] Ran initial migration to verify setup: `python manage.py migrate`
 - [ ] Dev server runs without errors: `python manage.py runserver`
+
+**Do NOT run `python manage.py migrate` yet.** You must create the custom User model first (Step 1 below). Running migrations before defining your custom User model will cause Django to create its default auth tables, and you'll need to reset the database to fix it.
 
 ---
 
@@ -23,13 +24,26 @@ Before writing any code, make sure you have:
 
 ### 1. `users` (FIRST - Critical)
 
-**Why first?** Django's custom User model must be defined before ANY migrations are run. If you've already run `migrate`, you'll need to reset the database or deal with migration headaches.
+**Why first?** Django's custom User model must be defined before ANY migrations are run. If you've already run `migrate`, you'll need to reset the database.
 
 **What it provides:**
 - Custom User model with email-based authentication
 - No username field (email is the identifier)
 
 **Depends on:** Nothing
+
+**Already ran `migrate`? Here's the fix:**
+
+If you ran `python manage.py migrate` before creating the custom User model, Django already created its default `auth_user` table. To start fresh:
+
+1. Delete `db.sqlite3` from the project root
+2. Delete any `migrations/` files in your apps (keep the `__init__.py` files)
+3. Build the `users` app and define the custom User model (see "Custom User Model Setup" below)
+4. Set `AUTH_USER_MODEL` in `settings.py`
+5. Run `python manage.py makemigrations users`
+6. Run `python manage.py migrate`
+
+Django will create a new `db.sqlite3` automatically when you run `migrate`. No data is lost since this is a fresh dev database.
 
 ---
 
