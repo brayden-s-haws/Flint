@@ -1,0 +1,31 @@
+# catalog app - MVP Checklist
+
+## Models
+
+- [ ] `Schema` — schema/namespace within a source
+- [ ] `Table` — table or view metadata (name, type, row count, belongs to schema)
+- [ ] `Column` — column metadata (name, data type, nullable, primary key, belongs to table)
+
+## Admin
+
+- [ ] Register `Schema`, `Table`, `Column` in admin
+
+## Views
+
+- [ ] Table list view — browse all tables, filterable by source/schema
+- [ ] Table detail view — show columns, metadata, and linked insights
+
+## Templates
+
+- [ ] `catalog/table_list.html` — browsable table list
+- [ ] `catalog/table_detail.html` — table detail with column list and insights
+
+## URLs
+
+- [ ] `/catalog/` — table list (all sources)
+- [ ] `/catalog/<id>/` — table detail
+
+## MVP Notes
+
+- TableStatistics model is deferred — no stats collection in MVP
+- Metadata is populated by the sync action in the sources app, not manually entered

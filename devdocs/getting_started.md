@@ -8,11 +8,11 @@ This guide walks you through building the Luminetiq MVP step by step. Think of t
 
 Before writing any code, make sure you have:
 
-- [ ] Python 3.13+ installed
-- [ ] Virtual environment created and activated (`.venv/`)
-- [ ] `.env` file created from `.env.example`
-- [ ] Django installed (`pip install django`)
-- [ ] Dev server runs without errors: `python manage.py runserver`
+- [x] Python 3.13+ installed
+- [x] Virtual environment created and activated (`.venv/`)
+- [x] `.env` file created from `.env.example`
+- [x] Django installed (`pip install django`)
+- [x] Dev server runs without errors: `python manage.py runserver`
 
 **Do NOT run `python manage.py migrate` yet.** You must create the custom User model first (Step 1 below). Running migrations before defining your custom User model will cause Django to create its default auth tables, and you'll need to reset the database to fix it.
 
@@ -22,7 +22,7 @@ Before writing any code, make sure you have:
 
 **This order matters.** Each app builds on the ones before it.
 
-### 1. `users` (FIRST - Critical)
+### 1. `users` (FIRST - Critical) DONE!
 
 **Why first?** Django's custom User model must be defined before ANY migrations are run. If you've already run `migrate`, you'll need to reset the database.
 
@@ -373,7 +373,8 @@ When building each app, follow this sequence:
 10. **Write views** in views.py
 11. **Create templates** in templates/<app_name>/
 12. **Wire up URLs** in the app's urls.py
-13. **Test manually** in browser
+13. **Run code review** — invoke `/code-review <file_path>` to review your work before testing
+14. **Test manually** in browser
 
 ---
 
@@ -420,8 +421,9 @@ python manage.py migrate --plan  # See what would run
 ## Next Steps
 
 1. Read `devdocs/architecture.md` for the full picture
-2. Start with the `users` app (custom User model)
-3. Build one app at a time, verifying each works before moving on
-4. Refer back to this doc when creating new apps
+2. Create a new branch for each app (e.g., `git checkout -b feature/users-app`). Build the app, get it working, then merge back to `main` before starting the next one.
+3. Start with the `users` app (custom User model)
+4. Build one app at a time, verifying each works before moving on
+5. Refer back to this doc when creating new apps
 
 Good luck! You've got this.
