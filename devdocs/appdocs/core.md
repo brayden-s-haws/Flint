@@ -2,8 +2,8 @@
 
 ## Models
 
-- [ ] `TimeStampedModel` — abstract model with `created_at`, `updated_at`
-- [ ] `TenantAwareModel` — abstract model extending `TimeStampedModel` with `account` FK
+- [x] `TimeStampedModel` — abstract model with `created_at`, `updated_at`
+- [x] `TenantAwareModel` — abstract model extending `TimeStampedModel` with `account` FK
 
 ## Mixins
 

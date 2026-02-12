@@ -239,7 +239,7 @@ With `app_name` set in each urls.py, use namespaced URLs:
 
 ---
 
-## Custom User Model Setup (Critical)
+## Custom User Model Setup (Critical) DONE
 
 **Do this BEFORE running any migrations beyond the initial Django setup.**
 
@@ -287,7 +287,7 @@ python manage.py migrate
 
 ---
 
-## Base Models Pattern
+## Base Models Pattern DONE
 
 Create these in `apps/core/models.py` for other apps to inherit:
 
