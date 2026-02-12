@@ -21,5 +21,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
 
     # App URLS
-    path('auth/', include('apps.users.urls'))
+    path('', include('apps.core.urls')), # Homepage, dashboards
+    path('auth/', include('apps.users.urls')) # Login, register, logout
 ]
