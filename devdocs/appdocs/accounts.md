@@ -2,8 +2,8 @@
 
 ## Models
 
-- [ ] `Account` — tenant/organization model (name, slug, timestamps)
-- [ ] `AccountMembership` — links User to Account with a role (MVP: owner only)
+- [x] `Account` — tenant/organization model (name, slug, timestamps)
+- [x] `AccountMembership` — links User to Account with a role (MVP: owner only)
 
 ## Admin
 
