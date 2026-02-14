@@ -23,5 +23,6 @@ urlpatterns = [
     # App URLS
     path('', include('apps.core.urls')), # Homepage, dashboards
     path('auth/', include('apps.users.urls')), # Login, register, logout
-    path('account/', include('apps.accounts.urls')) # Account management
+    path('account/', include('apps.accounts.urls')), # Account management
+    path('sources/', include('apps.sources.urls')) # Data sources management
 ]

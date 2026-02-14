@@ -7,7 +7,7 @@
 
 ## Admin
 
-- [ ] Register `Account` and `AccountMembership` in admin
+- [x] Register `Account` and `AccountMembership` in admin
 
 ## Middleware
 

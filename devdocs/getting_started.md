@@ -150,7 +150,6 @@ class UsersConfig(AppConfig):
 
 # After (corrected)
 class UsersConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
     name = 'apps.users'  # <-- Add apps. prefix
     label = 'users'      # <-- Add this to keep migrations clean
 ```
