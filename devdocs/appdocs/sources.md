@@ -2,13 +2,13 @@
 
 ## Models
 
-- [ ] `SourceType` — registry of supported connectors (MVP: PostgreSQL only)
-- [ ] `Source` — a connected data source belonging to an account, stores encrypted credentials
-- [ ] `SourceSyncLog` — history of sync attempts with status and metrics
+- [x] `SourceType` — registry of supported connectors (MVP: PostgreSQL only)
+- [x] `Source` — a connected data source belonging to an account, stores encrypted credentials
+- [x] `SourceSyncLog` — history of sync attempts with status and metrics
 
 ## Admin
 
-- [ ] Register `SourceType`, `Source`, `SourceSyncLog` in admin
+- [x] Register `SourceType`, `Source`, `SourceSyncLog` in admin
 
 ## Connectors
 
