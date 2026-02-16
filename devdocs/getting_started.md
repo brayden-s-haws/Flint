@@ -377,6 +377,52 @@ When building each app, follow this sequence:
 
 ---
 
+## Git Workflow: Branching, Merging, Cleanup
+
+Each app gets its own feature branch. Build it, verify it works, merge to main, delete the branch, then start the next one.
+
+### Create a branch for a new app
+
+```bash
+git checkout main
+git checkout -b feature/<app-name>-app
+```
+
+### Commit your work
+
+```bash
+git add <files>
+git commit -m "Add <app-name> app with models and admin"
+```
+
+### Merge into main
+
+```bash
+git checkout main
+git merge feature/<app-name>-app
+```
+
+### Delete the branch (after merging)
+
+Local:
+```bash
+git branch -d feature/<app-name>-app
+```
+
+Remote (if you pushed the branch to GitHub):
+```bash
+git push origin --delete feature/<app-name>-app
+```
+Or delete it via the GitHub UI under "branches."
+
+### Start the next app
+
+```bash
+git checkout -b feature/<next-app>-app
+```
+
+---
+
 ## Development Tips
 
 ### Use the Django Admin Early
