@@ -2,13 +2,13 @@
 
 ## Models
 
-- [ ] `Schema` — schema/namespace within a source
-- [ ] `Table` — table or view metadata (name, type, row count, belongs to schema)
-- [ ] `Column` — column metadata (name, data type, nullable, primary key, belongs to table)
+- [x] `Schema` — schema/namespace within a source
+- [x] `Table` — table or view metadata (name, type, row count, belongs to schema)
+- [x] `Column` — column metadata (name, data type, nullable, primary key, belongs to table)
 
 ## Admin
 
-- [ ] Register `Schema`, `Table`, `Column` in admin
+- [x] Register `Schema`, `Table`, `Column` in admin
 
 ## Views
 
