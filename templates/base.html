@@ -1,0 +1,39 @@
+<!-- TODO(review): Extra space in tag — should be {% load static %} -->
+{%  load static %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+    <!-- TODO(review): X-UA-Compatible is an IE-era tag, safe to remove for a new project -->
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- TODO(review): Load HTMX — it's core to your stack (see architecture.md). Add the script tag here -->
+    <!-- TODO(review): Add a title block so child templates can set page titles, e.g. <title>{% block title %}Luminetiq{% endblock %}</title> -->
+    <title>Document</title>
+</head>
+<body>
+    <nav class="shadow-lg">
+        <div class="flex flex-wrap justify-between ml-5 items-center mx-auto px-4 py-2.5">
+            <a class="flex items-center px-4" href="">
+                <span class="self-center text-xl font-semibold">Luminetiq</span>
+            </a>
+            <div class="flex items-center">
+                <a class="mr-6 text-sm font-medium text-gray-500" href="">Home</a>
+                <a class="mr-6 text-sm font-medium text-gray-500" href="">Link 1</a>
+                <a class="mr-6 text-sm font-medium text-gray-500" href="">Link 2</a>
+                <a class="mr-6 text-sm font-medium text-gray-500" href="">Link 3</a>
+                <a class="mr-6 text-sm font-medium text-gray-500" href="">Link 4</a>
+                <a class="mr-6 text-sm font-medium text-gray-500" href="">link 5</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- TODO(review): Add a Django messages block before the content area — getting_started.md specifies "nav, messages, block structure" -->
+
+    <!-- TODO(review): Rename block body to block content — more conventional in Django and avoids confusion with the <body> tag -->
+    {% block body %}
+
+    {% endblock body %}
+</body>
+</html>

@@ -4,112 +4,28 @@ This guide walks you through building the Luminetiq MVP step by step. Think of t
 
 ---
 
-## Prerequisites Checklist
+## ~~Prerequisites Checklist~~ COMPLETE
 
-Before writing any code, make sure you have:
+~~Before writing any code, make sure you have:~~
 
-- [x] Python 3.13+ installed
-- [x] Virtual environment created and activated (`.venv/`)
-- [x] `.env` file created from `.env.example`
-- [x] Django installed (`pip install django`)
-- [x] Dev server runs without errors: `python manage.py runserver`
-
-**Do NOT run `python manage.py migrate` yet.** You must create the custom User model first (Step 1 below). Running migrations before defining your custom User model will cause Django to create its default auth tables, and you'll need to reset the database to fix it.
+- [x] ~~Python 3.13+ installed~~
+- [x] ~~Virtual environment created and activated (`.venv/`)~~
+- [x] ~~`.env` file created from `.env.example`~~
+- [x] ~~Django installed (`pip install django`)~~
+- [x] ~~Dev server runs without errors: `python manage.py runserver`~~
 
 ---
 
-## App Build Order
+## ~~App Build Order~~ ALL MODELS COMPLETE
+~~**This order matters.** Each app builds on the ones before it.~~
 
-**This order matters.** Each app builds on the ones before it.
-
-### 1. `users` (FIRST - Critical) DONE!
-
-**Why first?** Django's custom User model must be defined before ANY migrations are run. If you've already run `migrate`, you'll need to reset the database.
-
-**What it provides:**
-- Custom User model with email-based authentication
-- No username field (email is the identifier)
-
-**Depends on:** Nothing
-
-**Already ran `migrate`? Here's the fix:**
-
-If you ran `python manage.py migrate` before creating the custom User model, Django already created its default `auth_user` table. To start fresh:
-
-1. Delete `db.sqlite3` from the project root
-2. Delete any `migrations/` files in your apps (keep the `__init__.py` files)
-3. Build the `users` app and define the custom User model (see "Custom User Model Setup" below)
-4. Set `AUTH_USER_MODEL` in `settings.py`
-5. Run `python manage.py makemigrations users`
-6. Run `python manage.py migrate`
-
-Django will create a new `db.sqlite3` automatically when you run `migrate`. No data is lost since this is a fresh dev database.
-
----
-
-### 2. `core` DONE
-
-**Why second?** Provides base models and utilities that all other apps inherit from.
-
-**What it provides:**
-- `TimeStampedModel` - abstract model with `created_at`, `updated_at`
-- `TenantAwareModel` - abstract model with `account` foreign key
-- Shared utilities and mixins
-
-**Depends on:** Nothing (but users should exist first for the User FK patterns)
-
----
-
-### 3. `accounts` DONE
-
-**Why third?** Multi-tenancy foundation. All data is scoped to accounts.
-
-**What it provides:**
-- `Account` model (the tenant/organization)
-- `AccountMembership` linking users to accounts with roles
-- Middleware for resolving current account from request
-
-**Depends on:** `users`, `core`
-
----
-
-### 4. `sources` DONE
-
-**What it provides:**
-- `SourceType` registry of supported connectors
-- `Source` model for connected data sources (encrypted credentials)
-- `SourceSyncLog` for sync history
-- Connector plugin system (start with PostgreSQL)
-
-**Depends on:** `accounts`, `core`
-
----
-
-### 5. `catalog` DONE
-
-**What it provides:**
-- `Schema`, `Table`, `Column` models (metadata, NOT actual data)
-- `TableStatistics` for row counts, etc.
-
-**Depends on:** `sources`, `core`
-
----
-
-### 6. `insights`
-
-**What it provides:**
-- `Insight` model for LLM-generated content
-- `InsightTarget` polymorphic linking to sources/tables/columns
-- `InsightPrompt` for versioned prompts
-- LLM provider abstraction (OpenAI/Anthropic)
-
-**Depends on:** `catalog`, `sources`, `core`
-
----
-
-### 7. `api` (Post-MVP)
-
-REST API layer. Skip for MVP - build when you need external integrations.
+- [x] ~~1. `users` — Custom User model with email-based auth~~
+- [x] ~~2. `core` — TimeStampedModel, TenantAwareModel base models~~
+- [x] ~~3. `accounts` — Account, AccountMembership models~~
+- [x] ~~4. `sources` — SourceType, Source, SourceSyncLog models~~
+- [x] ~~5. `catalog` — Schema, Table, Column models~~
+- [x] ~~6. `insights` — Insight, InsightTarget, InsightPrompt models~~
+- [ ] 7. `api` (Post-MVP) — REST API layer, skip for now
 
 ---
 
@@ -238,93 +154,15 @@ With `app_name` set in each urls.py, use namespaced URLs:
 
 ---
 
-## Custom User Model Setup (Critical) DONE
+## ~~Custom User Model Setup~~ COMPLETE
 
-**Do this BEFORE running any migrations beyond the initial Django setup.**
-
-### Step 1: Create the users app first
-
-```bash
-cd apps && python ../manage.py startapp users && cd ..
-```
-
-### Step 2: Define the User model
-
-```python
-# apps/users/models.py
-from __future__ import annotations
-
-from django.contrib.auth.models import AbstractUser
-from django.db import models
-
-
-class User(AbstractUser):
-    username = None  # Remove the username field
-    email = models.EmailField(unique=True)
-
-    USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = []
-
-    def __str__(self) -> str:
-        return self.email
-```
-
-### Step 3: Tell Django to use your custom User
-
-Add to `Luminetiq/settings.py`:
-
-```python
-AUTH_USER_MODEL = 'users.User'
-```
-
-### Step 4: Create and run migrations
-
-```bash
-python manage.py makemigrations users
-python manage.py migrate
-```
+~~See `apps/users/models.py` for the final implementation. Uses `AbstractUser` with email-based auth, optional username for display, and custom `UserManager`.~~
 
 ---
 
-## Base Models Pattern DONE
+## ~~Base Models Pattern~~ COMPLETE
 
-Create these in `apps/core/models.py` for other apps to inherit:
-
-```python
-# apps/core/models.py
-from django.db import models
-
-class TimeStampedModel(models.Model):
-    """Abstract base model with created/updated timestamps."""
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        abstract = True
-
-class TenantAwareModel(TimeStampedModel):
-    """Abstract base model scoped to an account (tenant)."""
-    account = models.ForeignKey(
-        'accounts.Account',
-        on_delete=models.CASCADE,
-        related_name='%(class)ss'  # e.g., account.sources, account.tables
-    )
-
-    class Meta:
-        abstract = True
-```
-
-Then in other apps:
-
-```python
-# apps/sources/models.py
-from apps.core.models import TenantAwareModel
-
-class Source(TenantAwareModel):
-    name = models.CharField(max_length=255)
-    # ... other fields
-    # Automatically has: account, created_at, updated_at
-```
+~~See `apps/core/models.py` for `TimeStampedModel` and `TenantAwareModel`. All tenant-scoped models extend `TenantAwareModel`.~~
 
 ---
 
@@ -463,15 +301,13 @@ python manage.py migrate --plan  # See what would run
 
 ---
 
-## Next Steps
+## ~~Next Steps~~ (Original — see Post-Model Build Order below)
 
-1. Read `devdocs/architecture.md` for the full picture
-2. Create a new branch for each app (e.g., `git checkout -b feature/users-app`). Build the app, get it working, then merge back to `main` before starting the next one.
-3. Start with the `users` app (custom User model)
-4. Build one app at a time, verifying each works before moving on
-5. Refer back to this doc when creating new apps
-
-Good luck! You've got this.
+~~1. Read `devdocs/architecture.md` for the full picture~~
+~~2. Create a new branch for each app~~
+~~3. Start with the `users` app (custom User model)~~
+~~4. Build one app at a time, verifying each works before moving on~~
+~~5. Refer back to this doc when creating new apps~~
 
 ---
 

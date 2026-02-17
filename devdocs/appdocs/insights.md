@@ -8,7 +8,7 @@
 
 ## Admin
 
-- [ ] Register `Insight`, `InsightTarget`, `InsightPrompt` in admin
+- [x] Register `Insight`, `InsightTarget`, `InsightPrompt` in admin
 
 ## Services
 
