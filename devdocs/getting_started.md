@@ -47,7 +47,7 @@ Django will create a new `db.sqlite3` automatically when you run `migrate`. No d
 
 ---
 
-### 2. `core`
+### 2. `core` DONE
 
 **Why second?** Provides base models and utilities that all other apps inherit from.
 
@@ -60,7 +60,7 @@ Django will create a new `db.sqlite3` automatically when you run `migrate`. No d
 
 ---
 
-### 3. `accounts`
+### 3. `accounts` DONE
 
 **Why third?** Multi-tenancy foundation. All data is scoped to accounts.
 
@@ -73,7 +73,7 @@ Django will create a new `db.sqlite3` automatically when you run `migrate`. No d
 
 ---
 
-### 4. `sources`
+### 4. `sources` DONE
 
 **What it provides:**
 - `SourceType` registry of supported connectors
@@ -85,7 +85,7 @@ Django will create a new `db.sqlite3` automatically when you run `migrate`. No d
 
 ---
 
-### 5. `catalog`
+### 5. `catalog` DONE
 
 **What it provides:**
 - `Schema`, `Table`, `Column` models (metadata, NOT actual data)
@@ -472,3 +472,17 @@ python manage.py migrate --plan  # See what would run
 5. Refer back to this doc when creating new apps
 
 Good luck! You've got this.
+
+---
+
+## Post-Model Build Order: Views, Templates, and Features
+
+Once all app models are in place, go back through each app's `devdocs/appdocs/<app>.md` checklist and build out the remaining items (views, templates, URLs, etc.) in this order:
+
+1. **Base template** — `templates/base.html` with nav, messages, block structure. Every page extends this, so it comes first.
+2. **Users** — registration, login, logout views + templates. Auth must work before anything else is usable.
+3. **Accounts** — tenant middleware + signal to auto-create an Account when a user registers.
+4. **Core** — `TenantQuerysetMixin` + dashboard view. Depends on accounts middleware being in place.
+5. **Sources** — CRUD views, PostgreSQL connector, Fernet encryption. This is the main feature.
+6. **Catalog** — table list and detail views. Data is populated by source sync.
+7. **Insights** — LLM provider abstraction, generate/view insights. The capstone feature.

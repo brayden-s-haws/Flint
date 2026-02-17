@@ -2,9 +2,9 @@
 
 ## Models
 
-- [ ] `Insight` — LLM-generated or manual insight content (text, type, status)
-- [ ] `InsightTarget` — links an insight to a specific table (polymorphic linking deferred, just table FK for MVP)
-- [ ] `InsightPrompt` — versioned LLM prompt templates stored in database
+- [x] `Insight` — LLM-generated or manual insight content (text, type, status)
+- [x] `InsightTarget` — links an insight to a specific table (polymorphic linking deferred, just table FK for MVP)
+- [x] `InsightPrompt` — versioned LLM prompt templates stored in database
 
 ## Admin
 

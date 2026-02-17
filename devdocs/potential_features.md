@@ -107,6 +107,18 @@ This document tracks potential future features and capabilities beyond the MVP. 
 
 ---
 
+## Shared / Default Metadata
+
+- **Standard metadata templates** - Pre-built descriptions for common SaaS sources (e.g., HubSpot Contacts, Stripe Charges). Provide default table/column descriptions that work out of the box without LLM generation, saving cost and setup time.
+- **Tenant-overridable defaults** - Tenants inherit shared descriptions by default but can customize them. Custom descriptions take priority over shared ones.
+- **Standard insight templates** - Pre-generated insights for well-known table structures. If a HubSpot "Contacts" table looks the same across tenants, reuse the insight rather than generating a new one per tenant.
+- **Custom-only mode for standalone databases** - Sources like standalone PostgreSQL databases have no shared templates. All metadata and insights are generated per-tenant.
+- **Community-contributed templates** (future) - Allow users to contribute and share metadata templates for common tools.
+
+This reduces LLM costs, speeds up onboarding for common sources, and still supports fully custom metadata for unique database schemas.
+
+---
+
 ## Enterprise Features
 
 - **SSO/SAML authentication** - Enterprise identity providers

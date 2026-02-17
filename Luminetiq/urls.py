@@ -26,4 +26,5 @@ urlpatterns = [
     path('account/', include('apps.accounts.urls')), # Account management
     path('sources/', include('apps.sources.urls')), # Data sources management
     path('catalog/', include('apps.catalog.urls')), # Catalog of tables and columns
+    path('insights/', include('apps.insights.urls')), # View/generate insights
 ]
