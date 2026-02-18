@@ -1,1 +1,32 @@
 {% extends 'base.html' %}
+
+{% block title %}Log In – Luminetiq{% endblock title %}
+
+{% block content %}
+<div class="flex items-center justify-center min-h-screen bg-gray-50">
+    <div class="w-full max-w-sm bg-white rounded-lg shadow-md p-8">
+        <h2 class="text-center text-2xl font-bold text-gray-900 mb-6">Welcome Back</h2>
+        <form method="post">
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+            <div class="text-sm text-red-600 mt-1">
+                {{ form.non_field_errors }}
+            </div>
+            {% endif %}
+            <input type="hidden" name="next" value="{{ next }}">
+            <div class="mb-4">
+                {{ form.username.label_tag }}
+                {{ form.username }}
+                {{ form.username.errors }}
+            </div>
+            <div class="mb-4">
+                {{ form.password.label_tag }}
+                {{ form.password }}
+                {{ form.password.errors }}
+            </div>
+            <button class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md transition-colors mt-2" type="submit">Login</button>
+        </form>
+        <p class="text-center text-sm text-gray-600 mt-4">Don't have an account? <a class="text-blue-600 hover:underline" href="{% url 'users:register' %}">Sign up</a></p>
+    </div>
+</div>
+{% endblock content %}

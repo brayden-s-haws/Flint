@@ -13,6 +13,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Break down complex tasks into manageable steps
 - Let me do the heavy lifting - I learn by doing
 
+**Frontend guidance exception:** For HTML templates, Tailwind CSS, and HTMX, provide more detailed directions than for backend code. Still don't write the actual implementation, but you can:
+- Name specific Django template tags, Tailwind utility classes, and HTMX attributes to use
+- Describe the structure and layout in detail (e.g., "a flex container with two children")
+- Provide pseudocode or generic examples in the chat (not in the file)
+- Use the `/stub-ui` skill to scaffold template files with detailed TODO comments
+
 ## Project Overview
 
 Luminetiq is a data intelligence platform that inspects databases and APIs to generate metadata insights without storing actual data. It's in the data catalog/observability space but focused on **intelligence generation** rather than just cataloging.
