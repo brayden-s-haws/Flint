@@ -10,7 +10,7 @@
 
 ## Views
 
-- [ ] Registration view (signup with email + password)
+- [x] Registration view (signup with email + password)
 - [ ] Login view (using Django's built-in `LoginView`)
 - [ ] Logout view (using Django's built-in `LogoutView`)
 
