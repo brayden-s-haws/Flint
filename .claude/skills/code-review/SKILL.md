@@ -53,8 +53,9 @@ The same rules apply regardless of syntax: only manage TODO(review) comments, ne
 
 - Read the file provided in the argument
 - Read relevant architecture/getting_started docs to understand what the file should contain
-- **Remove resolved TODOs**: If the file has existing TODO(review) comments from a previous review and the code now satisfies them, delete those TODO comments
-- **Add new TODOs**: Add TODO(review) comments inline at specific lines that still need attention, using the correct comment syntax for the file type (see Comment Syntax section above)
-- **Leave developer TODOs alone**: Never modify or remove TODO comments (without the `(review)` tag) — those belong to the developer
+- **Remove resolved TODO(review)s**: If the file has existing TODO(review) comments from a previous review and the code now satisfies them, delete those TODO comments
+- **Add new TODO(review)s**: Add TODO(review) comments inline at specific lines that still need attention, using the correct comment syntax for the file type (see Comment Syntax section above)
+- **Clean up TODO(stub)s**: If the file has TODO(stub) comments from a previous stub-backend or stub-ui run, remove them for any section that has been implemented. Leave stub TODOs in place where the section is still empty or incomplete — do not remove a stub just because surrounding code exists
+- **Leave developer TODOs alone**: Never modify or remove plain `TODO` comments (without any tag) — those belong to the developer
 - After updating TODOs, provide a brief summary of findings grouped by category
 - If the file looks good and all TODOs are resolved, say so — don't invent issues that aren't there

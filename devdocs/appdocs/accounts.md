@@ -11,11 +11,11 @@
 
 ## Middleware
 
-- [ ] Tenant middleware — resolves the current account from the logged-in user and attaches to request
+- [x] Tenant middleware — resolves the current account from the logged-in user and attaches to request
 
 ## Signals / Hooks
 
-- [ ] Auto-create an Account + owner membership when a new user registers (1:1 for MVP)
+- [x] Auto-create an Account + owner membership when a new user registers (1:1 for MVP)
 
 ## Views
 

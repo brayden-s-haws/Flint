@@ -316,7 +316,7 @@ python manage.py migrate --plan  # See what would run
 Once all app models are in place, go back through each app's `devdocs/appdocs/<app>.md` checklist and build out the remaining items (views, templates, URLs, etc.) in this order:
 
 1. ~~**Base template** — `templates/base.html` with nav, messages, block structure. Every page extends this, so it comes first.~~ COMPLETE
-2. **Users** — registration, login, logout views + templates. Auth must work before anything else is usable.
+2. ~~**Users** — registration, login, logout views + templates. Auth must work before anything else is usable.~~ COMPLETE
 3. **Accounts** — tenant middleware + signal to auto-create an Account when a user registers.
 4. **Core** — `TenantQuerysetMixin` + dashboard view. Depends on accounts middleware being in place.
 5. **Sources** — CRUD views, PostgreSQL connector, Fernet encryption. This is the main feature.
