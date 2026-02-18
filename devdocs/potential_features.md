@@ -85,6 +85,19 @@ This document tracks potential future features and capabilities beyond the MVP. 
 - **Fivetran/Airbyte sync status** - Monitor ETL health
 - **BI tool metadata** - Looker, Tableau, Metabase integration
 - **GitHub/GitLab** - Version tracking for schema changes
+- **Buster.so integration** - Leverage [Buster](https://www.buster.so) (open-source, YC-backed AI analytics engineering platform) for complementary capabilities. Potential integration points:
+  - *Schema change monitoring* - Buster agents detect upstream schema changes and assess downstream impact, which could feed Luminetiq's change detection alerts
+  - *Auto-documentation* - Buster profiles tables and generates documentation automatically; could supplement or cross-reference Luminetiq's LLM-generated insights
+  - *Text-to-SQL* - Buster's natural language to SQL capabilities could power Luminetiq's planned NL-to-SQL feature
+  - *CI/CD for data models* - Self-healing pipeline validation that auto-opens PRs to fix breaking changes
+  - *Agent framework* - Buster's YAML-defined AI agents run in sandboxed environments with warehouse + GitHub access; could serve as a model for Luminetiq's own automation agents
+  - Buster connects to Snowflake, Redshift, Postgres, BigQuery, Databricks, MySQL, SQL Server, and MariaDB
+
+---
+
+## Feature Management
+
+- **Bitmath feature flags** - Use bitwise operations to control feature toggles. Store a single integer per account/user where each bit position represents a feature (e.g., bit 0 = dark mode, bit 1 = beta insights, bit 2 = advanced connectors). Check flags with bitwise AND (`flags & FEATURE_BIT`), enable with OR (`flags | FEATURE_BIT`), disable with AND + NOT (`flags & ~FEATURE_BIT`). Keeps the database lean (one integer column vs. a join table), is extremely fast to evaluate, and doubles as a learning exercise in bit manipulation. Consider a `FeatureFlag` enum or constants file mapping bit positions to human-readable names.
 
 ---
 

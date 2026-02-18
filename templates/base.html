@@ -1,16 +1,12 @@
-<!-- TODO(review): Extra space in tag — should be {% load static %} -->
-{%  load static %}
+{% load static %}
 <!doctype html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
-    <!-- TODO(review): X-UA-Compatible is an IE-era tag, safe to remove for a new project -->
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- TODO(review): Load HTMX — it's core to your stack (see architecture.md). Add the script tag here -->
-    <!-- TODO(review): Add a title block so child templates can set page titles, e.g. <title>{% block title %}Luminetiq{% endblock %}</title> -->
-    <title>Document</title>
+    <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js" integrity="sha384-/TgkGk7p307TH7EXJDuUlgG3Ce1UVolAOFopFekQkkXihi5u/6OCvVKyz1W+idaz" crossorigin="anonymous"></script>
+    <title>{% block title %}Luminetiq{% endblock %}</title>
 </head>
 <body>
     <nav class="shadow-lg">
@@ -28,12 +24,15 @@
             </div>
         </div>
     </nav>
+    {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}
+            <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+    {% block content %}
 
-    <!-- TODO(review): Add a Django messages block before the content area — getting_started.md specifies "nav, messages, block structure" -->
-
-    <!-- TODO(review): Rename block body to block content — more conventional in Django and avoids confusion with the <body> tag -->
-    {% block body %}
-
-    {% endblock body %}
+    {% endblock content %}
 </body>
 </html>

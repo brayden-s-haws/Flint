@@ -71,6 +71,145 @@ Luminetiq/
 | **InsightPrompt** | Versioned LLM prompts for generation |
 | **InsightBuilder** | User-created cross-source exploration sessions |
 
+### Model Relationship Diagram
+
+```mermaid
+erDiagram
+    %% ── users ──
+    User {
+        int id PK
+        string email UK
+        string username
+    }
+
+    %% ── accounts ──
+    Account {
+        int id PK
+        string name
+        int owner_id FK
+        datetime created_at
+        datetime updated_at
+    }
+
+    AccountMembership {
+        int id PK
+        int account_id FK
+        int user_id FK
+        string role
+        datetime created_at
+        datetime updated_at
+    }
+
+    %% ── sources ──
+    SourceType {
+        int id PK
+        string name
+        datetime created_at
+        datetime updated_at
+    }
+
+    Source {
+        int id PK
+        int account_id FK
+        int source_type_id FK
+        string name
+        text credentials
+        datetime first_synced_at
+        datetime created_at
+        datetime updated_at
+    }
+
+    SourceSyncLog {
+        int id PK
+        int account_id FK
+        int source_id FK
+        string status
+        datetime started_at
+        datetime completed_at
+        int records_synced
+        text error_message
+    }
+
+    %% ── catalog ──
+    Schema {
+        int id PK
+        int account_id FK
+        int source_id FK
+        string name
+        text description
+    }
+
+    Table {
+        int id PK
+        int account_id FK
+        int schema_id FK
+        string name
+        string table_type
+        int row_count
+    }
+
+    Column {
+        int id PK
+        int account_id FK
+        int table_id FK
+        string name
+        string data_type
+        bool nullable
+        bool primary_key
+    }
+
+    %% ── insights ──
+    Insight {
+        int id PK
+        int account_id FK
+        int insight_prompt_id FK
+        text text
+        string insight_type
+        string status
+    }
+
+    InsightTarget {
+        int id PK
+        int account_id FK
+        int insight_id FK
+        int target_id FK
+    }
+
+    InsightPrompt {
+        int id PK
+        int account_id FK
+        string name
+        text prompt
+        int version
+    }
+
+    %% ── Relationships ──
+    User ||--o{ Account : "owns"
+    User ||--o{ AccountMembership : "has memberships"
+    Account ||--o{ AccountMembership : "has members"
+
+    Account ||--o{ Source : "has sources"
+    SourceType ||--o{ Source : "categorizes"
+    Source ||--o{ SourceSyncLog : "has sync logs"
+    Account ||--o{ SourceSyncLog : "scopes"
+
+    Source ||--o{ Schema : "contains"
+    Account ||--o{ Schema : "scopes"
+    Schema ||--o{ Table : "contains"
+    Account ||--o{ Table : "scopes"
+    Table ||--o{ Column : "contains"
+    Account ||--o{ Column : "scopes"
+
+    Account ||--o{ Insight : "has insights"
+    InsightPrompt ||--o{ Insight : "generates"
+    Insight ||--o{ InsightTarget : "links to"
+    Table ||--o{ InsightTarget : "targeted by"
+    Account ||--o{ InsightTarget : "scopes"
+    Account ||--o{ InsightPrompt : "has prompts"
+```
+
+> **Note:** `AccountInvitation`, `TableStatistics`, and `InsightBuilder` are planned (see model tables above) but not yet implemented.
+
 ---
 
 ## Key Architectural Decisions
