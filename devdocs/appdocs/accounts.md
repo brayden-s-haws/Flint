@@ -19,11 +19,11 @@
 
 ## Views
 
-- [ ] None for MVP (account is auto-created, no settings page needed yet)
+- [x] None for MVP (account is auto-created, no settings page needed yet)
 
 ## Templates
 
-- [ ] None for MVP
+- [x] None for MVP
 
 ## MVP Notes
 
