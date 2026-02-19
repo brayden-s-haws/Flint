@@ -10,7 +10,7 @@ Stub out the Python file at `$ARGUMENTS` with detailed TODO comments that guide 
 ## Before Stubbing
 
 1. Read the file provided in the argument
-2. Identify the file type from its name: `signals.py`, `middleware.py`, `views.py`, `forms.py`, or `apps.py`
+2. Identify the file type from its name: `signals.py`, `middleware.py`, `views.py`, `forms.py`, `apps.py`, or `mixins.py`
 3. Identify which app it belongs to from its path (e.g., `apps/accounts/signals.py` → accounts app)
 4. Read relevant docs:
    - `devdocs/architecture.md` — overall patterns and multi-tenancy approach
@@ -86,6 +86,18 @@ Key TODOs to include:
 - That `ready()` is the correct place to import signals — explain why (avoids circular imports at module load time)
 - The exact import pattern to use inside `ready()` (import the signals module, not individual functions)
 - A note that `ready()` should only contain signal wiring, not business logic
+
+### mixins.py
+
+Skeleton: `from __future__ import annotations` header, import placeholders, one mixin class stub per mixin needed.
+
+Key TODOs to include:
+- That a mixin is a plain Python class (no `models.Model`, no `View` base) — it relies on MRO to pick up `get_queryset` from the view it's mixed into
+- The method to override is `get_queryset(self) -> QuerySet` — import `QuerySet` from `django.db.models`
+- That `self.request.account` is available because `TenantMiddleware` attaches it — check for `None` and raise `PermissionDenied` (import from `django.core.exceptions`) if so
+- To call `super().get_queryset()` first to get the base queryset, then filter it — explain why calling super() is important (respects any queryset narrowing already done by the view)
+- The filter to apply: `.filter(account=self.request.account)`
+- That this mixin should always be used alongside `LoginRequiredMixin` (which should come first in the MRO) to ensure unauthenticated users are redirected before `get_queryset` is ever called
 
 ## After Stubbing
 

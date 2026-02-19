@@ -7,7 +7,7 @@
 
 ## Mixins
 
-- [ ] `TenantQuerysetMixin` — view mixin that filters querysets by the current user's account
+- [x] `TenantQuerysetMixin` — view mixin that filters querysets by the current user's account
 
 ## Templates
 

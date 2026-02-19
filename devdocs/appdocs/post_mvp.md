@@ -9,9 +9,13 @@ For speculative or longer-horizon ideas, see `devdocs/potential_features.md`.
 ## accounts
 
 - **Account settings page** — allow the account owner to rename their account (`/account/settings/`)
-- **Team invites** — invite other users to join an account (`AccountInvitation` model planned, see `devdocs/architecture.md`)
+- **Domain-based registration guard** — public registration remains open, but during sign-up check whether the user's email domain is already associated with an existing account; if so, block 
+  registration and show a message: "An account already exists for this domain — contact your administrator to request access" (do not expose the owner's identity); if no account exists for the 
+  domain, registration proceeds normally and a new account is created; existing owners provision additional users from their domain via the team invites flow (exclude common domains like 
+  gmail.com, yahoo.com, outlook.com)
+- **Team invites** — account owner provisions a new user by email and assigns a role; the `AccountInvitation` model (planned, see `devdocs/architecture.md`) tracks pending invites; invited user receives an email with a tokenised link to set their password and activate their account (similar to Django's password reset flow using `PasswordResetForm` machinery)
 - **Multi-account switching** — users can belong to more than one account; UI to switch context
-- **Role-based permissions** — expand beyond `owner` only; add `admin`, `member`, `viewer` roles to `AccountMembership`
+- **Role-based permissions** — expand beyond `owner` only; add `admin`, `member`, `viewer` roles to `AccountMembership`; `admin` can invite/provision users, `member` has read-write access, `viewer` is read-only
 
 ---
 
