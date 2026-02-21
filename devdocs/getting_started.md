@@ -323,3 +323,12 @@ Once all app models are in place, go back through each app's `devdocs/appdocs/<a
 6. **Catalog** — table list and detail views. Data is populated by source sync.
 7. **Insights** — LLM provider abstraction, generate/view insights. The capstone feature.
 8. **Fix redirect URLs** — once the dashboard/home view exists, update `LOGIN_REDIRECT_URL`, `LOGOUT_REDIRECT_URL` in `settings.py` and `success_url` on `RegisterUser` in `apps/users/views.py`. See `devdocs/appdocs/users.md` Deferred section.
+
+---
+
+## After MVP: What to Work on Next
+
+Once the MVP is complete and verified (see Verification Plan in `devdocs/architecture.md`), review these two documents before starting any new work:
+
+- **`devdocs/ui/cleanup.md`** — UI polish items that were intentionally deferred during the MVP build. Work through these before adding new features so the product feels solid.
+- **`devdocs/appdocs/post_mvp.md`** — Concrete features scoped out of the MVP, organised by app. Use this as your backlog for Phase 2.

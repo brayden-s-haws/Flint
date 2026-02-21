@@ -14,6 +14,7 @@ Items to revisit when polishing the UI. Not blockers — functional code comes f
 
 - [ ] **Wire up nav links** — `templates/base.html` lines 18-24. Placeholder links with empty `href=""`. Replace with real `{% url %}` tags as views are built.
 - [ ] **Add auth-aware nav** — Show login/register when logged out, show user info/logout when logged in.
+- [ ] **Swap Login/Register button hierarchy** — `templates/components/_navbar.html`. Currently Login has the prominent blue button style and Register has the plain text link. Convention is the opposite — Register (the sign-up CTA) should be the filled button, Login the plain link.
 
 ---
 

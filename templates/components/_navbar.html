@@ -1,0 +1,23 @@
+<nav class="shadow-lg bg-white w-full">
+    <div class="flex justify-between items-center px-4 py-2.5 max-w-7xl mx-auto">
+        <div class="text-xl font-semibold">
+            <a class="flex items-center px-4" href="#">
+                <span class="self-center text-xl font-semibold">Luminetiq</span>
+            </a>
+        </div>
+        <div>
+            {% if request.user.is_authenticated %}
+                <a class="text-sm font-medium text-gray-600 hover:text-gray-900 mr-6" href="{% url 'sources:list' %}">Sources</a>
+                <a class="text-sm font-medium text-gray-600 hover:text-gray-900 mr-6" href="{% url 'catalog:list' %}">Catalog</a>
+                <a class="text-sm font-medium text-gray-600 hover:text-gray-900 mr-6" href="{% url 'insights:list' %}">Insights</a>
+                <form action="{% url 'users:logout' %}" method="post">
+                    {% csrf_token %}
+                    <button class="bg-transparent border-none cursor-pointer text-sm font-medium text-gray-600 hover:text-gray-900" type="submit">Logout</button>
+                </form>
+            {% else %}
+                <a class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700" href="{% url 'users:login' %}">Login</a>
+                <a class="text-sm font-medium text-gray-600 hover:text-gray-900 mr-6" href="{% url 'users:register' %}">Register</a>
+            {% endif %}
+        </div>
+    </div>
+</nav>
