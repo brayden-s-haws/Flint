@@ -7,32 +7,16 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js" integrity="sha384-/TgkGk7p307TH7EXJDuUlgG3Ce1UVolAOFopFekQkkXihi5u/6OCvVKyz1W+idaz" crossorigin="anonymous"></script>
     <title>{% block title %}Luminetiq{% endblock %}</title>
+    {% block extra_head %}
+    {% endblock extra_head %}
 </head>
 <body>
-    <nav class="shadow-lg">
-        <div class="flex flex-wrap justify-between ml-5 items-center mx-auto px-4 py-2.5">
-            <a class="flex items-center px-4" href="">
-                <span class="self-center text-xl font-semibold">Luminetiq</span>
-            </a>
-            <div class="flex items-center">
-                <a class="mr-6 text-sm font-medium text-gray-500" href="">Home</a>
-                <a class="mr-6 text-sm font-medium text-gray-500" href="">Link 1</a>
-                <a class="mr-6 text-sm font-medium text-gray-500" href="">Link 2</a>
-                <a class="mr-6 text-sm font-medium text-gray-500" href="">Link 3</a>
-                <a class="mr-6 text-sm font-medium text-gray-500" href="">Link 4</a>
-                <a class="mr-6 text-sm font-medium text-gray-500" href="">link 5</a>
-            </div>
-        </div>
-    </nav>
-    {% if messages %}
-        <ul class="messages">
-            {% for message in messages %}
-            <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
-            {% endfor %}
-        </ul>
-    {% endif %}
+    {% include 'components/_navbar.html' %}
+    {% include 'components/_messages.html' %}
     {% block content %}
 
     {% endblock content %}
+    {% block extra_js %}
+    {% endblock extra_js %}
 </body>
 </html>

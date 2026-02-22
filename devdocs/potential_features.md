@@ -36,7 +36,7 @@ This document tracks potential future features and capabilities beyond the MVP. 
 
 ## Advanced Intelligence
 
-- **Natural language to SQL** - Generate queries from questions
+- **Natural language to SQL** - Generate queries from questions using LLMs with schema context injection; built natively (no third-party dependency); see `devdocs/appdocs/post_mvp.md` for the detailed approach
 - **Query explanation** - SQL to English translation
 - **Automated data relationship discovery** - Detect foreign keys and joins
 - **Cross-account benchmarking** - Compare patterns across organizations
@@ -85,13 +85,13 @@ This document tracks potential future features and capabilities beyond the MVP. 
 - **Fivetran/Airbyte sync status** - Monitor ETL health
 - **BI tool metadata** - Looker, Tableau, Metabase integration
 - **GitHub/GitLab** - Version tracking for schema changes
-- **Buster.so integration** - Leverage [Buster](https://www.buster.so) (open-source, YC-backed AI analytics engineering platform) for complementary capabilities. Potential integration points:
-  - *Schema change monitoring* - Buster agents detect upstream schema changes and assess downstream impact, which could feed Luminetiq's change detection alerts
-  - *Auto-documentation* - Buster profiles tables and generates documentation automatically; could supplement or cross-reference Luminetiq's LLM-generated insights
-  - *Text-to-SQL* - Buster's natural language to SQL capabilities could power Luminetiq's planned NL-to-SQL feature
-  - *CI/CD for data models* - Self-healing pipeline validation that auto-opens PRs to fix breaking changes
-  - *Agent framework* - Buster's YAML-defined AI agents run in sandboxed environments with warehouse + GitHub access; could serve as a model for Luminetiq's own automation agents
-  - Buster connects to Snowflake, Redshift, Postgres, BigQuery, Databricks, MySQL, SQL Server, and MariaDB
+- **Amundsen integration** - Open source data catalog (Linux Foundation) used by many data teams. Luminetiq can use the `amundsen-databuilder` Python library to supplement its own connector extraction, and optionally push LLM-generated descriptions back to Amundsen deployments via REST API. Positions Luminetiq as the AI intelligence layer on top of an existing catalog. See `devdocs/appdocs/post_mvp.md` for the detailed approach.
+
+---
+
+## Business Ontology Layer
+
+A semantic mapping layer that sits between raw database schema and business users/AI agents. Maps physical tables and columns to named business entities (e.g., `tbl_cust_master` → **Customer**, `contact_email_addr` → **Email Address**) and defines typed relationships between them (Customer *has many* Orders). LLMs can suggest object type names, property labels, and relationships from catalog metadata; humans review and accept. See `devdocs/appdocs/post_mvp.md` for the detailed approach.
 
 ---
 

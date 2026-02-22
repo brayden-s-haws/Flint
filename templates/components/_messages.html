@@ -1,16 +1,17 @@
 {% if messages %}
-    <ul class="messages">
+    <div class="messages max-w-2xl mx-auto px-4 pt-4">
         {% for message in messages %}
-        <!-- TODO(stub): Replace this <li> with a styled alert element. The current class="{{ message.tags }}" just outputs Django's tag string (e.g. "success") which has no Tailwind styles applied to it.
-            Instead, use an {% if %} chain to map each tag to a Tailwind color set:
-            - {% if 'success' in message.tags %}  → bg-green-100 border-green-400 text-green-800
-            - {% elif 'error' in message.tags %}  → bg-red-100 border-red-400 text-red-800
-            - {% elif 'warning' in message.tags %} → bg-yellow-100 border-yellow-400 text-yellow-800
-            - {% elif 'info' in message.tags %}   → bg-blue-100 border-blue-400 text-blue-800
-            - {% else %}                          → bg-gray-100 border-gray-400 text-gray-800
-            Shared structural classes for all variants: border-l-4 p-4 mb-3 rounded
-            Add role="alert" for accessibility so screen readers announce the message -->
-        <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+                {% if 'success' in message.tags %}
+                <div class="border-l-4 p-4 mb-3 rounded bg-green-100 border-green-400 text-green-800" role="alert">{{ message }}</div>
+                {% elif 'error' in message.tags %}
+                <div class="border-l-4 p-4 mb-3 rounded bg-red-100 border-red-400 text-red-800" role="alert">{{ message }}</div>
+                {% elif 'warning' in message.tags %}
+                <div class="border-l-4 p-4 mb-3 rounded bg-yellow-100 border-yellow-400 text-yellow-800" role="alert">{{ message }}</div>
+                {% elif 'info' in message.tags %}
+                <div class="border-l-4 p-4 mb-3 rounded bg-blue-100 border-blue-400 text-blue-800" role="alert">{{ message }}</div>
+                {% else %}
+                <div class="border-l-4 p-4 mb-3 rounded bg-gray-100 border-gray-400 text-gray-800" role="alert">{{ message }}</div>
+                {% endif %}
         {% endfor %}
-    </ul>
+    </div>
 {% endif %}

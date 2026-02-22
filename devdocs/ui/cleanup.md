@@ -6,7 +6,8 @@ Items to revisit when polishing the UI. Not blockers — functional code comes f
 
 ## Messages
 
-- [ ] **Style Django messages with Tailwind** — `templates/base.html` lines 28-33. Currently using generic `class="messages"` on the `<ul>` and Django's message tags (`success`, `error`, `warning`, `info`) on `<li>` elements. These tags don't map to any Tailwind classes. Need to either map tags to Tailwind utility classes (e.g., green background for success, red for error) or extract messages into a `components/_messages.html` partial.
+- [x] **Style Django messages with Tailwind** — `templates/base.html` lines 28-33. Currently using generic `class="messages"` on the `<ul>` and Django's message tags (`success`, `error`, `warning`,
+  `info`) on `<li>` elements. These tags don't map to any Tailwind classes. Need to either map tags to Tailwind utility classes (e.g., green background for success, red for error) or extract messages into a `components/_messages.html` partial.
 
 ---
 

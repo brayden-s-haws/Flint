@@ -13,7 +13,7 @@
 
 - [x] `base.html` — base template with nav, messages, block structure (project-level `templates/`)
 - [x] `components/_navbar.html` — navigation partial
-- [ ] `components/_messages.html` — flash messages partial
+- [x] `components/_messages.html` — flash messages partial
 - [ ] `core/dashboard.html` — logged-in landing page / dashboard
 
 ## Views
