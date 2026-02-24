@@ -318,7 +318,7 @@ Once all app models are in place, go back through each app's `devdocs/appdocs/<a
 1. ~~**Base template** — `templates/base.html` with nav, messages, block structure. Every page extends this, so it comes first.~~ COMPLETE
 2. ~~**Users** — registration, login, logout views + templates. Auth must work before anything else is usable.~~ COMPLETE
 3. ~~**Accounts** — tenant middleware + signal to auto-create an Account when a user registers.~~ COMPLETE
-4. **Core** — `TenantQuerysetMixin` + dashboard view. Depends on accounts middleware being in place.
+4. ~~**Core** — `TenantQuerysetMixin` + dashboard view. Depends on accounts middleware being in place.~~ COMPLETE
 5. **Sources** — CRUD views, PostgreSQL connector, Fernet encryption. This is the main feature.
 6. **Catalog** — table list and detail views. Data is populated by source sync.
 7. **Insights** — LLM provider abstraction, generate/view insights. The capstone feature.
