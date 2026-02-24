@@ -27,6 +27,8 @@ Items to revisit when polishing the UI. Not blockers — functional code comes f
 
 ## Dashboard
 
+- [ ] **Wire up stat card "View all" links** — `templates/core/dashboard.html` lines 20, 25, 30. Currently `href=""` placeholders. Replace with `{% url 'sources:list' %}`, `{% url 'catalog:list' %}`, and `{% url 'insights:list' %}` once each app has its list view defined.
+- [ ] **Wire up empty state CTA button** — `templates/core/dashboard.html` line 39. Currently `href=""`. Replace with `{% url 'sources:list' %}` once the sources list view exists.
 - [ ] **Flesh out dashboard active state** — `templates/core/dashboard.html`. The `{% if source_count > 0 %}` block is currently a placeholder. Return to this after the sources and catalog apps are complete. At that point: update `DashboardView.get_context_data` in `apps/core/views.py` to query real counts (`Source`, `Table`, `Insight` models), and build out the active state section with a recent sources list, recently discovered tables, and latest insights.
 
 ---

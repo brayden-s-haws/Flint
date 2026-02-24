@@ -6,7 +6,20 @@ disable-model-invocation: true
 
 Review everything changed on the current branch. Your job is to catch real issues in the work that was done — not to suggest work from other features, not to suggest post-MVP improvements. Stay scoped.
 
-**Do not write inline TODO comments in files.** Instead, write all findings to a report at `devdocs/reviews/branch-review.md`. This keeps the source files clean and gives the developer one place to work through before committing.
+Add inline `TODO(review)` comments directly in each file that has findings, using the correct comment syntax for the file type. Remove `TODO(review)` comments that are already resolved. Summarise all findings in chat when done.
+
+---
+
+## Comment Syntax by File Type
+
+Use the correct comment syntax based on the file extension:
+
+- **Python** (`.py`): `# TODO(review): message`
+- **HTML/Templates** (`.html`): `<!-- TODO(review): message -->`
+- **JavaScript** (`.js`): `// TODO(review): message`
+- **CSS** (`.css`): `/* TODO(review): message */`
+
+Only manage `TODO(review)` comments — never touch `TODO(stub)` or plain `TODO` comments.
 
 ---
 
@@ -46,7 +59,7 @@ For each file in the changed file list, read it and apply the checklist below. K
 
 #### Completeness
 - Does this file satisfy the checklist items for its app that are expected on this branch?
-- Are any checklist items marked `[ ]` in the appdoc that this file was supposed to address?
+- Are any checklist items marked `[ ]` in the appdoc/featuredoc that this file was supposed to address?
 
 #### Type Hints (Python files only)
 - All function parameters and return types annotated
@@ -81,65 +94,22 @@ For each file in the changed file list, read it and apply the checklist below. K
 
 ---
 
-## Step 4: Write the Report
+## Step 4: Write Inline TODO(review) Comments
 
-Write your findings to `devdocs/reviews/branch-review.md`. Create the file if it doesn't exist. If it does exist, replace the entire contents — this report always reflects the current state of the branch, not a history of reviews.
+For each file that has findings:
 
-### Report format
+- **Remove resolved `TODO(review)` comments**: If the file already has `TODO(review)` comments from a previous review and the code now satisfies them, delete those comments.
+- **Add new `TODO(review)` comments**: Add comments inline at the specific lines that need attention, using the correct syntax for the file type.
+- **Clean up `TODO(stub)` comments**: If a `TODO(stub)` section has been implemented, remove it. Leave stub TODOs in place where the section is still empty or incomplete.
+- **Leave plain `TODO` comments alone**: Never modify or remove `TODO` comments written by the developer.
 
-```markdown
-# Branch Review: <branch-name>
-
-**Date:** YYYY-MM-DD
-**Files reviewed:** N
-**Apps in scope:** app1, app2
-
----
-
-## Summary
-
-One paragraph: what this branch accomplishes, what's solid, and whether it's ready to commit.
-
----
-
-## Findings
-
-### <filename> — <pass | needs attention>
-
-<One sentence describing the overall state of this file.>
-
-- **[Category]** Finding description. ← only include if there's an actual issue
-- **[Category]** Finding description.
-
-*(If the file is clean, write "No issues found." and move on.)*
-
----
-
-## Checklist Corrections
-
-If any checklist items need to be updated to reflect what was built on this branch, list them here. Reference whichever doc is authoritative for this branch — the featuredoc if one exists, otherwise the appdoc:
-
-- `devdocs/featuredocs/<feature>.md` — `<item>` should be marked `[x]` (now implemented)
-- `devdocs/featuredocs/<feature>.md` — `<item>` should be marked `[ ]` (marked done but code not found)
-- `devdocs/appdocs/<app>.md` — `<item>` should be marked `[x]` (now implemented)
-
-Apply these corrections to the relevant files after writing the report.
-
----
-
-## Commit Readiness
-
-**Ready to commit:** Yes / No / With caveats
-
-If no or with caveats, list the blockers:
-- <specific issue that must be resolved before committing>
-```
+If a file has no findings, do not touch it.
 
 ---
 
 ## Step 5: Apply Checklist Corrections
 
-After writing the report, update the relevant checklists to match reality. If a featuredoc exists for this branch's feature, update it. Otherwise update the relevant appdoc.
+After adding inline comments, update the relevant checklists to match reality. If a featuredoc exists for this branch's feature, update it. Otherwise update the relevant appdoc.
 
 - Mark `[x]` on items that are now implemented
 - Mark `[ ]` on items that were checked off but the code doesn't back up
@@ -149,23 +119,24 @@ After writing the report, update the relevant checklists to match reality. If a 
 
 ## Step 6: Summarise in Chat
 
-After writing the report and updating checklists, give the developer a short summary:
+After adding inline comments and updating checklists, give the developer a short summary:
 
 - **Branch:** what it accomplishes
 - **Files reviewed:** how many
-- **Issues found:** count by severity (blocker vs minor)
+- **Issues found:** count and which files (the inline TODOs have the detail)
 - **Commit readiness:** yes, no, or with caveats
 - **Next step:** based on `devdocs/getting_started.md`, what should they work on after this branch
 
-Keep the chat summary to under 10 lines. The report has the detail.
+Keep the chat summary short — the inline `TODO(review)` comments have the detail.
 
 ---
 
 ## What NOT to do
 
-- Do not write inline `TODO(review)` comments in source files — all findings go in the report
+- Do not write a report file — all findings go inline as `TODO(review)` comments
 - Do not flag post-MVP gaps — those belong in `devdocs/appdocs/post_mvp.md` and are not this branch's concern
 - Do not flag gaps in apps not touched by this branch
 - Do not suggest new features or architectural improvements not already in the plan
-- Do not rewrite or restructure source files — this is read-only except for appdoc checkbox updates
+- Do not rewrite or restructure source files
 - Do not remove appdoc checklist items — only update their `[ ]` / `[x]` status
+- Do not modify or remove plain `TODO` or `TODO(stub)` comments
