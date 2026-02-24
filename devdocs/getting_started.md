@@ -18,7 +18,7 @@ This guide walks you through building the Luminetiq MVP step by step. Think of t
 
 ## ~~App Build Order~~ ALL MODELS COMPLETE
 ~~**This order matters.** Each app builds on the ones before it.~~
-
+ca
 - [x] ~~1. `users` — Custom User model with email-based auth~~
 - [x] ~~2. `core` — TimeStampedModel, TenantAwareModel base models~~
 - [x] ~~3. `accounts` — Account, AccountMembership models~~

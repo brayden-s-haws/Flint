@@ -36,7 +36,7 @@
 
 ## URLs
 
-- [ ] `/sources/` — list
+- [ ] `/sources/` — list  ← `name='list'` required; `{% url 'sources:list' %}` is already referenced in `templates/core/dashboard.html` (empty-state CTA button) and will 404 until this URL exists
 - [ ] `/sources/add/` — create
 - [ ] `/sources/<id>/` — detail
 - [ ] `/sources/<id>/test/` — test connection

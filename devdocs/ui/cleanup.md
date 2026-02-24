@@ -13,7 +13,7 @@ Items to revisit when polishing the UI. Not blockers — functional code comes f
 
 ## Navigation
 
-- [ ] **Wire up nav links** — `templates/base.html` lines 18-24. Placeholder links with empty `href=""`. Replace with real `{% url %}` tags as views are built.
+- [ ] **Wire up nav links** — `templates/base.html` lines 18-24. Placeholder links with empty `href=""`. Replace with real `{% url %}` tags as views are built. (this is actually in components/_navbar.html )
 - [ ] **Add auth-aware nav** — Show login/register when logged out, show user info/logout when logged in.
 - [ ] **Swap Login/Register button hierarchy** — `templates/components/_navbar.html`. Currently Login has the prominent blue button style and Register has the plain text link. Convention is the opposite — Register (the sign-up CTA) should be the filled button, Login the plain link.
 
@@ -22,6 +22,12 @@ Items to revisit when polishing the UI. Not blockers — functional code comes f
 ## Forms
 
 - [ ] **Style registration form inputs** — `templates/users/register.html`. Plain browser-default inputs render correctly but are unstyled. Add `__init__` to `RegistrationForm` in `apps/users/forms.py` and call `field.widget.attrs.update({'class': '...'})` on each field. Also pass `attrs={"class": "..."}` to each `label_tag` call in the template. Target input classes: `w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500`. Target label classes: `block text-sm font-medium text-gray-700 mb-1`.
+
+---
+
+## Dashboard
+
+- [ ] **Flesh out dashboard active state** — `templates/core/dashboard.html`. The `{% if source_count > 0 %}` block is currently a placeholder. Return to this after the sources and catalog apps are complete. At that point: update `DashboardView.get_context_data` in `apps/core/views.py` to query real counts (`Source`, `Table`, `Insight` models), and build out the active state section with a recent sources list, recently discovered tables, and latest insights.
 
 ---
 

@@ -52,7 +52,9 @@ The same rules apply regardless of syntax: only manage TODO(review) comments, ne
 ## Output Format
 
 - Read the file provided in the argument
-- Read relevant architecture/getting_started docs to understand what the file should contain
+- Determine which app and feature the file belongs to
+- **Check for a featuredoc first:** Look in `devdocs/featuredocs/` for a file matching this feature. If one exists, use it as the completeness reference for the Completeness checklist item. If not, use the relevant `devdocs/appdocs/<app>.md`.
+- Read `devdocs/architecture.md` and `devdocs/getting_started.md` to understand context
 - **Remove resolved TODO(review)s**: If the file has existing TODO(review) comments from a previous review and the code now satisfies them, delete those TODO comments
 - **Add new TODO(review)s**: Add TODO(review) comments inline at specific lines that still need attention, using the correct comment syntax for the file type (see Comment Syntax section above)
 - **Clean up TODO(stub)s**: If the file has TODO(stub) comments from a previous stub-backend or stub-ui run, remove them for any section that has been implemented. Leave stub TODOs in place where the section is still empty or incomplete — do not remove a stub just because surrounding code exists
