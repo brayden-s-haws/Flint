@@ -18,7 +18,7 @@
 
 ## Encryption
 
-- [ ] Fernet encryption utility for storing/retrieving database credentials
+- [x] Fernet encryption utility for storing/retrieving database credentials
 
 ## Views
 
@@ -41,3 +41,13 @@
 - [ ] `/sources/<id>/` — detail
 - [ ] `/sources/<id>/test/` — test connection
 - [ ] `/sources/<id>/sync/` — trigger sync
+
+---
+
+## Build Order
+
+1. ~~**Encryption utility** — `apps/sources/encryption.py`. Small and self-contained; required before credentials can be safely stored or used by connectors.~~
+2. **List + Create views, form template, URLs** — build the CRUD layer so `/sources/` and `/sources/add/` work. No connectors needed yet; just save and load source records.
+3. **BaseConnector + PostgreSQLConnector + ConnectorRegistry** — `apps/sources/connectors/`. Build after the UI exists so you can test against real source records.
+4. **Detail view + template** — shows source info and sync history; build after connectors so sync data is meaningful.
+5. **Wire test connection and sync actions** — tie the test and sync URL actions to the connector layer.

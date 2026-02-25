@@ -1,0 +1,17 @@
+# Core framework
+Django==6.0.2
+asgiref==3.11.1  # Django dependency
+sqlparse==0.5.5  # Django dependency
+
+# Environment / configuration
+python-dotenv==1.2.1
+
+# Credential encryption
+cryptography==46.0.5
+cffi==2.0.0       # cryptography dependency
+pycparser==3.0    # cffi dependency
+
+# --- Planned (not yet installed) ---
+# openai            # LLM insights - OpenAI provider
+# anthropic         # LLM insights - Anthropic provider
+# psycopg2-binary   # PostgreSQL connector (native metadata extraction)
