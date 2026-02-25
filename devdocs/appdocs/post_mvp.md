@@ -340,6 +340,33 @@ LLM calls per account per run scale with the number of source pairs, not the num
 
 ---
 
+## testing
+
+The test plan lives in `devdocs/testing.md`. The `apps.users` section is complete. The following sections are stubs that must be filled in and implemented once each app's views are built:
+
+- **apps.sources** — source creation (valid credentials, missing fields), connection test (success and failure), sync trigger
+- **apps.catalog** — schema/table/column list views return 200, all views are scoped to the correct account (no cross-tenant data leakage)
+- **apps.insights** — insight generation triggers LLM call (mock the LLM), insight list and detail views return 200
+
+When each section is filled in, run the full test suite (`python manage.py test`) before marking it done. Multi-tenancy boundary tests (account A cannot see account B's data) are required for every app that touches tenant-scoped models.
+
+---
+
+## logging
+
+The logging plan lives in `devdocs/logging.md`. No logging infrastructure exists yet — this is a clean addition post-MVP. Work to complete:
+
+- **settings.py** — add the `LOGGING` dict with console handler (dev) and file handler (production)
+- **apps.accounts** — instrument `TenantMiddleware`: successful account resolution, missing membership warning
+- **apps.users** — instrument registration and login/logout events (user ID only, never email or password)
+- **apps.sources** — instrument encryption operations, source creation, and sync lifecycle (start, complete, fail)
+- **apps.catalog** — instrument metadata sync: schema/table/column discovery counts, skipped objects, completion summary
+- **apps.insights** — instrument LLM calls: provider, model, token usage, retries, failures (never log prompt or response content)
+
+Review the "What NOT to Log" section in `devdocs/logging.md` before instrumenting any app. Credentials, tokens, and LLM content are never logged at any level.
+
+---
+
 ## queries (new app — Natural Language to SQL)
 
 ### Overview
