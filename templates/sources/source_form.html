@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block title %}Connect Source | Luminetiq{% endblock %}
+
+{% block content %}
+<!-- TODO(stub): Wrap everything in a <main> with "max-w-2xl mx-auto px-4 py-8"
+                A narrower max-width than the list page is appropriate here —
+                forms read better in a constrained column. -->
+
+    <!-- TODO(stub): Page header — an <h1> "Connect a Data Source" (text-2xl font-bold text-gray-900)
+                    and an optional subheading explaining what the form does
+                    (text-gray-500, e.g. "Add a PostgreSQL source to start syncing metadata"). -->
+
+    <!-- TODO(stub): Form card — a white card (bg-white rounded-lg border border-gray-200 p-6 mt-6)
+                    wrapping the entire <form> element.
+
+                    The <form> tag must have:
+                      - method="post"
+                      - {% csrf_token %} as the first child inside the form — Django will reject
+                        the POST without it (403 Forbidden). -->
+
+        <!-- TODO(stub): Source name field — render {{ form.name }} with a label above it.
+                         Use <label for="{{ form.name.id_for_label }}"> for accessibility.
+                         Wrap label + input in a <div class="mb-4">.
+                         Style the input with: block w-full border border-gray-300 rounded-md
+                         px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 -->
+
+        <!-- TODO(stub): Source type field — render {{ form.source_type }} the same way.
+                         This renders as a <select> dropdown populated from the SourceType model.
+                         Apply the same input styling as above (select elements accept the same classes). -->
+
+        <!-- TODO(stub): Credentials section header — a visual divider to separate the
+                         "about this source" fields above from the "connection details" below.
+                         A <p> or <h3> labelled "Connection Details" (font-semibold text-gray-700 mb-4 mt-6)
+                         makes the form easier to scan. -->
+
+        <!-- TODO(stub): Host field — render {{ form.host }} with label. Same styling as above. -->
+
+        <!-- TODO(stub): Port field — render {{ form.port }} with label. Same styling as above.
+                         Note: IntegerField renders as <input type="number">. The initial value
+                         of 5432 will be pre-filled but only if the form is unbound (i.e., a GET
+                         request). On a failed POST, Django re-renders with the submitted value. -->
+
+        <!-- TODO(stub): Database name field — render {{ form.dbname }} with label. -->
+
+        <!-- TODO(stub): Username field — render {{ form.user }} with label.
+                         Label it "Database User" to avoid confusion with the Luminetiq user account. -->
+
+        <!-- TODO(stub): Password field — render {{ form.password }} with label.
+                         PasswordInput renders as <input type="password"> automatically —
+                         you don't need to set the type yourself.
+                         Important: on a failed POST, this field will be blank (PasswordInput
+                         intentionally does not re-render the value). Mention this in the label
+                         or a helper text if you want to signal that to users. -->
+
+        <!-- TODO(stub): Form errors — render {{ form.non_field_errors }} above the submit button
+                         to surface any errors that aren't tied to a specific field
+                         (e.g., from a future clean() method). Style with text-red-600 text-sm. -->
+
+        <!-- TODO(stub): Submit button row — a flex container (justify-between items-center) with:
+                         1. A "Cancel" link back to {% url 'sources:list' %} — styled as a
+                            secondary/ghost link (text-gray-600 hover:underline)
+                         2. A submit <button type="submit"> — "Connect Source" — styled as a
+                            primary button (bg-blue-600 hover:bg-blue-700 text-white font-semibold
+                            py-2 px-4 rounded-md transition-colors) -->
+
+{% endblock content %}

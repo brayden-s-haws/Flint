@@ -643,3 +643,9 @@ No server-side graph library required — the Django view queries `ObjectType` a
 ### Key Architectural Invariant
 
 The ontology is a **projection, not a store**. It describes how to interpret data; it does not copy or cache rows. All foreign keys in the ontology models point at `catalog.Table` and `catalog.Column` — the physical metadata that was synced from the source. When the source schema changes, the ontology definitions that reference renamed or dropped columns should be flagged as stale (schema drift detection, already a potential feature in `potential_features.md`).
+
+# Use frontend-design plugin to iterate on UI
+
+# Change App Name to 'Shane'
+* Update all references to 'Luminetiq'
+* Create logo and add to UI

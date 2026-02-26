@@ -22,8 +22,8 @@
 
 ## Views
 
-- [ ] Source list view — show all sources for the current account
-- [ ] Source create view — form to add a new PostgreSQL source (host, port, dbname, user, password)
+- [x] Source list view — show all sources for the current account
+- [x] Source create view — form to add a new PostgreSQL source (host, port, dbname, user, password)
 - [ ] Source detail view — show source info, sync history, and connected schemas/tables
 - [ ] Test connection action — verify credentials work before saving
 - [ ] Trigger sync action — manually kick off metadata sync
@@ -36,8 +36,8 @@
 
 ## URLs
 
-- [ ] `/sources/` — list  ← `name='list'` required; `{% url 'sources:list' %}` is already referenced in `templates/core/dashboard.html` (empty-state CTA button) and will 404 until this URL exists
-- [ ] `/sources/add/` — create
+- [x] `/sources/` — list  ← `name='list'` required; `{% url 'sources:list' %}` is already referenced in `templates/core/dashboard.html` (empty-state CTA button) and will 404 until this URL exists
+- [x] `/sources/add/` — create
 - [ ] `/sources/<id>/` — detail
 - [ ] `/sources/<id>/test/` — test connection
 - [ ] `/sources/<id>/sync/` — trigger sync
