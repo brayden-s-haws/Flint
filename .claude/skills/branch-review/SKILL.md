@@ -1,10 +1,21 @@
 ---
 name: branch-review
-description: Context-aware branch review — reviews all changed files on the current branch, scoped to the current feature and MVP boundary
+description: Context-aware branch review — reviews all changed files on the current branch, scoped to the current feature. Defaults to MVP boundary; pass "post-mvp" to review without that restriction.
 disable-model-invocation: true
 ---
 
-Review everything changed on the current branch. Your job is to catch real issues in the work that was done — not to suggest work from other features, not to suggest post-MVP improvements. Stay scoped.
+## Mode
+
+Check the argument passed to this skill invocation:
+
+- **No argument or `mvp`** — default mode. Stay within the MVP boundary. Do not flag post-MVP gaps. This is the standard mode during active MVP development.
+- **`post-mvp`** — relaxed mode. The MVP boundary restriction is lifted. You may flag architectural gaps, missing features, and improvements that go beyond MVP scope. Rule 1 in Step 3 does not apply.
+
+All other behaviour (scope rules 2–4, inline comment format, checklist updates) applies in both modes.
+
+---
+
+Review everything changed on the current branch. Your job is to catch real issues in the work that was done — not to suggest work from other features. Stay scoped.
 
 Add inline `TODO(review)` comments directly in each file that has findings, using the correct comment syntax for the file type. Remove `TODO(review)` comments that are already resolved. Summarise all findings in chat when done.
 
@@ -84,7 +95,7 @@ For each file in the changed file list, read it and apply the checklist below. K
 
 ### Scope Rules — apply these before writing any finding
 
-**Rule 1 — MVP boundary**: If a finding is about something that belongs post-MVP (not in any `devdocs/appdocs/` checklist, or explicitly noted as post-MVP in `devdocs/architecture.md`), do not include it. Post-MVP gaps are not this branch's problem.
+**Rule 1 — MVP boundary** *(mvp mode only)*: If a finding is about something that belongs post-MVP (not in any `devdocs/appdocs/` checklist, or explicitly noted as post-MVP in `devdocs/architecture.md`), do not include it. Post-MVP gaps are not this branch's problem. Skip this rule entirely in `post-mvp` mode.
 
 **Rule 2 — Feature boundary**: If a finding is about something that belongs to a different app or a different feature branch, do not include it. Only report gaps in the apps this branch is touching.
 
@@ -134,7 +145,7 @@ Keep the chat summary short — the inline `TODO(review)` comments have the deta
 ## What NOT to do
 
 - Do not write a report file — all findings go inline as `TODO(review)` comments
-- Do not flag post-MVP gaps — those belong in `devdocs/appdocs/post_mvp.md` and are not this branch's concern
+- Do not flag post-MVP gaps in `mvp` mode — those belong in `devdocs/appdocs/post_mvp.md` and are not this branch's concern
 - Do not flag gaps in apps not touched by this branch
 - Do not suggest new features or architectural improvements not already in the plan
 - Do not rewrite or restructure source files
