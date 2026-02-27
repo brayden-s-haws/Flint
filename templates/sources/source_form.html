@@ -13,41 +13,42 @@
                 <label for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
                 {{ form.name }}
             </div>
+            <div class="mb-4">
+                <label for="{{ form.source_type.id_for_label }}">{{ form.source_type.label }}</label>
+                {{ form.source_type }}
+            </div>
+            <p class="text-gray-700 font-semibold mb-4 mt-6">Connection Details</p>
+            <div class="mb-4">
+                <label for="{{ form.host.id_for_label }}">{{ form.host.label }}</label>
+                {{ form.host }}
+            </div>
+            <div class="mb-4">
+                <label for="{{ form.port.id_for_label }}">{{ form.port.label }}</label>
+                {{ form.port }}
+            </div>
+            <div class="mb-4">
+                <label for="{{ form.dbname.id_for_label }}">{{ form.dbname.label }}</label>
+                {{ form.dbname }}
+            </div>
+            <div class="mb-4">
+                <label for="{{ form.user.id_for_label }}">Database User</label>
+                {{ form.user }}
+            </div>
+            <div class="mb-4">
+                <label for="{{ form.password.id_for_label }}">Database Password</label>
+                {{ form.password }}
+            </div>
+            {% if form.non_field_errors %}
+            <div class="text-sm text-red-600 mt-1">
+                {{ form.non_field_errors }}
+            </div>
+            {% endif %}
+            <div class="flex justify-between items-center mt-6">
+                <a class="text-gray-600 hover:underline" href="{% url 'sources:list' %}">Cancel</a>
+                <button class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md transition-colors" type="submit">Connect Source</button>
+            </div>
 
-            <!-- TODO(stub): Source type field — same pattern as name above (once fixed).
-                             {{ form.source_type }} renders as a <select> populated from SourceType.
-                             Wrap in <div class="mb-4">, label above, widget below.
-                             Note: the dropdown will be empty until a SourceType row exists in the DB —
-                             add a PostgreSQL entry via /admin/ before testing end-to-end. -->
 
-            <!-- TODO(stub): Credentials section divider — add a visual separator before the
-                             connection fields. A <p> or <h3> "Connection Details" with
-                             font-semibold text-gray-700 mb-4 mt-6 helps the form scan better. -->
-
-            <!-- TODO(stub): Host field — {{ form.host }} with label, same mb-4 wrapper pattern. -->
-
-            <!-- TODO(stub): Port field — {{ form.port }} with label. Renders as <input type="number">.
-                             The initial=5432 value pre-fills on GET; on a failed POST it shows the
-                             last submitted value instead. -->
-
-            <!-- TODO(stub): Database name field — {{ form.dbname }} with label. -->
-
-            <!-- TODO(stub): Username field — {{ form.user }} with label.
-                             Use "Database User" as label text to distinguish from the Luminetiq account. -->
-
-            <!-- TODO(stub): Password field — {{ form.password }} with label.
-                             PasswordInput auto-renders type="password" — no need to set it manually.
-                             The field will be blank on a re-rendered form after a failed POST.
-                             Consider adding helper text like "Re-enter your password if resubmitting." -->
-
-            <!-- TODO(stub): Non-field errors — render {{ form.non_field_errors }} above the submit
-                             button to surface validation errors not tied to a specific field.
-                             Style with text-red-600 text-sm. -->
-
-            <!-- TODO(stub): Submit row — a flex container (flex justify-between items-center mt-6) with:
-                             1. A "Cancel" <a> linking to {% url 'sources:list' %} — text-gray-600 hover:underline
-                             2. A <button type="submit"> "Connect Source" — bg-blue-600 hover:bg-blue-700
-                                text-white font-semibold py-2 px-4 rounded-md transition-colors -->
 
         </form>
     </div>

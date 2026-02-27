@@ -21,7 +21,7 @@ Items to revisit when polishing the UI. Not blockers — functional code comes f
 
 ## Forms
 
-- [ ] **Style registration form inputs** — `templates/users/register.html`. Plain browser-default inputs render correctly but are unstyled. Add `__init__` to `RegistrationForm` in `apps/users/forms.py` and call `field.widget.attrs.update({'class': '...'})` on each field. Also pass `attrs={"class": "..."}` to each `label_tag` call in the template. Target input classes: `w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500`. Target label classes: `block text-sm font-medium text-gray-700 mb-1`.
+- [ ] **Style all form inputs** — All forms across the project render Django's default unstyled widgets. At MVP completion, do a pass over every form class (`RegistrationForm`, `LoginForm`, `SourceForm`, and any others added) and add an `__init__` method that calls `field.widget.attrs.update({'class': '...'})` on each field. Also update label rendering in templates. Target input classes: `w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500`. Target label classes: `block text-sm font-medium text-gray-700 mb-1`.
 
 ---
 
