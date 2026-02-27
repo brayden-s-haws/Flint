@@ -25,12 +25,13 @@
 - [x] Source list view — show all sources for the current account
 - [x] Source create view — form to add a new PostgreSQL source (host, port, dbname, user, password)
 - [ ] Source detail view — show source info, sync history, and connected schemas/tables
+- [ ] Wire source name link in `source_list.html` → `{% url 'sources:detail' source.pk %}` (placeholder `href=""` until detail URL exists)
 - [ ] Test connection action — verify credentials work before saving
 - [ ] Trigger sync action — manually kick off metadata sync
 
 ## Templates
 
-- [ ] `sources/source_list.html` — list of connected sources
+- [x] `sources/source_list.html` — list of connected sources
 - [ ] `sources/source_form.html` — add/edit source form
 - [ ] `sources/source_detail.html` — source detail with sync history
 

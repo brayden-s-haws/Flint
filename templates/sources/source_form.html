@@ -3,65 +3,53 @@
 {% block title %}Connect Source | Luminetiq{% endblock %}
 
 {% block content %}
-<!-- TODO(stub): Wrap everything in a <main> with "max-w-2xl mx-auto px-4 py-8"
-                A narrower max-width than the list page is appropriate here —
-                forms read better in a constrained column. -->
+<main class="max-w-2xl mx-auto px-4 py-8">
+    <h1 class="text-2xl font-bold text-gray-900">Connect a Data Source</h1>
+    <p class="text-gray-500">Add a source to start syncing data</p>
+    <div class="bg-white rounded-lg border border-gray-200 p-6 mt-6">
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-4">
+                <label for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+                {{ form.name }}
+            </div>
 
-    <!-- TODO(stub): Page header — an <h1> "Connect a Data Source" (text-2xl font-bold text-gray-900)
-                    and an optional subheading explaining what the form does
-                    (text-gray-500, e.g. "Add a PostgreSQL source to start syncing metadata"). -->
+            <!-- TODO(stub): Source type field — same pattern as name above (once fixed).
+                             {{ form.source_type }} renders as a <select> populated from SourceType.
+                             Wrap in <div class="mb-4">, label above, widget below.
+                             Note: the dropdown will be empty until a SourceType row exists in the DB —
+                             add a PostgreSQL entry via /admin/ before testing end-to-end. -->
 
-    <!-- TODO(stub): Form card — a white card (bg-white rounded-lg border border-gray-200 p-6 mt-6)
-                    wrapping the entire <form> element.
+            <!-- TODO(stub): Credentials section divider — add a visual separator before the
+                             connection fields. A <p> or <h3> "Connection Details" with
+                             font-semibold text-gray-700 mb-4 mt-6 helps the form scan better. -->
 
-                    The <form> tag must have:
-                      - method="post"
-                      - {% csrf_token %} as the first child inside the form — Django will reject
-                        the POST without it (403 Forbidden). -->
+            <!-- TODO(stub): Host field — {{ form.host }} with label, same mb-4 wrapper pattern. -->
 
-        <!-- TODO(stub): Source name field — render {{ form.name }} with a label above it.
-                         Use <label for="{{ form.name.id_for_label }}"> for accessibility.
-                         Wrap label + input in a <div class="mb-4">.
-                         Style the input with: block w-full border border-gray-300 rounded-md
-                         px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 -->
+            <!-- TODO(stub): Port field — {{ form.port }} with label. Renders as <input type="number">.
+                             The initial=5432 value pre-fills on GET; on a failed POST it shows the
+                             last submitted value instead. -->
 
-        <!-- TODO(stub): Source type field — render {{ form.source_type }} the same way.
-                         This renders as a <select> dropdown populated from the SourceType model.
-                         Apply the same input styling as above (select elements accept the same classes). -->
+            <!-- TODO(stub): Database name field — {{ form.dbname }} with label. -->
 
-        <!-- TODO(stub): Credentials section header — a visual divider to separate the
-                         "about this source" fields above from the "connection details" below.
-                         A <p> or <h3> labelled "Connection Details" (font-semibold text-gray-700 mb-4 mt-6)
-                         makes the form easier to scan. -->
+            <!-- TODO(stub): Username field — {{ form.user }} with label.
+                             Use "Database User" as label text to distinguish from the Luminetiq account. -->
 
-        <!-- TODO(stub): Host field — render {{ form.host }} with label. Same styling as above. -->
+            <!-- TODO(stub): Password field — {{ form.password }} with label.
+                             PasswordInput auto-renders type="password" — no need to set it manually.
+                             The field will be blank on a re-rendered form after a failed POST.
+                             Consider adding helper text like "Re-enter your password if resubmitting." -->
 
-        <!-- TODO(stub): Port field — render {{ form.port }} with label. Same styling as above.
-                         Note: IntegerField renders as <input type="number">. The initial value
-                         of 5432 will be pre-filled but only if the form is unbound (i.e., a GET
-                         request). On a failed POST, Django re-renders with the submitted value. -->
+            <!-- TODO(stub): Non-field errors — render {{ form.non_field_errors }} above the submit
+                             button to surface validation errors not tied to a specific field.
+                             Style with text-red-600 text-sm. -->
 
-        <!-- TODO(stub): Database name field — render {{ form.dbname }} with label. -->
+            <!-- TODO(stub): Submit row — a flex container (flex justify-between items-center mt-6) with:
+                             1. A "Cancel" <a> linking to {% url 'sources:list' %} — text-gray-600 hover:underline
+                             2. A <button type="submit"> "Connect Source" — bg-blue-600 hover:bg-blue-700
+                                text-white font-semibold py-2 px-4 rounded-md transition-colors -->
 
-        <!-- TODO(stub): Username field — render {{ form.user }} with label.
-                         Label it "Database User" to avoid confusion with the Luminetiq user account. -->
-
-        <!-- TODO(stub): Password field — render {{ form.password }} with label.
-                         PasswordInput renders as <input type="password"> automatically —
-                         you don't need to set the type yourself.
-                         Important: on a failed POST, this field will be blank (PasswordInput
-                         intentionally does not re-render the value). Mention this in the label
-                         or a helper text if you want to signal that to users. -->
-
-        <!-- TODO(stub): Form errors — render {{ form.non_field_errors }} above the submit button
-                         to surface any errors that aren't tied to a specific field
-                         (e.g., from a future clean() method). Style with text-red-600 text-sm. -->
-
-        <!-- TODO(stub): Submit button row — a flex container (justify-between items-center) with:
-                         1. A "Cancel" link back to {% url 'sources:list' %} — styled as a
-                            secondary/ghost link (text-gray-600 hover:underline)
-                         2. A submit <button type="submit"> — "Connect Source" — styled as a
-                            primary button (bg-blue-600 hover:bg-blue-700 text-white font-semibold
-                            py-2 px-4 rounded-md transition-colors) -->
-
+        </form>
+    </div>
+</main>
 {% endblock content %}

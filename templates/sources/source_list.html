@@ -3,34 +3,31 @@
 {% block title %}Sources | Luminetiq{% endblock %}
 
 {% block content %}
-<!-- TODO(stub): Wrap everything in a <main> with class "max-w-7xl mx-auto px-4 py-8"
-                to match the dashboard layout pattern. -->
-
-    <!-- TODO(stub): Page header row — a flex container (justify-between, items-center)
-                    with two children:
-                    1. An <h1> — "Sources" — text-2xl font-bold text-gray-900
-                    2. An <a> linking to {% url 'sources:add' %} — styled as a primary button
-                       (bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md)
-                       Label: "Connect Source" -->
-
-    <!-- TODO(stub): Source list — iterate over the `sources` context variable using
-                    {% for source in sources %} ... {% empty %} ... {% endfor %}.
-                    `sources` is the tenant-filtered queryset from SourceListView.
-
-                    For each source, render a card (bg-white rounded-lg border border-gray-200 p-6)
-                    showing:
-                      - source.name — as a linked heading (href="" placeholder for now;
-                        detail URL doesn't exist yet) — font-semibold text-gray-900
-                      - source.source_type — the connector name — text-sm text-gray-500
-                      - Last synced: use {% if source.first_synced_at %} to show the date
-                        or "Never synced" if null. source.first_synced_at is a DateTimeField;
-                        format it with the |date template filter (e.g., |date:"N j, Y"). -->
-
-    <!-- TODO(stub): Empty state — inside the {% empty %} block, render a centered
-                    call-to-action matching the dashboard empty state pattern:
-                      - Heading: "No sources connected yet"
-                      - Subheading: "Connect a data source to start discovering insights"
-                      - Button/link to {% url 'sources:add' %} — same primary button style as above
-                    Use text-center and mt-16 to match dashboard spacing. -->
-
+<main class="max-w-7xl mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-8">
+        <h1 class="text-2xl font-bold text-gray-900">Sources</h1>
+        <a href="{% url 'sources:add' %}" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md">Connect Source</a>
+    </div>
+    <div>
+        {% if sources %}
+            {% for source in sources %}
+                <div class="bg-white rounded-lg border border-gray-200 p-6 mb-4">
+                    <h2 class="text-xl font-semibold text-gray-900"><a href="">{{ source.name }}</a></h2>
+                    <p class="text-sm text-gray-500">{{ source.source_type }}</p>
+                    {% if source.last_synced_at %}
+                    <p class="text-sm text-gray-500">Last synced: {{ source.last_synced_at|date:"N j, Y" }}</p>
+                    {% else %}
+                    <p class="text-sm text-gray-500">Last synced: Never synced</p>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="text-center mt-16">
+                <h1 class="text-2xl font-semibold text-gray-900">No sources connected yet</h1>
+                <h3 class="text-xl font-medium text-gray-600">Connect a data source to start discovering insights</h3>
+                <a href="{% url 'sources:add' %}" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-md transition-colors block mt-4">Connect a data source</a>
+            </div>
+        {% endif %}
+    </div>
+</main>
 {% endblock content %}

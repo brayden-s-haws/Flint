@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Max, QuerySet
 from django.views.generic import ListView, CreateView
 from django.urls import reverse_lazy
 from django.http import HttpResponse
@@ -16,6 +17,9 @@ class SourceListView(LoginRequiredMixin, TenantQuerysetMixin, ListView):
     model = Source
     template_name = 'sources/source_list.html'
     context_object_name = 'sources'
+
+    def get_queryset(self) -> QuerySet[Source]:
+        return super().get_queryset().annotate(last_synced_at=Max('sourcesynclog__completed_at'))
 
 
 class SourceCreateView(LoginRequiredMixin, CreateView):
