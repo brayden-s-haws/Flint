@@ -55,13 +55,20 @@ class PostgreSQLConnector(BaseConnector):
                         for table in tables:
                             cursor.execute(f"SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_schema = %s AND table_name = %s", (schema_name, table['table_name']))
                             columns = cursor.fetchall()
-                            # TODO(review): [Bug 1] This copies rows as-is. Each `col` still has
-                            #               psycopg2 key names ('column_name', 'is_nullable': 'YES'/'NO')
-                            #               instead of the catalog schema keys ('name', 'nullable': bool).
-                            #               Replace this line with a list comprehension that transforms
-                            #               each row into the required dict shape:
+                            # TODO(review): [Bug 1] Two steps needed here:
                             #
-                            #                   [
+                            #               Step A — Move the PK query ABOVE the column fetch so pk_set
+                            #               is available when you build the column dicts:
+                            #
+                            #                   cursor.execute("SELECT kcu.column_name ...")  # PK query
+                            #                   pk_set = {row['column_name'] for row in cursor.fetchall()}
+                            #                   cursor.execute("SELECT column_name, data_type, is_nullable ...")
+                            #                   raw_columns = cursor.fetchall()
+                            #
+                            #               Step B — Replace the no-op comprehension with one that transforms
+                            #               raw rows into the required catalog shape (rename keys, convert types):
+                            #
+                            #                   columns = [
                             #                       {
                             #                           'name': col['column_name'],
                             #                           'data_type': col['data_type'],
@@ -70,45 +77,31 @@ class PostgreSQLConnector(BaseConnector):
                             #                       }
                             #                       for col in raw_columns
                             #                   ]
-                            #
-                            #               Note: `pk_set` must be built first (fix Bug 2 below),
-                            #               then used here in the same comprehension.
                             columns = [col for col in columns]
                             table['columns'] = columns
-                            # TODO(review): [Bug 2] `constraint_type` is NOT a column on
-                            #               `information_schema.key_column_usage` — it lives on
-                            #               `information_schema.table_constraints`. This query will
-                            #               raise a database error at runtime.
-                            #
-                            #               Replace with a JOIN between the two tables:
-                            #
-                            #                   SELECT kcu.column_name
-                            #                   FROM information_schema.table_constraints tc
-                            #                   JOIN information_schema.key_column_usage kcu
-                            #                     ON tc.constraint_name = kcu.constraint_name
-                            #                    AND tc.table_schema    = kcu.table_schema
-                            #                   WHERE tc.constraint_type = 'PRIMARY KEY'
-                            #                     AND tc.table_schema = %s
-                            #                     AND tc.table_name   = %s
-                            #
-                            #               Bind (schema_name, table['table_name']) as parameters.
-                            #               Then collect into a set:
-                            #                   pk_set = {row['column_name'] for row in cursor.fetchall()}
-                            #               Use pk_set in the column comprehension above (Bug 1).
-                            cursor.execute(f"SELECT column_name FROM information_schema.key_column_usage WHERE constraint_type = 'PRIMARY KEY' AND table_schema = %s AND table_name = %s", (schema_name, table['table_name']))
-                            primary_keys = cursor.fetchall()
-                            primary_keys = [pk['column_name'] for pk in primary_keys]
-                            # TODO(review): [Bug 3] `primary_key` belongs on each COLUMN dict as a bool,
-                            #               not on the table dict as a scalar. Remove this line entirely.
-                            #               Once Bug 1 and Bug 2 are fixed, each column dict will already
-                            #               have 'primary_key': col['column_name'] in pk_set — a bool.
-                            #               The table dict itself should only have 'name', 'table_type',
-                            #               and 'columns'.
-                            table['primary_key'] = primary_keys[0] if primary_keys else None
-            # TODO(review): [Bug 4 continued] Delete this entire second loop. It re-iterates
-            #               schema_names but `tables` at this point only contains the tables
-            #               from the last schema in the first loop. Every schema would get the
-            #               same wrong tables. Move catalog assembly inside the first loop above.
+                            cursor.execute(f"SELECT column_name FROM information_schema.table_constraints tc JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name AND tc.table_schema = kcu.table_schema WHERE constraint_type = 'PRIMARY KEY' AND tc.table_schema = %s AND tc.table_name = %s",
+                                           (schema_name, table['table_name']))
+                            pk_set = {row['column_name'] for row in cursor.fetchall()}
+            # TODO(review): [Bug 4] Delete this entire second loop and move catalog assembly
+            #               inside the first loop above. `tables` here only contains tables from
+            #               the last schema — every schema in this loop gets the same wrong data.
+            #               Also: `'primary_key': table['primary_key']` on line 101 will raise
+            #               KeyError — that key was removed. Delete that entry from table_dict.
+            #               Target structure (goes inside the first `for schema_name` loop):
+            #
+            #                   catalog = []          # before the loop
+            #                   for schema_name in schema_names:
+            #                       ... fetch tables ...
+            #                       table_dicts = []
+            #                       for table in tables:
+            #                           ... build pk_set, then columns list ...
+            #                           table_dicts.append({
+            #                               'name': table['table_name'],
+            #                               'table_type': table['table_type'],
+            #                               'columns': columns,   # the transformed list from Bug 1
+            #                           })
+            #                       catalog.append({'name': schema_name, 'tables': table_dicts})
+            #                   return catalog        # after the loop, still inside the with blocks
             catalog = []
             for schema_name in schema_names:
                 schema_dict = {'name': schema_name, 'tables': []}
