@@ -12,9 +12,10 @@
 
 ## Connectors
 
-- [ ] `BaseConnector` — abstract connector interface (test_connection, discover_catalog, get_table_metadata)
-- [ ] `PostgreSQLConnector` — native connector for PostgreSQL metadata extraction
-- [ ] `ConnectorRegistry` — lookup connectors by source type
+- [x] `BaseConnector` — abstract connector interface (test_connection, discover_catalog)
+- [x] `PostgreSQLConnector` — native connector for PostgreSQL metadata extraction
+- [x] `ConnectorRegistry` — lookup connectors by source type
+- [ ] `get_table_metadata` — add to `BaseConnector` and `PostgreSQLConnector`; needed by the sync action to fetch per-table detail (step 5)
 
 ## Encryption
 
@@ -49,6 +50,6 @@
 
 1. ~~**Encryption utility** — `apps/sources/encryption.py`. Small and self-contained; required before credentials can be safely stored or used by connectors.~~
 2. ~~**List + Create views, form template, URLs** — build the CRUD layer so `/sources/` and `/sources/add/` work. No connectors needed yet; just save and load source records.~~
-3. **BaseConnector + PostgreSQLConnector + ConnectorRegistry** — `apps/sources/connectors/`. Build after the UI exists so you can test against real source records.
+3. ~~**BaseConnector + PostgreSQLConnector + ConnectorRegistry** — `apps/sources/connectors/`. Build after the UI exists so you can test against real source records.~~
 4. **Detail view + template** — shows source info and sync history; build after connectors so sync data is meaningful.
-5. **Wire test connection and sync actions** — tie the test and sync URL actions to the connector layer.
+5. **Wire test connection and sync actions** — tie the test and sync URL actions to the connector layer. Also implement `get_table_metadata` on `BaseConnector` and `PostgreSQLConnector` for use by the sync action.
