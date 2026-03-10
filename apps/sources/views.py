@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from typing import Any
+
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Max, QuerySet
-from django.views.generic import ListView, CreateView
+from django.views.generic import ListView, CreateView, DetailView
 from django.urls import reverse_lazy
 from django.http import HttpResponse
 from django.forms import BaseModelForm
@@ -42,3 +44,13 @@ class SourceCreateView(LoginRequiredMixin, CreateView):
         source_instance.save()
         self.object = source_instance
         return super().form_valid(form)
+
+class SourceDetailView(LoginRequiredMixin, TenantQuerysetMixin, DetailView):
+    model = Source
+    template_name = 'sources/source_detail.html'
+    context_object_name = 'source'
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        context['sync_logs'] = self.object.sourcesynclog_set.order_by('-started_at')
+        return context

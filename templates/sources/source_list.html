@@ -12,7 +12,7 @@
         {% if sources %}
             {% for source in sources %}
                 <div class="bg-white rounded-lg border border-gray-200 p-6 mb-4">
-                    <h2 class="text-xl font-semibold text-gray-900"><a href="">{{ source.name }}</a></h2>
+                    <h2 class="text-xl font-semibold text-gray-900"><a href="{% url 'sources:detail' source.pk %}">{{ source.name }}</a></h2>
                     <p class="text-sm text-gray-500">{{ source.source_type }}</p>
                     {% if source.last_synced_at %}
                     <p class="text-sm text-gray-500">Last synced: {{ source.last_synced_at|date:"N j, Y" }}</p>

@@ -330,5 +330,6 @@ Once all app models are in place, go back through each app's `devdocs/appdocs/<a
 
 Once the MVP is complete and verified (see Verification Plan in `devdocs/architecture.md`), review these two documents before starting any new work:
 
+- ** Have claude review all appdocs files and make sure all MVP items are covered.
 - **`devdocs/ui/cleanup.md`** — UI polish items that were intentionally deferred during the MVP build. Work through these before adding new features so the product feels solid.
 - **`devdocs/appdocs/post_mvp.md`** — Concrete features scoped out of the MVP, organised by app. Use this as your backlog for Phase 2.

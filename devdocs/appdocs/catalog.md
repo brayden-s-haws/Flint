@@ -29,3 +29,8 @@
 
 - TableStatistics model is deferred — no stats collection in MVP
 - Metadata is populated by the sync action in the sources app, not manually entered
+
+## Cross-App Integration (revisit when catalog app is built)
+
+- `SourceDetailView` in `apps/sources/views.py` needs schema context added to `get_context_data` once catalog models are queryable. Pattern: `context['schemas'] = self.object.schema_set.prefetch_related('table_set')`
+- `source_detail.html` needs its schema/tables section fleshed out (currently shows an empty state placeholder)
