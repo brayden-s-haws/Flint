@@ -53,3 +53,5 @@
 3. ~~**BaseConnector + PostgreSQLConnector + ConnectorRegistry** — `apps/sources/connectors/`. Build after the UI exists so you can test against real source records.~~
 4. **Detail view + template** — shows source info and sync history; build after connectors so sync data is meaningful.
 5. **Wire test connection and sync actions** — tie the test and sync URL actions to the connector layer. Also implement `get_table_metadata` on `BaseConnector` and `PostgreSQLConnector` for use by the sync action.
+
+Note to self:Make sure you merge this branch once done and start a new one for connectors.

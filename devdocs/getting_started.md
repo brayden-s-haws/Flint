@@ -320,6 +320,7 @@ Once all app models are in place, go back through each app's `devdocs/appdocs/<a
 3. ~~**Accounts** — tenant middleware + signal to auto-create an Account when a user registers.~~ COMPLETE
 4. ~~**Core** — `TenantQuerysetMixin` + dashboard view. Depends on accounts middleware being in place.~~ COMPLETE
 5. **Sources** — CRUD views, PostgreSQL connector, Fernet encryption. This is the main feature.
+- ** Before we do catalog, have Claude rename project to Flint, with the tagline "Light up your data."
 6. **Catalog** — table list and detail views. Data is populated by source sync.
 7. **Insights** — LLM provider abstraction, generate/view insights. The capstone feature.
 8. **Fix redirect URLs** — once the dashboard/home view exists, update `LOGIN_REDIRECT_URL`, `LOGOUT_REDIRECT_URL` in `settings.py` and `success_url` on `RegisterUser` in `apps/users/views.py`. See `devdocs/appdocs/users.md` Deferred section.
@@ -329,6 +330,7 @@ Once all app models are in place, go back through each app's `devdocs/appdocs/<a
 ## After MVP: What to Work on Next
 
 Once the MVP is complete and verified (see Verification Plan in `devdocs/architecture.md`), review these two documents before starting any new work:
+
 
 - ** Have claude review all appdocs files and make sure all MVP items are covered.
 - **`devdocs/ui/cleanup.md`** — UI polish items that were intentionally deferred during the MVP build. Work through these before adding new features so the product feels solid.
