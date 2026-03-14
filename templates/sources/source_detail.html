@@ -3,55 +3,84 @@
 {% block title %}{{ source.name }} | Luminetiq{% endblock %}
 
 {% block content %}
-<!-- TODO(stub): Outer page wrapper — use the same max-w-7xl mx-auto px-4 py-8 pattern
-                as source_list.html to keep consistent page margins. -->
-
-    <!-- TODO(stub): Page header row — a flex container (flex justify-between items-center mb-8)
-                    with two children:
-                    Left: source name as an h1 (text-2xl font-bold text-gray-900).
-                      Use {{ source.name }}.
-                    Right: action buttons — "Sync Now" and "Test Connection".
-                    Use href="" placeholders for now; these wire to
-                    {% url 'sources:sync' source.pk %} and {% url 'sources:test' source.pk %}
-                    in step 5. Style "Sync Now" as the filled blue button (bg-blue-600)
-                    and "Test Connection" as a secondary outlined style. -->
-
-    <!-- TODO(stub): Source info card — a white rounded-lg border border-gray-200 p-6 mb-6 card
-                    showing the source's metadata. Display these fields:
-                    - Source type: {{ source.source_type }}
-                    - First synced: {{ source.first_synced_at|date:"N j, Y" }} — wrap in
-                      {% if source.first_synced_at %}...{% else %}Never synced{% endif %}
-                    Use a simple two-column grid (grid grid-cols-2 gap-4) or dl/dt/dd list.
-                    Labels: text-sm text-gray-500. Values: text-sm font-medium text-gray-900. -->
+<main class="max-w-7xl mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-8">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">{{ source.name }}</h1>
+        </div>
+        <div>
+            <a href="" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Sync Now</a>
+            <a href="" class="border border-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-100">Test Connection</a>
+        </div>
+    </div>
+    <div class="flex justify-between items-center mb-8">
+        <div class="bg-white rounded-lg border border-gray-200 p-6 mb-6 card">
+            <p class="text-sm text-gray-500">Source type: {{ source.source_type }}</p>
+            {% if last_synced_at %}
+            <p class="text-sm text-gray-500">Last synced: {{ last_synced_at|date:"N j, Y" }}</p>
+            {% elif source.first_synced_at %}
+            <p class="text-sm text-gray-500">First synced: {{ source.first_synced_at|date:"N j, Y" }}</p>
+            {% else %}
+            <p class="text-sm text-gray-500">Last synced: Never synced</p>
+            {% endif %}
+        </div>
+        <div class="bg-white rounded-lg border border-gray-200 p-6 mb-6 card">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Connection Details</h2>
+            <p class="text-sm text-gray-500">Host: {{ source.host }}</p>
+            <p class="text-sm text-gray-500">Port: {{ source.port }}</p>
+            <p class="text-sm text-gray-500">Username: {{ source.username }}</p>
+            <p class="text-sm text-gray-500">Database: {{ source.database }}</p>
+        </div>
+    </div>
+    <div>
+        <div class="bg-white rounded-lg border border-gray-200 p-6 mb-6 card">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Sync History</h2>
+            {if sync_logs %}
+            <span class="px-2 py-1 rounded-full text-xs font-medium
+            {% if log.status == 'success' %}bg-green-100 text-green-800
+            {% elif log.status == 'failed' %}bg-red-100 text-red-800
+            {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+            {{ log.status }}
+            </span>
+        </div>
+    </div>
+    <div>
+        <div class="bg-white rounded-lg border border-gray-200 p-6 mb-6 card">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Schemas & Tables</h2>
+            <p class="text-sm text-gray-500">Sync this source to discover its schemas and tables.</p>
+        </div>
+    </div>
 
     <!-- TODO(stub): Sync history section.
                     Start with an h2 "Sync History" (text-lg font-semibold text-gray-900 mb-4).
-                    Context variable: `sync_logs` — a queryset of SourceSyncLog records,
-                    ordered most recent first. Each log has: started_at, completed_at,
+                    Context variable: `sync_logs` — queryset of SourceSyncLog records ordered
+                    most recent first. Each log has: started_at, completed_at,
                     status ('success'/'failed'/'running'), records_synced, error_message.
 
-                    Wrap content in {% if sync_logs %}...{% else %}...{% endif %}.
+                    Wrap in {% if sync_logs %}...{% else %}...{% endif %}.
 
-                    Empty state ({% else %}): a muted card with "No syncs yet" text.
+                    Empty state: a muted card with "No syncs yet" text.
 
-                    Populated state ({% if %}): a table or list — for each log show:
+                    Populated state: a table with these columns per log row:
                     - started_at — |date:"N j, Y, g:i a"
-                    - status — colour-coded badge using a <span> with conditional classes:
-                        green (bg-green-100 text-green-800) for 'success'
-                        red (bg-red-100 text-red-800) for 'failed'
-                        yellow (bg-yellow-100 text-yellow-800) for 'running'
-                      Use {% if log.status == 'success' %}...{% elif %}...{% endif %}
-                    - completed_at — formatted, or "—" if null
+                    - status — colour-coded badge <span> with conditional Tailwind classes.
+                      Write the condition directly inside the class attribute:
+                        class="{% if log.status == 'success' %}bg-green-100 text-green-800
+                               {% elif log.status == 'failed' %}bg-red-100 text-red-800
+                               {% else %}bg-yellow-100 text-yellow-800{% endif %} ..."
+                    - completed_at — formatted with |date, or "—" if null
+                      ({% if log.completed_at %}...{% else %}—{% endif %})
                     - records_synced
-                    - error_message — only render this row/cell when log.status == 'failed' -->
+                    - error_message row/cell — only render when log.status == 'failed' -->
 
-    <!-- TODO(stub): Schemas & tables section — placeholder until the catalog app is built.
-                    Start with an h2 "Schemas & Tables".
-                    For now render a static empty state card:
+    <!-- CATALOG PLACEHOLDER: replace with schema/table loop once catalog app is built.
+         See devdocs/appdocs/catalog.md cross-app integration note. -->
+    <!-- TODO(stub): Schemas & tables section — static placeholder for now.
+                    Add an h2 "Schemas & Tables" heading.
+                    Render a muted empty state card:
                     "Sync this source to discover its schemas and tables."
-                    Style it muted (text-gray-500, border-dashed or similar).
-                    Leave a clear HTML comment marking where the catalog loop goes:
-                    <!-- CATALOG PLACEHOLDER: replace with schema/table loop once catalog app is built -->
-                    See devdocs/appdocs/catalog.md cross-app integration note for the pattern. -->
+                    Use text-gray-500 and a dashed border (border border-dashed border-gray-300)
+                    to visually distinguish it as a placeholder. -->
 
+</main>
 {% endblock content %}
