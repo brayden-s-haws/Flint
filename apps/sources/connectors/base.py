@@ -15,3 +15,7 @@ class BaseConnector(ABC):
     @abstractmethod
     def discover_catalog(self) -> list[dict[str, Any]]:
         ...
+
+    @abstractmethod
+    def get_table_metadata(self, schema_name: str, table_name: str) -> dict[str, Any]:
+        ...

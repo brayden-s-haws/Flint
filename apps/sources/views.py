@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Max, QuerySet
 from django.views.generic import ListView, CreateView, DetailView
@@ -55,3 +56,9 @@ class SourceDetailView(LoginRequiredMixin, TenantQuerysetMixin, DetailView):
         context['sync_logs'] = self.object.sourcesynclog_set.order_by('-started_at')
         context['last_synced_at'] = self.object.sourcesynclog_set.filter(status='success').order_by('-completed_at').values_list('completed_at', flat=True).first()
         return context
+
+@login_required
+def test_connection(request: Any, pk: int) -> HttpResponse:
+    if request.method != 'POST':
+        return HttpResponse('Method not allowed', status=405)
+    source_id

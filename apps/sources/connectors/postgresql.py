@@ -61,3 +61,16 @@ class PostgreSQLConnector(BaseConnector):
         except Exception as e:
             logger.error(f"Error connecting to PostgreSQL: {e}")
             return []
+
+    def get_table_metadata(self, schema_name: str, table_name: str) -> dict[str, Any]:
+        try:
+            with psycopg2.connect(**self.credentials) as conn:
+                with conn.cursor(cursor_factory=RealDictCursor) as cursor:
+                    cursor.execute("SELECT reltuples::bigint AS row_count FROM pg_class JOIN pg_namespace ON pg_class.relnamespace = pg_namespace.oid WHERE nspname = %s AND relname = %s", (schema_name, table_name))
+                    row = cursor.fetchone()
+                    if row is None:
+                        return {'row_count': None}
+                    return {'row_count': row['row_count']}
+        except Exception as e:
+            logger.error(f"Count not query row counts: {e}")
+            return { 'row_count': None}

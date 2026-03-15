@@ -15,7 +15,7 @@
 - [x] `BaseConnector` — abstract connector interface (test_connection, discover_catalog)
 - [x] `PostgreSQLConnector` — native connector for PostgreSQL metadata extraction
 - [x] `ConnectorRegistry` — lookup connectors by source type
-- [ ] `get_table_metadata` — add to `BaseConnector` and `PostgreSQLConnector`; needed by the sync action to fetch per-table detail (step 5)
+- [x] `get_table_metadata` — add to `BaseConnector` and `PostgreSQLConnector`; needed by the sync action to fetch per-table detail (step 5)
 
 ## Encryption
 
