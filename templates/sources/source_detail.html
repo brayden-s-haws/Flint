@@ -10,7 +10,10 @@
         </div>
         <div>
             <a href="" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Sync Now</a>
-            <a href="" class="border border-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-100">Test Connection</a>
+            <form method="post" action="{% url 'sources:test_connection' source.pk %}">
+                {% csrf_token %}
+                <button type="submit" class=" border border-gray-300 text-gray-700 hover:bg-gray-100 mr-2">Test Connection</button>
+            </form>
         </div>
     </div>
     <div>

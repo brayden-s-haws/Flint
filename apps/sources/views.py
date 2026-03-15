@@ -4,16 +4,19 @@ from typing import Any
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib import messages
 from django.db.models import Max, QuerySet
+from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import ListView, CreateView, DetailView
 from django.urls import reverse_lazy
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpRequest
 from django.forms import BaseModelForm
 from apps.core.mixins import TenantQuerysetMixin
+from .connectors.registry import get_connector
 
 from .models import Source
 from .forms import SourceForm
-from .encryption import encrypt_credentials
+from .encryption import encrypt_credentials, decrypt_credentials
 
 
 class SourceListView(LoginRequiredMixin, TenantQuerysetMixin, ListView):
@@ -58,7 +61,16 @@ class SourceDetailView(LoginRequiredMixin, TenantQuerysetMixin, DetailView):
         return context
 
 @login_required
-def test_connection(request: Any, pk: int) -> HttpResponse:
+def test_connection(request: HttpRequest, pk: int) -> HttpResponse:
     if request.method != 'POST':
         return HttpResponse('Method not allowed', status=405)
-    source_id
+    source = get_object_or_404(Source, pk=pk, account=request.account) # type: ignore[attr-defined]
+    credentials = decrypt_credentials(source.credentials)
+    connector_class = get_connector(source.source_type.name)
+    connector = connector_class(credentials)
+    success = connector.test_connection()
+    if success:
+        messages.success(request, 'Connection test successful')
+    else:
+        messages.error(request, 'Connection test failed. Check your credentials.')
+    return redirect('sources:detail', pk=pk)

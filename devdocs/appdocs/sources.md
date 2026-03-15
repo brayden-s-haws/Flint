@@ -27,7 +27,7 @@
 - [x] Source create view — form to add a new PostgreSQL source (host, port, dbname, user, password)
 - [x] Source detail view — show source info, sync history, and connected schemas/tables
 - [x] Wire source name link in `source_list.html` → `{% url 'sources:detail' source.pk %}` (placeholder `href=""` until detail URL exists)
-- [ ] Test connection action — verify credentials work before saving
+- [x] Test connection action — verify credentials work before saving
 - [ ] Trigger sync action — manually kick off metadata sync
 
 ## Templates
@@ -41,7 +41,7 @@
 - [x] `/sources/` — list  ← `name='list'` required; `{% url 'sources:list' %}` is already referenced in `templates/core/dashboard.html` (empty-state CTA button) and will 404 until this URL exists
 - [x] `/sources/add/` — create
 - [x] `/sources/<id>/` — detail
-- [ ] `/sources/<id>/test/` — test connection
+- [x] `/sources/<id>/test/` — test connection
 - [ ] `/sources/<id>/sync/` — trigger sync
 
 ---

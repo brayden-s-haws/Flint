@@ -7,4 +7,5 @@ urlpatterns = [
     path('', views.SourceListView.as_view(), name='list'),
     path('add/', views.SourceCreateView.as_view(), name='add'),
     path('<int:pk>/', views.SourceDetailView.as_view(), name='detail'),
+    path('<int:pk>/test/', views.test_connection, name='test_connection'),
 ]
