@@ -434,9 +434,9 @@ The virtuous cycle: richer catalog metadata → better SQL generation. Specifica
 
 ### Overview
 
-[Amundsen](https://www.amundsen.io) is an open source data discovery and metadata engine (Linux Foundation AI & Data). It is widely deployed at data-mature organizations. Luminetiq's opportunity is to be the **AI intelligence layer on top of Amundsen** — enriching it with LLM-generated descriptions that Amundsen itself has no mechanism to produce.
+[Amundsen](https://www.amundsen.io) is an open source data discovery and metadata engine (Linux Foundation AI & Data). It is widely deployed at data-mature organizations. Flint's opportunity is to be the **AI intelligence layer on top of Amundsen** — enriching it with LLM-generated descriptions that Amundsen itself has no mechanism to produce.
 
-Amundsen has no LLM layer, no auto-generated descriptions, and no data profiling. That gap is exactly Luminetiq's value proposition.
+Amundsen has no LLM layer, no auto-generated descriptions, and no data profiling. That gap is exactly Flint's value proposition.
 
 ### Integration Patterns
 
@@ -453,11 +453,11 @@ POST /table/{table_uri}/badges           # push LLM-generated tags
 
 Amundsen's table URI format: `{database}://{cluster}.{schema}/{table_name}` — e.g., `postgresql://prod.public/orders`.
 
-This positions Luminetiq as a value-add service for organizations already invested in Amundsen. The pitch: "Luminetiq generates the descriptions; your Amundsen instance surfaces them."
+This positions Flint as a value-add service for organizations already invested in Amundsen. The pitch: "Flint generates the descriptions; your Amundsen instance surfaces them."
 
 **Pattern B — Use Databuilder extractors for Phase 3+ connectors**
 
-`amundsen-databuilder` is a pip-installable Python library that contains battle-tested metadata extractors for BigQuery, Snowflake, Redshift, Hive, dbt, Tableau, and more. Rather than writing native connectors from scratch for every Phase 3+ data warehouse, evaluate whether Databuilder's extractor classes can be used inside Luminetiq's sync pipeline to populate `catalog.Table` and `catalog.Column` records.
+`amundsen-databuilder` is a pip-installable Python library that contains battle-tested metadata extractors for BigQuery, Snowflake, Redshift, Hive, dbt, Tableau, and more. Rather than writing native connectors from scratch for every Phase 3+ data warehouse, evaluate whether Databuilder's extractor classes can be used inside Flint's sync pipeline to populate `catalog.Table` and `catalog.Column` records.
 
 The extractor model: each extractor implements a `next_record()` method returning `TableMetadata` objects. These can be adapted to populate our own Django models without loading anything into Amundsen's Neo4j backend.
 
@@ -472,7 +472,7 @@ while record := extractor.extract():
     ...
 ```
 
-**What not to do:** Do not deploy Amundsen's services (Neo4j + Elasticsearch + three Flask microservices) as part of Luminetiq. The infrastructure overhead is significant and unnecessary when you can call the REST API against a user-hosted instance or use just the Databuilder library.
+**What not to do:** Do not deploy Amundsen's services (Neo4j + Elasticsearch + three Flask microservices) as part of Flint. The infrastructure overhead is significant and unnecessary when you can call the REST API against a user-hosted instance or use just the Databuilder library.
 
 ### Where This Fits
 
@@ -646,6 +646,6 @@ The ontology is a **projection, not a store**. It describes how to interpret dat
 
 # Use frontend-design plugin to iterate on UI
 
-# Change App Name to 'Shane'
-* Update all references to 'Luminetiq'
+# ~~Change App Name to 'Flint'~~ COMPLETE
+* ~~Update all references to 'Luminetiq'~~ DONE
 * Create logo and add to UI

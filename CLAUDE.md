@@ -21,7 +21,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Luminetiq is a data intelligence platform that inspects databases and APIs to generate metadata insights without storing actual data. It's in the data catalog/observability space but focused on **intelligence generation** rather than just cataloging.
+Flint is a data intelligence platform that inspects databases and APIs to generate metadata insights without storing actual data. It's in the data catalog/observability space but focused on **intelligence generation** rather than just cataloging.
 
 - **Framework**: Django 6.0.2, Python 3.13.5
 - **Frontend**: Django templates + HTMX (server-rendered)
@@ -64,7 +64,7 @@ python manage.py shell
 ## Architecture
 
 ### Current State
-- **Luminetiq/**: Main Django project configuration (settings, urls, wsgi/asgi)
+- **Flint/**: Main Django project configuration (settings, urls, wsgi/asgi)
 - **templates/**: Project-wide templates directory
 - **devdocs/**: Developer documentation (architecture, models, views, getting started)
 - **manage.py**: Django management CLI entry point

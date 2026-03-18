@@ -96,7 +96,7 @@ Organize by phase if the source docs describe a phased build. If not phased, use
 
 #### Settings & Wiring
 - [ ] Register `apps/<app>` in `INSTALLED_APPS`
-- [ ] Include `apps/<app>/urls.py` in `Luminetiq/urls.py` with `app_name = '<app>'`
+- [ ] Include `apps/<app>/urls.py` in `Flint/urls.py` with `app_name = '<app>'`
 - [ ] Any middleware, signals, or app config wiring needed
 
 #### Tests *(note any critical test cases worth calling out)*

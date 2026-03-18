@@ -1,4 +1,4 @@
-# Luminetiq Views Reference
+# Flint Views Reference
 
 This document details every view needed for the MVP, organized by app. Use this as your blueprint when building views and templates.
 
@@ -715,7 +715,7 @@ Delete an insight.
 ### Main urls.py
 
 ```python
-# Luminetiq/urls.py
+# Flint/urls.py
 from django.contrib import admin
 from django.urls import path, include
 

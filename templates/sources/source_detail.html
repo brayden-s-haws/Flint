@@ -1,71 +1,70 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ source.name }} | Luminetiq{% endblock %}
+{% block title %}{{ source.name }} | Flint{% endblock %}
 
 {% block content %}
 <main class="max-w-7xl mx-auto px-4 py-8">
     <div class="flex justify-between items-center mb-8">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900">{{ source.name }}</h1>
+            <h1 class="text-2xl font-bold text-flint-text">{{ source.name }}</h1>
         </div>
-        <div>
+        <div class="flex gap-2">
             <form method="post" action="{% url 'sources:sync' source.pk %}">
                 {% csrf_token %}
-                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 mr-2">Sync Now</button>
+                <button type="submit" class="bg-flint-orange text-white px-4 py-2 rounded-md hover:bg-flint-orange-hover">Sync Now</button>
             </form>
             <form method="post" action="{% url 'sources:test_connection' source.pk %}">
                 {% csrf_token %}
-                <button type="submit" class=" border border-gray-300 text-gray-700 hover:bg-gray-100 mr-2">Test Connection</button>
+                <button type="submit" class="border border-flint-border text-flint-muted hover:bg-flint-card px-4 py-2 rounded-md">Test Connection</button>
             </form>
         </div>
     </div>
     <div>
-        <div class="bg-white rounded-lg border border-gray-200 p-6 mb-6 card">
-            <p class="text-sm text-gray-500">Source type: {{ source.source_type }}</p>
+        <div class="bg-flint-card rounded-lg border border-flint-border p-6 mb-6 card">
+            <p class="text-sm text-flint-muted">Source type: {{ source.source_type }}</p>
             {% if last_synced_at %}
-            <p class="text-sm text-gray-500">Last synced: {{ last_synced_at|date:"N j, Y" }}</p>
+            <p class="text-sm text-flint-muted">Last synced: {{ last_synced_at|date:"N j, Y" }}</p>
             {% elif source.first_synced_at %}
-            <p class="text-sm text-gray-500">First synced: {{ source.first_synced_at|date:"N j, Y" }}</p>
+            <p class="text-sm text-flint-muted">First synced: {{ source.first_synced_at|date:"N j, Y" }}</p>
             {% else %}
-            <p class="text-sm text-gray-500">Last synced: Never synced</p>
+            <p class="text-sm text-flint-muted">Last synced: Never synced</p>
             {% endif %}
         </div>
     </div>
     <div>
-        <div class="bg-white rounded-lg border border-gray-200 p-6 mb-6 card">
-            <h2 class="text-lg font-semibold text-gray-900 mb-4">Sync History</h2>
+        <div class="bg-flint-card rounded-lg border border-flint-border p-6 mb-6 card">
+            <h2 class="text-lg font-semibold text-flint-text mb-4">Sync History</h2>
             {% if sync_logs %}
-                <table>
+                <table class="w-full">
                     <thead>
                         <tr>
-                            <th>Started At</th>
-                            <th>Status</th>
-                            <th>Completed At</th>
-                            <th>Records Synced</th>
-                            <th>Error Message</th>
+                            <th class="text-flint-muted text-left text-sm font-medium pb-3">Started At</th>
+                            <th class="text-flint-muted text-left text-sm font-medium pb-3">Status</th>
+                            <th class="text-flint-muted text-left text-sm font-medium pb-3">Completed At</th>
+                            <th class="text-flint-muted text-left text-sm font-medium pb-3">Records Synced</th>
+                            <th class="text-flint-muted text-left text-sm font-medium pb-3">Error Message</th>
                         </tr>
                     </thead>
                 <tbody>
                     {% for log in sync_logs %}
-                        <tr>
-                            <td>{{ log.started_at|date:"N j, Y, g:i a" }}</td>
-                            <td><span class="badge {% if log.status == 'success' %}bg-green-100 text-green-800{% elif log.status == 'failed' %}bg-red-100 text-red-800{% else %}bg-yellow-100
-                            text-yellow-800{% endif %}">{{ log.status }}</span></td>
-                            <td>{% if log.completed_at %} {{ log.completed_at|date:"N j, Y, g:i a"}} {% else %}-{% endif %}</td>
-                            <td>{{ log.records_synced }}</td>
-                            <td>{% if log.status == 'failed' %}{{ log.error_message }}{% endif %}</td>
+                        <tr class="border-t border-flint-border text-sm text-flint-text">
+                            <td class="py-3 pr-4">{{ log.started_at|date:"N j, Y, g:i a" }}</td>
+                            <td class="py-3 pr-4"><span class="px-2 py-0.5 rounded text-xs font-medium {% if log.status == 'success' %}bg-green-900/20 text-flint-success{% elif log.status == 'failed' %}bg-red-900/20 text-red-400{% else %}bg-yellow-900/20 text-yellow-300{% endif %}">{{ log.status }}</span></td>
+                            <td class="py-3 pr-4">{% if log.completed_at %} {{ log.completed_at|date:"N j, Y, g:i a"}} {% else %}-{% endif %}</td>
+                            <td class="py-3 pr-4">{{ log.records_synced }}</td>
+                            <td class="py-3">{% if log.status == 'failed' %}{{ log.error_message }}{% endif %}</td>
                         </tr>
                     {%  endfor %}
                 </tbody></table>
         {% else %}
-                <p class="text-sm text-gray-500">No syncs yet.</p>
+                <p class="text-sm text-flint-muted">No syncs yet.</p>
             {% endif %}
         </div>
     </div>
     <div>
-        <div class="bg-white rounded-lg border border-gray-200 p-6 mb-6 card">
-            <h2 class="text-lg font-semibold text-gray-900 mb-4">Schemas & Tables</h2>
-            <p class="text-sm text-gray-500">Sync this source to discover its schemas and tables.</p>
+        <div class="bg-flint-card rounded-lg border border-flint-border p-6 mb-6 card">
+            <h2 class="text-lg font-semibold text-flint-text mb-4">Schemas & Tables</h2>
+            <p class="text-sm text-flint-muted">Sync this source to discover its schemas and tables.</p>
         </div>
     </div>
 

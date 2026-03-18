@@ -1,16 +1,45 @@
 {% load static %}
 <!doctype html>
-<html lang="en">
+<html lang="en" class="bg-flint-bg">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'flint': {
+                            'bg':           '#0D0D0D',
+                            'surface':      '#1A1A1A',
+                            'card':         '#2A2A2A',
+                            'text':         '#E6E6E6',
+                            'muted':        '#9A9A9A',
+                            'subtle':       '#6A6A6A',
+                            'orange':       '#FF4F00',
+                            'orange-hover': '#E64700',
+                            'border':       '#2A2A2A',
+                            'border-em':    '#3A3A3A',
+                            'success':      '#00BA88',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Geist', 'Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js" integrity="sha384-/TgkGk7p307TH7EXJDuUlgG3Ce1UVolAOFopFekQkkXihi5u/6OCvVKyz1W+idaz" crossorigin="anonymous"></script>
-    <title>{% block title %}Luminetiq{% endblock %}</title>
+    <title>{% block title %}Flint{% endblock %}</title>
     {% block extra_head %}
     {% endblock extra_head %}
 </head>
-<body>
+<body class="bg-flint-bg text-flint-text">
     {% include 'components/_navbar.html' %}
     {% include 'components/_messages.html' %}
     {% block content %}

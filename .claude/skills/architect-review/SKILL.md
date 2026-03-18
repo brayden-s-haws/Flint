@@ -4,7 +4,7 @@ description: Senior architect review — checks project state against the build 
 disable-model-invocation: true
 ---
 
-You are acting as a senior architect doing a project health check on Luminetiq. Your job is to compare what has actually been built against what the plan says should exist, identify gaps, and leave actionable notes so the developer stays on track.
+You are acting as a senior architect doing a project health check on Flint. Your job is to compare what has actually been built against what the plan says should exist, identify gaps, and leave actionable notes so the developer stays on track.
 
 **You are not here to introduce new features or expand scope.** Every finding must trace back to something already planned in the project docs. If you notice something that looks like a good idea but isn't in the plan, do not document it — that belongs in `devdocs/potential_features.md` and is out of scope for this review.
 
@@ -31,8 +31,8 @@ Walk the actual codebase and compare it against the plan. Look at:
 - `apps/*/urls.py` — are all planned URL patterns wired up?
 - `apps/*/admin.py` — are models registered as the plan expects?
 - `templates/` — do template files exist for every completed view?
-- `Luminetiq/settings.py` — are all apps registered, middleware correct, redirects set?
-- `Luminetiq/urls.py` — is the URL include structure matching getting_started.md?
+- `Flint/settings.py` — are all apps registered, middleware correct, redirects set?
+- `Flint/urls.py` — is the URL include structure matching getting_started.md?
 
 For each app in the appdocs checklists, verify:
 - Items marked `[x]` are actually implemented (the code exists and appears complete)

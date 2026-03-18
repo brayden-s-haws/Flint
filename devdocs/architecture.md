@@ -1,8 +1,8 @@
-# Luminetiq Architecture
+# Flint Architecture
 
 ## Project Overview
 
-Luminetiq is a data intelligence platform that inspects databases and APIs to generate metadata insights without storing actual data. It's positioned in the data catalog/observability space alongside tools like Atlan, Alation, Monte Carlo, and Secoda, but with a focus on **intelligence generation** rather than just cataloging.
+Flint is a data intelligence platform that inspects databases and APIs to generate metadata insights without storing actual data. It's positioned in the data catalog/observability space alongside tools like Atlan, Alation, Monte Carlo, and Secoda, but with a focus on **intelligence generation** rather than just cataloging.
 
 **Key Decisions:**
 - **Frontend**: Django templates (server-rendered, simpler for solo dev)
@@ -14,8 +14,8 @@ Luminetiq is a data intelligence platform that inspects databases and APIs to ge
 ## Django Apps Structure
 
 ```
-Luminetiq/
-├── Luminetiq/              # Project config (existing)
+Flint/
+├── Flint/              # Project config (existing)
 ├── apps/
 │   ├── core/               # Shared utilities, base models, tenant middleware
 │   ├── accounts/           # Multi-tenancy, organizations
@@ -395,8 +395,8 @@ Use **Airbyte** when:
 ## File Structure (After MVP Implementation)
 
 ```
-Luminetiq/
-├── Luminetiq/
+Flint/
+├── Flint/
 │   ├── settings.py           # Keep simple for MVP (split later)
 │   ├── urls.py
 │   └── ...

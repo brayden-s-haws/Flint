@@ -2,15 +2,15 @@
     <div class="messages max-w-2xl mx-auto px-4 pt-4">
         {% for message in messages %}
                 {% if 'success' in message.tags %}
-                <div class="border-l-4 p-4 mb-3 rounded bg-green-100 border-green-400 text-green-800" role="alert">{{ message }}</div>
+                <div class="border-l-4 p-4 mb-3 rounded bg-green-900/20 border-flint-success text-flint-success" role="alert">{{ message }}</div>
                 {% elif 'error' in message.tags %}
-                <div class="border-l-4 p-4 mb-3 rounded bg-red-100 border-red-400 text-red-800" role="alert">{{ message }}</div>
+                <div class="border-l-4 p-4 mb-3 rounded bg-red-900/20 border-red-500 text-red-400" role="alert">{{ message }}</div>
                 {% elif 'warning' in message.tags %}
-                <div class="border-l-4 p-4 mb-3 rounded bg-yellow-100 border-yellow-400 text-yellow-800" role="alert">{{ message }}</div>
+                <div class="border-l-4 p-4 mb-3 rounded bg-yellow-900/20 border-yellow-400 text-yellow-300" role="alert">{{ message }}</div>
                 {% elif 'info' in message.tags %}
-                <div class="border-l-4 p-4 mb-3 rounded bg-blue-100 border-blue-400 text-blue-800" role="alert">{{ message }}</div>
+                <div class="border-l-4 p-4 mb-3 rounded bg-flint-card border-flint-border-em text-flint-muted" role="alert">{{ message }}</div>
                 {% else %}
-                <div class="border-l-4 p-4 mb-3 rounded bg-gray-100 border-gray-400 text-gray-800" role="alert">{{ message }}</div>
+                <div class="border-l-4 p-4 mb-3 rounded bg-flint-card border-flint-border text-flint-muted" role="alert">{{ message }}</div>
                 {% endif %}
         {% endfor %}
     </div>

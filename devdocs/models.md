@@ -1,4 +1,4 @@
-# Luminetiq Models Reference
+# Flint Models Reference
 
 This document details every model, its fields, and relationships. Use this as your blueprint when building each app.
 

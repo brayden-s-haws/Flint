@@ -1,22 +1,22 @@
-<nav class="shadow-lg bg-white w-full">
+<nav class="bg-flint-surface border-b border-flint-border w-full">
     <div class="flex justify-between items-center px-4 py-2.5 max-w-7xl mx-auto">
-        <div class="text-xl font-semibold">
+        <div>
             <a class="flex items-center px-4" href="#">
-                <span class="self-center text-xl font-semibold">Luminetiq</span>
+                <span class="text-xl font-bold text-flint-text tracking-tight">Flint</span>
             </a>
         </div>
-        <div>
+        <div class="flex items-center">
             {% if request.user.is_authenticated %}
-                <a class="text-sm font-medium text-gray-600 hover:text-gray-900 mr-6" href="">Sources</a>
-                <a class="text-sm font-medium text-gray-600 hover:text-gray-900 mr-6" href="">Catalog</a>
-                <a class="text-sm font-medium text-gray-600 hover:text-gray-900 mr-6" href="">Insights</a>
+                <a class="text-sm font-medium text-flint-muted hover:text-flint-text mr-6" href="{% url 'sources:list' %}">Sources</a>
+                <a class="text-sm font-medium text-flint-muted hover:text-flint-text mr-6" href="#">Catalog</a>
+                <a class="text-sm font-medium text-flint-muted hover:text-flint-text mr-6" href="#">Insights</a>
                 <form action="{% url 'users:logout' %}" method="post">
                     {% csrf_token %}
-                    <button class="bg-transparent border-none cursor-pointer text-sm font-medium text-gray-600 hover:text-gray-900" type="submit">Logout</button>
+                    <button class="bg-transparent border-none cursor-pointer text-sm font-medium text-flint-muted hover:text-flint-text" type="submit">Logout</button>
                 </form>
             {% else %}
-                <a class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700" href="{% url 'users:login' %}">Login</a>
-                <a class="text-sm font-medium text-gray-600 hover:text-gray-900 mr-6" href="{% url 'users:register' %}">Register</a>
+                <a class="text-sm font-medium text-flint-muted hover:text-flint-text mr-6" href="{% url 'users:register' %}">Register</a>
+                <a class="bg-flint-orange text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-flint-orange-hover" href="{% url 'users:login' %}">Login</a>
             {% endif %}
         </div>
     </div>

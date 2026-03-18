@@ -1,4 +1,4 @@
-# Luminetiq Potential Features
+# Flint Potential Features
 
 This document tracks potential future features and capabilities beyond the MVP. Features are organized by category for planning purposes.
 
@@ -85,7 +85,7 @@ This document tracks potential future features and capabilities beyond the MVP. 
 - **Fivetran/Airbyte sync status** - Monitor ETL health
 - **BI tool metadata** - Looker, Tableau, Metabase integration
 - **GitHub/GitLab** - Version tracking for schema changes
-- **Amundsen integration** - Open source data catalog (Linux Foundation) used by many data teams. Luminetiq can use the `amundsen-databuilder` Python library to supplement its own connector extraction, and optionally push LLM-generated descriptions back to Amundsen deployments via REST API. Positions Luminetiq as the AI intelligence layer on top of an existing catalog. See `devdocs/appdocs/post_mvp.md` for the detailed approach.
+- **Amundsen integration** - Open source data catalog (Linux Foundation) used by many data teams. Luminetiq can use the `amundsen-databuilder` Python library to supplement its own connector extraction, and optionally push LLM-generated descriptions back to Amundsen deployments via REST API. Positions Flint as the AI intelligence layer on top of an existing catalog. See `devdocs/appdocs/post_mvp.md` for the detailed approach.
 
 ---
 

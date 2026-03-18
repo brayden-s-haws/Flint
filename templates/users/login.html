@@ -1,15 +1,15 @@
 {% extends 'base.html' %}
 
-{% block title %}Log In – Luminetiq{% endblock title %}
+{% block title %}Log In – Flint{% endblock title %}
 
 {% block content %}
-<div class="flex items-center justify-center min-h-screen bg-gray-50">
-    <div class="w-full max-w-sm bg-white rounded-lg shadow-md p-8">
-        <h2 class="text-center text-2xl font-bold text-gray-900 mb-6">Welcome Back</h2>
+<div class="flex items-center justify-center min-h-screen bg-flint-bg">
+    <div class="w-full max-w-sm bg-flint-surface rounded-lg border border-flint-border p-8">
+        <h2 class="text-center text-2xl font-bold text-flint-text mb-6">Welcome Back</h2>
         <form method="post">
             {% csrf_token %}
             {% if form.non_field_errors %}
-            <div class="text-sm text-red-600 mt-1">
+            <div class="text-sm text-red-400 mt-1">
                 {{ form.non_field_errors }}
             </div>
             {% endif %}
@@ -24,9 +24,9 @@
                 {{ form.password }}
                 {{ form.password.errors }}
             </div>
-            <button class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md transition-colors mt-2" type="submit">Login</button>
+            <button class="w-full bg-flint-orange hover:bg-flint-orange-hover text-white font-semibold py-2 px-4 rounded-md transition-colors mt-2" type="submit">Login</button>
         </form>
-        <p class="text-center text-sm text-gray-600 mt-4">Don't have an account? <a class="text-blue-600 hover:underline" href="{% url 'users:register' %}">Sign up</a></p>
+        <p class="text-center text-sm text-flint-muted mt-4">Don't have an account? <a class="text-flint-orange hover:underline" href="{% url 'users:register' %}">Sign up</a></p>
     </div>
 </div>
 {% endblock content %}

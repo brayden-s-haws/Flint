@@ -1,6 +1,6 @@
-# Getting Started: Building Luminetiq MVP
+# Getting Started: Building Flint MVP
 
-This guide walks you through building the Luminetiq MVP step by step. Think of this as your tech lead's onboarding doc.
+This guide walks you through building the Flint MVP step by step. Think of this as your tech lead's onboarding doc.
 
 ---
 
@@ -72,7 +72,7 @@ class UsersConfig(AppConfig):
 
 ### Step 3: Register in INSTALLED_APPS
 
-Open `Luminetiq/settings.py` and add to `INSTALLED_APPS`:
+Open `Flint/settings.py` and add to `INSTALLED_APPS`:
 
 ```python
 INSTALLED_APPS = [
@@ -108,12 +108,12 @@ urlpatterns = [
 
 ## URL Structure with include()
 
-The main `Luminetiq/urls.py` should use `include()` to delegate to each app's URLs.
+The main `Flint/urls.py` should use `include()` to delegate to each app's URLs.
 
 ### Pattern
 
 ```python
-# Luminetiq/urls.py
+# Flint/urls.py
 from django.contrib import admin
 from django.urls import path, include
 
@@ -319,7 +319,7 @@ Once all app models are in place, go back through each app's `devdocs/appdocs/<a
 2. ~~**Users** — registration, login, logout views + templates. Auth must work before anything else is usable.~~ COMPLETE
 3. ~~**Accounts** — tenant middleware + signal to auto-create an Account when a user registers.~~ COMPLETE
 4. ~~**Core** — `TenantQuerysetMixin` + dashboard view. Depends on accounts middleware being in place.~~ COMPLETE
-5. **Sources** — CRUD views, PostgreSQL connector, Fernet encryption. This is the main feature.
+5. ~~**Sources** — CRUD views, PostgreSQL connector, Fernet encryption. This is the main feature.~~ COMPLETE
 - ** Before we do catalog, have Claude rename project to Flint, with the tagline "Light up your data."
 6. **Catalog** — table list and detail views. Data is populated by source sync.
 7. **Insights** — LLM provider abstraction, generate/view insights. The capstone feature.

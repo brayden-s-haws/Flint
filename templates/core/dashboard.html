@@ -1,45 +1,45 @@
 {% extends 'base.html' %}
 
-{% block title %}Dashboard | Luminetiq{% endblock %}
+{% block title %}Dashboard | Flint{% endblock %}
 
 {% block content %}
 <main class="max-w-7xl mx-auto px-4 py-8">
     <div>
         {% if account %}
-        <h1 class="text-2xl font-bold text-gray-900">Welcome to {{ account.name }}!</h1>
+        <h1 class="text-2xl font-bold text-flint-text">Welcome to {{ account.name }}!</h1>
         {% else %}
-        <h1 class="text-2xl font-bold text-gray-900">Welcome to Luminetiq!</h1>
+        <h1 class="text-2xl font-bold text-flint-text">Welcome to Flint!</h1>
         {% endif %}
-        <h2 class="text-xl font-medium text-gray-600">Here's an overview of your connected data.</h2>
+        <h2 class="text-xl font-medium text-flint-muted">Here's an overview of your connected data.</h2>
     </div>
     <div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8">
-            <div class="bg-white rounded-lg border border-gray-200 p-6">
-                <h3 class="text-sm text-gray-500">Sources Connected</h3>
-                <h1 class="text-3xl font-bold text-gray-900">{{ source_count }}</h1>
-                <a href="" class="text-blue-600 hover:underline">View all</a>
+            <div class="bg-flint-card rounded-lg border border-flint-border p-6">
+                <h3 class="text-sm text-flint-muted">Sources Connected</h3>
+                <h1 class="text-3xl font-bold text-flint-text">{{ source_count }}</h1>
+                <a href="{% url 'sources:list' %}" class="text-flint-orange hover:underline">View all</a>
             </div>
-            <div class="bg-white rounded-lg border border-gray-200 p-6">
-                <h3 class="text-sm text-gray-500">Tables</h3>
-                <h1 class="text-3xl font-bold text-gray-900">{{ table_count }}</h1>
-                <a href="" class="text-blue-600 hover:underline">View all</a>
+            <div class="bg-flint-card rounded-lg border border-flint-border p-6">
+                <h3 class="text-sm text-flint-muted">Tables</h3>
+                <h1 class="text-3xl font-bold text-flint-text">{{ table_count }}</h1>
+                <a href="#" class="text-flint-orange hover:underline">View all</a>
             </div>
-            <div class="bg-white rounded-lg border border-gray-200 p-6">
-                <h3 class="text-sm text-gray-500">Insights</h3>
-                <h1 class="text-3xl font-bold text-gray-900">{{ insight_count }}</h1>
-                <a href="" class="text-blue-600 hover:underline">View all</a>
+            <div class="bg-flint-card rounded-lg border border-flint-border p-6">
+                <h3 class="text-sm text-flint-muted">Insights</h3>
+                <h1 class="text-3xl font-bold text-flint-text">{{ insight_count }}</h1>
+                <a href="#" class="text-flint-orange hover:underline">View all</a>
             </div>
         </div>
     </div>
     <div>
         <div class="text-center mt-16">
             {% if source_count == 0 %}
-            <h1 class="text-2xl font-semibold text-gray-900">Connect your first data source</h1>
-            <h3 class="text-xl font-medium text-gray-600">Luminetiq will help you discover insights from your data</h3>
-            <a href="" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-md transition-colors block mt-4">Connect a data source</a>
+            <h1 class="text-2xl font-semibold text-flint-text">Connect your first data source</h1>
+            <h3 class="text-xl font-medium text-flint-muted">Flint will help you discover insights from your data</h3>
+            <a href="{% url 'sources:add' %}" class="bg-flint-orange hover:bg-flint-orange-hover text-white font-semibold py-3 px-6 rounded-md transition-colors inline-block mt-4">Connect a data source</a>
             {% endif %}
             {% if source_count > 0 %}
-            <h3 class="text-xl font-medium text-gray-600">Your sources are connected.</h3>
+            <h3 class="text-xl font-medium text-flint-muted">Your sources are connected.</h3>
             {% endif %}
         </div>
     </div>

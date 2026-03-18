@@ -1,31 +1,31 @@
 {% extends 'base.html' %}
 
-{% block title %}Sources | Luminetiq{% endblock %}
+{% block title %}Sources | Flint{% endblock %}
 
 {% block content %}
 <main class="max-w-7xl mx-auto px-4 py-8">
     <div class="flex justify-between items-center mb-8">
-        <h1 class="text-2xl font-bold text-gray-900">Sources</h1>
-        <a href="{% url 'sources:add' %}" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md">Connect Source</a>
+        <h1 class="text-2xl font-bold text-flint-text">Sources</h1>
+        <a href="{% url 'sources:add' %}" class="bg-flint-orange hover:bg-flint-orange-hover text-white font-semibold py-2 px-4 rounded-md">Connect Source</a>
     </div>
     <div>
         {% if sources %}
             {% for source in sources %}
-                <div class="bg-white rounded-lg border border-gray-200 p-6 mb-4">
-                    <h2 class="text-xl font-semibold text-gray-900"><a href="{% url 'sources:detail' source.pk %}">{{ source.name }}</a></h2>
-                    <p class="text-sm text-gray-500">{{ source.source_type }}</p>
+                <div class="bg-flint-card rounded-lg border border-flint-border p-6 mb-4">
+                    <h2 class="text-xl font-semibold text-flint-text"><a href="{% url 'sources:detail' source.pk %}">{{ source.name }}</a></h2>
+                    <p class="text-sm text-flint-muted">{{ source.source_type }}</p>
                     {% if source.last_synced_at %}
-                    <p class="text-sm text-gray-500">Last synced: {{ source.last_synced_at|date:"N j, Y" }}</p>
+                    <p class="text-sm text-flint-muted">Last synced: {{ source.last_synced_at|date:"N j, Y" }}</p>
                     {% else %}
-                    <p class="text-sm text-gray-500">Last synced: Never synced</p>
+                    <p class="text-sm text-flint-muted">Last synced: Never synced</p>
                     {% endif %}
                 </div>
             {% endfor %}
         {% else %}
             <div class="text-center mt-16">
-                <h1 class="text-2xl font-semibold text-gray-900">No sources connected yet</h1>
-                <h3 class="text-xl font-medium text-gray-600">Connect a data source to start discovering insights</h3>
-                <a href="{% url 'sources:add' %}" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-md transition-colors block mt-4">Connect a data source</a>
+                <h1 class="text-2xl font-semibold text-flint-text">No sources connected yet</h1>
+                <h3 class="text-xl font-medium text-flint-muted">Connect a data source to start discovering insights</h3>
+                <a href="{% url 'sources:add' %}" class="bg-flint-orange hover:bg-flint-orange-hover text-white font-semibold py-3 px-6 rounded-md transition-colors inline-block mt-4">Connect a data source</a>
             </div>
         {% endif %}
     </div>
