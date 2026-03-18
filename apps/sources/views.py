@@ -11,10 +11,12 @@ from django.views.generic import ListView, CreateView, DetailView
 from django.urls import reverse_lazy
 from django.http import HttpResponse, HttpRequest
 from django.forms import BaseModelForm
+from django.utils import timezone
 from apps.core.mixins import TenantQuerysetMixin
 from .connectors.registry import get_connector
 
-from .models import Source
+from apps.catalog.models import Schema, Table, Column
+from .models import Source, SourceSyncLog
 from .forms import SourceForm
 from .encryption import encrypt_credentials, decrypt_credentials
 
@@ -74,3 +76,56 @@ def test_connection(request: HttpRequest, pk: int) -> HttpResponse:
     else:
         messages.error(request, 'Connection test failed. Check your credentials.')
     return redirect('sources:detail', pk=pk)
+
+@login_required
+def sync_source(request: HttpRequest, pk:int) -> HttpResponse:
+    if request.method != 'POST':
+        return HttpResponse('Method not allowed', status=405)
+    source = get_object_or_404(Source, pk=pk, account=request.account) # type: ignore[attr-defined]
+    source_sync = source.sourcesynclog_set.create(status='running', started_at=timezone.now())
+    try:
+        credentials = decrypt_credentials(source.credentials)
+        connector_class = get_connector(source.source_type.name)
+        connector = connector_class(credentials)
+        catalog = connector.discover_catalog()
+        records_synced = 0
+        for schema_data in catalog:
+            schema, _ = Schema.objects.get_or_create(
+                source=source, name=schema_data['name'],
+                defaults={'account': source.account}
+            )
+            for table_data in schema_data['tables']:
+                table, _ = Table.objects.get_or_create(
+                    schema=schema, name=table_data['name'],
+                    defaults={'account': source.account, 'table_type': table_data['table_type']}
+                )
+                metadata = connector.get_table_metadata(schema_data['name'], table_data['name'])
+                table.row_count = metadata['row_count']
+                table.table_type = table_data['table_type']
+                table.save()
+                for col_data in table_data['columns']:
+                    col, _ = Column.objects.get_or_create(
+                        table=table, name=col_data['name'],
+                        defaults={'account': source.account, 'data_type': col_data['data_type'], 'nullable': col_data['nullable'], 'primary_key': col_data['primary_key']}
+                    )
+                    col.data_type = col_data['data_type']
+                    col.nullable = col_data['nullable']
+                    col.primary_key = col_data['primary_key']
+                    col.save()
+                records_synced += 1
+        source_sync.completed_at = timezone.now()
+        source_sync.status = 'success'
+        source_sync.records_synced = records_synced
+        if source.first_synced_at is None:
+            source.first_synced_at = timezone.now()
+            source.save()
+        source_sync.save()
+        messages.success(request, 'Source sync completed successfully')
+        return redirect('sources:detail', pk=pk)
+    except Exception as e:
+        source_sync.status = 'failed'
+        source_sync.error_message = str(e)
+        source_sync.completed_at = timezone.now()
+        source_sync.save()
+        messages.error(request, f'Source sync failed: {e}')
+        return redirect('sources:detail', pk=pk)

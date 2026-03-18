@@ -28,7 +28,7 @@
 - [x] Source detail view — show source info, sync history, and connected schemas/tables
 - [x] Wire source name link in `source_list.html` → `{% url 'sources:detail' source.pk %}` (placeholder `href=""` until detail URL exists)
 - [x] Test connection action — verify credentials work before saving
-- [ ] Trigger sync action — manually kick off metadata sync
+- [x] Trigger sync action — manually kick off metadata sync
 
 ## Templates
 
@@ -42,7 +42,7 @@
 - [x] `/sources/add/` — create
 - [x] `/sources/<id>/` — detail
 - [x] `/sources/<id>/test/` — test connection
-- [ ] `/sources/<id>/sync/` — trigger sync
+- [x] `/sources/<id>/sync/` — trigger sync
 
 ---
 
@@ -52,6 +52,11 @@
 2. ~~**List + Create views, form template, URLs** — build the CRUD layer so `/sources/` and `/sources/add/` work. No connectors needed yet; just save and load source records.~~
 3. ~~**BaseConnector + PostgreSQLConnector + ConnectorRegistry** — `apps/sources/connectors/`. Build after the UI exists so you can test against real source records.~~
 4. ~~**Detail view + template** — shows source info and sync history; build after connectors so sync data is meaningful.~~
-5. **Wire test connection and sync actions** — tie the test and sync URL actions to the connector layer. Also implement `get_table_metadata` on `BaseConnector` and `PostgreSQLConnector` for use by the sync action.
+5. ~~**Wire test connection and sync actions** — tie the test and sync URL actions to the connector layer. Also implement `get_table_metadata` on `BaseConnector` and `PostgreSQLConnector` for use by the sync action.~~
+
+
+
+
 
 Note to self:Make sure you merge this branch once done and start a new one for connectors.
+
