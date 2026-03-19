@@ -12,8 +12,8 @@
 
 ## Views
 
-- [ ] Table list view — browse all tables, filterable by source/schema
-- [ ] Table detail view — show columns, metadata, and linked insights
+- [x] Table list view — browse all tables, filterable by source/schema
+- [x] Table detail view — show columns, metadata, and linked insights
 
 ## Templates
 
@@ -22,8 +22,8 @@
 
 ## URLs
 
-- [ ] `/catalog/` — table list (all sources)
-- [ ] `/catalog/<id>/` — table detail
+- [x] `/catalog/` — table list (all sources)
+- [x] `/catalog/<id>/` — table detail
 
 ## MVP Notes
 
@@ -34,3 +34,4 @@
 
 - `SourceDetailView` in `apps/sources/views.py` needs schema context added to `get_context_data` once catalog models are queryable. Pattern: `context['schemas'] = self.object.schema_set.prefetch_related('table_set')`
 - `source_detail.html` needs its schema/tables section fleshed out (currently shows an empty state placeholder)
+
