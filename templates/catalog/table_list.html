@@ -3,36 +3,29 @@
 {% block title %}Catalog | Flint{% endblock %}
 
 {% block content %}
-<!-- TODO(stub): Wrap everything in a <main> with max-width and padding — match the pattern
-     in source_list.html: class="max-w-7xl mx-auto px-4 py-8" -->
 <main class="max-w-7xl mx-auto px-4 py-8">
     <div class="flex justify-between">
         <h1 class="text-2xl font-bold text-flint-text">Catalog</h1>
     </div>
     <div>
-
+        {% if tables %}
+            {%  for table in tables %}
+                <div class="bg-flint-card rounded-lg border border-flint-border p-6 mb-4">
+                    <h2 class="text-xl font-semibold text-flint-text"><a class="text-flint-orange" href="{% url 'catalog:detail' table.pk %}">{{ table.name }}</a></h2>
+                    <p class="text-sm text-flint-muted">{{ table.schema.name }}</p>
+                    <p class="text-sm text-flint-muted">{{ table.schema.source.name }}</p>
+                    <p class="text-sm text-flint-muted">{{ table.table_type }}</p>
+                    <p class="text-sm text-flint-muted">{{ table.row_count|default:"Unknown" }}</p>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="text-center mt-16">
+                <h1 class="text-2xl font-semibold text-flint-text">No sources connected yet</h1>
+                <h3 class="text-xl font-medium text-flint-muted">Connect a data source to see tables</h3>
+                <a href="{% url 'sources:list' %}" class="bg-flint-orange hover:bg-flint-orange-hover text-white font-semibold py-3 px-6 rounded-md transition-colors inline-block mt-4">Connect a data
+                    source</a>
+            </div>
+        {% endif %}
     </div>
-
 </main>
-
-    <!-- TODO(stub): Page header — a flex row with space-between alignment containing:
-         - Left: an <h1> with text "Catalog" or "Tables", styled text-2xl font-bold text-flint-text
-         - Right: no action button needed here (catalog is read-only; tables come from syncing sources) -->
-
-    <!-- TODO(stub): Empty state — use {% if tables %} ... {% else %} ... {% endif %}
-         For the empty state (no tables yet), show a centered message explaining that tables
-         appear after syncing a source. Include a link to {% url 'sources:list' %} so the user
-         knows where to go. Style similar to the empty state in source_list.html. -->
-
-    <!-- TODO(stub): Table list — for each table in `tables` (the context variable from TableListView),
-         render a card using bg-flint-card rounded-lg border border-flint-border p-6 mb-4.
-         Each card should show:
-         - Table name as a link to {% url 'catalog:detail' table.pk %}, styled prominently
-         - Schema name: table.schema.name — available because of select_related in the view
-         - Source name: table.schema.source.name — also available via select_related
-         - Table type: table.table_type (e.g. "BASE TABLE", "VIEW")
-         - Row count: table.row_count — show "Unknown" if None
-         Accessibility: wrap the list in a <ul> with each card as an <li>, or use <div> cards
-         consistently with source_list.html. Pick one and stay consistent. -->
-
 {% endblock content %}

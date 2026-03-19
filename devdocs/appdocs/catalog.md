@@ -17,7 +17,7 @@
 
 ## Templates
 
-- [ ] `catalog/table_list.html` — browsable table list
+- [x] `catalog/table_list.html` — browsable table list
 - [ ] `catalog/table_detail.html` — table detail with column list and insights
 
 ## URLs
