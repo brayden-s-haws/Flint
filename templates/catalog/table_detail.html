@@ -1,10 +1,20 @@
 {% extends 'base.html' %}
 
-{% block title %}<!-- TODO(stub): Set to "{{ table.name }} | Flint" — the Table object is available
-     as `object` (Django DetailView default) or `table` if you set context_object_name.
-     The view doesn't set context_object_name, so use `{{ object.name }}` here. -->{% endblock %}
+{% block title %} {{ table.name }} | Flint {% endblock %}
 
 {% block content %}
+<main class="max-w-7xl mx-auto px-4 py-8">
+    <div class="flex row, space-between, items-center, mb-8">
+        <a class="text-sm text-flint-muted hover:text-flint-text" href="{% url 'catalog:list' %}">← Catalog</a>
+        <h1 class="text-2xl font-bold text-flint-text">{{ object.name }}</h1>
+        <p class="text-sm text-flint-muted">{{ object.schema.name }} · {{ object.schema.source.name }}"</p>
+    </div>
+    <div>
+
+
+    </div>
+
+</main>
 <!-- TODO(stub): Wrap everything in <main class="max-w-7xl mx-auto px-4 py-8"> — consistent with
      source_detail.html and table_list.html. -->
 

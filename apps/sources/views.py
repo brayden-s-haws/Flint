@@ -82,7 +82,7 @@ def sync_source(request: HttpRequest, pk:int) -> HttpResponse:
     if request.method != 'POST':
         return HttpResponse('Method not allowed', status=405)
     source = get_object_or_404(Source, pk=pk, account=request.account) # type: ignore[attr-defined]
-    source_sync = source.sourcesynclog_set.create(status='running', started_at=timezone.now())
+    source_sync = source.sourcesynclog_set.create(account=source.account, status='running', started_at=timezone.now())
     try:
         credentials = decrypt_credentials(source.credentials)
         connector_class = get_connector(source.source_type.name)
