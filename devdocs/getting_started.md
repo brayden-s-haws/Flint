@@ -321,7 +321,7 @@ Once all app models are in place, go back through each app's `devdocs/appdocs/<a
 4. ~~**Core** — `TenantQuerysetMixin` + dashboard view. Depends on accounts middleware being in place.~~ COMPLETE
 5. ~~**Sources** — CRUD views, PostgreSQL connector, Fernet encryption. This is the main feature.~~ COMPLETE
 - ~~** Before we do catalog, have Claude rename project to Flint, with the tagline "Light up your data."~~ COMPLETE
-6. **Catalog** — table list and detail views. Data is populated by source sync.
+6. ~~**Catalog** — table list and detail views. Data is populated by source sync.~~ COMPLETE
 7. **Insights** — LLM provider abstraction, generate/view insights. The capstone feature.
 8. **Fix redirect URLs** — once the dashboard/home view exists, update `LOGIN_REDIRECT_URL`, `LOGOUT_REDIRECT_URL` in `settings.py` and `success_url` on `RegisterUser` in `apps/users/views.py`. See `devdocs/appdocs/users.md` Deferred section.
 
