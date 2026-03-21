@@ -64,9 +64,33 @@
     <div>
         <div class="bg-flint-card rounded-lg border border-flint-border p-6 mb-6 card">
             <h2 class="text-lg font-semibold text-flint-text mb-4">Schemas & Tables</h2>
-            <p class="text-sm text-flint-muted">Sync this source to discover its schemas and tables.</p>
+            <table class="w-full">
+                <thead class="text-flint-muted text-left text-sm font-medium pb-3">
+                    <tr>
+                        <th>Schema Name</th>
+                        <th>Tables</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for schema in schemas %}
+                    <tr class="border-t border-flint-border text-sm text-flint-text">
+                        <td class="align-top py-3 pr-4">{{ schema.name }}</td>
+                        <td>
+                            {% for table in schema.table_set.all %}
+                                <a href="{% url 'catalog:detail' table.pk %}" class="text-flint-orange hover:underline">{{ table.name }}</a><br>
+                            {% endfor %}
+                        </td>
+                    </tr>
+                {%  empty %}
+                    <tr>
+                        <td colspan="2" class="text-center text-flint-muted">No schemas found. Sync this source to discover schema</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
+
 
     <!-- CATALOG PLACEHOLDER: replace with schema/table loop once catalog app is built.
          See devdocs/appdocs/catalog.md cross-app integration note. -->

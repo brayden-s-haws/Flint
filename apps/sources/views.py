@@ -60,6 +60,7 @@ class SourceDetailView(LoginRequiredMixin, TenantQuerysetMixin, DetailView):
         context = super().get_context_data(**kwargs)
         context['sync_logs'] = self.object.sourcesynclog_set.order_by('-started_at')
         context['last_synced_at'] = self.object.sourcesynclog_set.filter(status='success').order_by('-completed_at').values_list('completed_at', flat=True).first()
+        context['schemas'] = self.object.schema_set.prefetch_related('table_set')
         return context
 
 @login_required

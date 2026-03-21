@@ -649,3 +649,7 @@ The ontology is a **projection, not a store**. It describes how to interpret dat
 # ~~Change App Name to 'Flint'~~ COMPLETE
 * ~~Update all references to 'Luminetiq'~~ DONE
 * Create logo and add to UI
+
+# DEMO MODE
+* Add a demo mode to the UI
+* Have claude mock up data locally for a few connectors that will generate interesting cross source insights
