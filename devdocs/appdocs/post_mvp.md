@@ -5,7 +5,11 @@ Concrete features that are out of scope for the MVP but will need to be built. O
 For speculative or longer-horizon ideas, see `devdocs/potential_features.md`.
 
 ---
+## general
+- Add docstrings to all files
 
+
+---
 ## accounts
 
 - **Account settings page** — allow the account owner to rename their account (`/account/settings/`)

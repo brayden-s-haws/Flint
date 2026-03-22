@@ -12,7 +12,7 @@
 
 ## Services
 
-- [ ] LLM provider abstraction — base interface for generating insights
+- [x] LLM provider abstraction — base interface for generating insights
 - [ ] OpenAI provider — call OpenAI API to generate table descriptions
 - [ ] Anthropic provider — call Anthropic API to generate table descriptions
 - [ ] Provider config — select which provider to use (settings or per-request)
