@@ -10,11 +10,18 @@
 
 - [x] Register `Insight`, `InsightTarget`, `InsightPrompt` in admin
 
+## Prompts
+
+Prompts live in `apps/insights/prompts/` — one file per use case. Services import from here rather than defining prompts inline.
+
+- [ ] `prompts/__init__.py` — empty, makes it a package
+- [ ] `prompts/table_insights.py` — `build_table_description_prompt(table: Table) -> str` function that builds the prompt string from a Table object (name, schema, source, columns)
+
 ## Services
 
-- [x] LLM provider abstraction — base interface for generating insights
-- [ ] OpenAI provider — call OpenAI API to generate table descriptions
-- [ ] Anthropic provider — call Anthropic API to generate table descriptions
+- [x] LLM provider abstraction — base interface for generating insights (`services/base.py`)
+- [ ] OpenAI provider — call OpenAI API to generate table descriptions (`services/openai.py`)
+- [ ] Anthropic provider — call Anthropic API to generate table descriptions (`services/anthropic.py`)
 - [ ] Provider config — select which provider to use (settings or per-request)
 
 ## Views

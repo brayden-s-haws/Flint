@@ -15,14 +15,11 @@ from __future__ import annotations
 #
 # - Implement generate_table_description(self, table: Table) -> str:
 #   This method should:
-#   1. Build a prompt string describing the table. Include:
-#      - table.name
-#      - table.schema.name and table.schema.source.name (use select_related in the view when
-#        fetching the table, or access via the FK traversal here — it will query lazily)
-#      - A list of columns: iterate table.column_set.all() and include each column's
-#        name, data_type, nullable, and primary_key fields
-#      Keep the prompt focused: "Describe what this database table likely contains and
-#      how it might be used, based on its name and columns."
+#   1. Build the prompt by importing from apps/insights/prompts/table_insights.py.
+#      Do NOT write the prompt string inline here — prompts live in the prompts/ directory.
+#      Import: from apps.insights.prompts.table_insights import build_table_description_prompt
+#      Then call: prompt = build_table_description_prompt(table)
+#      That function receives the Table object and returns the formatted prompt string.
 #
 #   2. Call the OpenAI chat completions API:
 #      response = self.client.chat.completions.create(
