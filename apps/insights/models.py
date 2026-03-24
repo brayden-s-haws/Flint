@@ -30,6 +30,14 @@ class InsightPrompt(TenantAwareModel):
     name = models.CharField(max_length=255)
     prompt = models.TextField()
     version = models.IntegerField(default=1)
+    provider = models.CharField(
+        max_length=255,
+        choices=[
+            ('openai', 'OpenAI'),
+            ('anthropic', 'Anthropic'),
+        ],
+        default = 'openai',
+    )
 
     def __str__(self) -> str:
         return f"{self.name} -> {self.prompt}"

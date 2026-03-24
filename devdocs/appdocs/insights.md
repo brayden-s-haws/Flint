@@ -20,8 +20,8 @@ Prompts live in `apps/insights/prompts/` — one file per use case. Services imp
 ## Services
 
 - [x] LLM provider abstraction — base interface for generating insights (`services/base.py`)
-- [ ] OpenAI provider — call OpenAI API to generate table descriptions (`services/openai.py`)
-- [ ] Anthropic provider — call Anthropic API to generate table descriptions (`services/anthropic.py`)
+- [x] OpenAI provider — call OpenAI API to generate table descriptions (`services/openai.py`)
+- [x] Anthropic provider — call Anthropic API to generate table descriptions (`services/anthropic.py`)
 - [ ] Provider config — select which provider to use (settings or per-request)
 
 ## Views
