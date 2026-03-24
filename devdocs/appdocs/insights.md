@@ -14,15 +14,15 @@
 
 Prompts live in `apps/insights/prompts/` — one file per use case. Services import from here rather than defining prompts inline.
 
-- [ ] `prompts/__init__.py` — empty, makes it a package
-- [ ] `prompts/table_insights.py` — `build_table_description_prompt(table: Table) -> str` function that builds the prompt string from a Table object (name, schema, source, columns)
+- [x] `prompts/__init__.py` — empty, makes it a package
+- [x] `prompts/table_insights.py` — `build_table_description_prompt(table: Table) -> str` function that builds the prompt string from a Table object (name, schema, source, columns)
 
 ## Services
 
 - [x] LLM provider abstraction — base interface for generating insights (`services/base.py`)
-- [x] OpenAI provider — call OpenAI API to generate table descriptions (`services/openai.py`)
-- [x] Anthropic provider — call Anthropic API to generate table descriptions (`services/anthropic.py`)
-- [ ] Provider config — select which provider to use (settings or per-request)
+- [x] OpenAI provider — call OpenAI API to generate table descriptions (`services/openai_service.py`)
+- [x] Anthropic provider — call Anthropic API to generate table descriptions (`services/anthropic_service.py`)
+- [x] Provider config — `InsightPrompt.provider` field selects provider per prompt; `services/provider.py` returns the correct service instance
 
 ## Views
 
@@ -38,9 +38,9 @@ Prompts live in `apps/insights/prompts/` — one file per use case. Services imp
 
 ## URLs
 
-- [ ] `/insights/` — list
-- [ ] `/insights/<id>/` — detail
-- [ ] `/insights/generate/<table_id>/` — trigger generation for a table
+- [x] `/insights/` — list
+- [x] `/insights/<id>/` — detail
+- [x] `/insights/generate/<table_id>/` — trigger generation for a table
 
 ## MVP Notes
 
