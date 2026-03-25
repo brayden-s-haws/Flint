@@ -26,9 +26,9 @@ Prompts live in `apps/insights/prompts/` — one file per use case. Services imp
 
 ## Views
 
-- [ ] Generate insight action — trigger LLM description generation for a single table (sync call)
-- [ ] Insight detail view — view a generated insight
-- [ ] Insight list view — browse all insights for the account
+- [x] Generate insight action — trigger LLM description generation for a single table (sync call)
+- [x] Insight detail view — view a generated insight
+- [x] Insight list view — browse all insights for the account
 
 ## Templates
 
