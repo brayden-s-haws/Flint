@@ -7,6 +7,7 @@ from django.db.models import QuerySet
 from django.views.generic import ListView, DetailView
 
 from apps.core.mixins import TenantQuerysetMixin
+from apps.insights.models import InsightTarget
 from .models import Table
 
 
@@ -26,5 +27,6 @@ class TableDetailView(TenantQuerysetMixin, LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
         context['columns'] = self.object.column_set.all().order_by('name')
-        context['insights'] = Table.objects.none()
+        insight_targets = InsightTarget.objects.filter(target=self.object, account=self.request.account).select_related('insight') # type: ignore[attr-defined]
+        context['insights'] = [it.insight for it in insight_targets]
         return context

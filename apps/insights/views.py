@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.db.models import QuerySet
@@ -26,6 +28,12 @@ class InsightDetailView(TenantQuerysetMixin, LoginRequiredMixin, DetailView):
     model = Insight
     template_name = 'insights/insight_detail.html'
     context_object_name = 'insight'
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        target = self.object.insighttarget_set.select_related('target').first()
+        context['table'] = target.target if target else None
+        return context
 
 
 class GenerateInsightView(LoginRequiredMixin, View):

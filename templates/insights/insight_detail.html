@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block title %}Insight | Flint{% endblock %}
+
+{% block content %}
+<main class="max-w-7xl mx-auto px-4 py-8">
+    <div class="mb-8">
+        <a class="text-sm text-flint-muted hover:text-flint-text" href="{% url 'insights:list' %}">← Insights</a>
+    </div>
+    <div>
+        <div class="bg-flint-card rounded-lg border border-flint-border p-6 mb-6">
+            <h2 class="text-lg font-semibold text-flint-text mb-4">Description</h2>
+            <p class="text-flint-text">{{ insight.text }}</p>
+            <p class="text-sm text-flint-muted">Created at: {{ insight.created_at|date:"M j, Y" }}</p>
+        </div>
+    </div>
+    <div>
+        <div class="bg-flint-card rounded-lg border border-flint-border p-6 mb-6">
+            <h2 class="text-lg font-semibold text-flint-text mb-4">Details</h2>
+            <p class="text-sm text-flint-muted">Prompt: {{ insight.insight_prompt.name }}</p>
+            <p class="text-sm text-flint-muted">Type: {{ insight.insight_type }}</p>
+            <p class="text-sm text-flint-muted">Status: {{ insight.status }}</p>
+            {% if table %}
+                <p class="text-sm text-flint-muted">Target: <a href="{% url 'catalog:detail' table.pk %}">{{ table.name }}</a></p>
+            {% endif %}
+        </div>
+    </div>
+</main>
+
+{% endblock content %}

@@ -48,9 +48,21 @@
     <div>
         <div class="bg-flint-card rounded-lg border border-flint-border p-6 mb-6">
             <h2 class="text-lg font-semibold text-flint-text mb-4">Insights</h2>
-            <p class="text-sm text-flint-muted">No insights generated yet.</p>
+            <form method="post" action="{% url 'insights:generate' object.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="bg-flint-orange text-white px-4 py-2 rounded-md hover:bg-flint-orange-hover">Generate Insight</button>
+            </form>
+            <ul class="mt-4">
+                {% for insight in insights %}
+                    <li class="text-flint-text">
+                        {{ insight.text }}
+                        <a href="{% url 'insights:detail' insight.pk %}" class="text-flint-orange hover:underline">View</a>
+                    </li>
+                {% empty %}
+                    <li class="text-flint-muted">No insights available.</li>
+                {% endfor %}
+            </ul>
         </div>
     </div>
-
 </main>
 {% endblock content %}

@@ -32,9 +32,9 @@ Prompts live in `apps/insights/prompts/` — one file per use case. Services imp
 
 ## Templates
 
-- [ ] `insights/insight_list.html` — list of generated insights
-- [ ] `insights/insight_detail.html` — full insight view
-- [ ] Inline insight display on `catalog/table_detail.html` (generate button + result)
+- [x] `insights/insight_list.html` — list of generated insights
+- [x] `insights/insight_detail.html` — full insight view
+- [x] Inline insight display on `catalog/table_detail.html` (generate button + result)
 
 ## URLs
 
@@ -42,7 +42,34 @@ Prompts live in `apps/insights/prompts/` — one file per use case. Services imp
 - [x] `/insights/<id>/` — detail
 - [x] `/insights/generate/<table_id>/` — trigger generation for a table
 
+## Prompt Architecture
+
+There are two types of LLM use cases in this app:
+
+**Hardcoded prompts** (e.g. table descriptions) — prompt lives as a Python file in `apps/insights/prompts/`. The prompt text, model, max tokens, and system message are all defined in code. Users cannot edit these. Services import from the prompts file directly. Provider is the only user choice.
+
+**User-defined prompts** (future) — prompt text is written by the user and stored in the `InsightPrompt` database model. These are versioned, named, and associated with an account. The `InsightPrompt.provider` field controls which LLM is used. Services receive an `InsightPrompt` object and use its `.prompt` field.
+
+The `InsightPrompt` model and `get_service()` in `provider.py` are designed for user-defined prompt flows. Do not use them for hardcoded prompt flows.
+
+### Fix needed: table description generate flow
+
+Currently `GenerateInsightView` looks up an `InsightPrompt` from the database to determine the provider. This is wrong for the table description use case — the prompt is hardcoded in `table_insights.py` and the only user input is provider choice.
+
+Steps to fix:
+
+1. **Update `get_service()` in `services/provider.py`** — change the parameter from `insight_prompt: InsightPrompt` to `provider: str`. The if/elif already only uses `insight_prompt.provider`, so swap that to the plain string.
+
+2. **Update `GenerateInsightView.post()` in `views.py`** — remove the `InsightPrompt` DB lookup. Read `provider = request.POST.get('provider', 'openai')` from the form instead. Call `get_service(provider)` directly. Pass `insight_prompt=None` when creating the `Insight`.
+
+3. **Update the generate form in `catalog/table_detail.html`** — add a `<select name="provider">` with `openai` and `anthropic` options inside the existing form.
+
+- [ ] Fix `get_service()` to accept `str` instead of `InsightPrompt`
+- [ ] Fix `GenerateInsightView` to read provider from POST, bypass DB lookup
+- [ ] Add provider selector to the generate form in `catalog/table_detail.html`
+
 ## MVP Notes
+Note to self: use branch review skill before merging to main. And then create a new branch for the next item
 
 - Sync LLM calls only (no Celery, no background tasks)
 - One table at a time (no batch generation)
