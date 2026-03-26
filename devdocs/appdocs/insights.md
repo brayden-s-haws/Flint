@@ -1,10 +1,92 @@
 # insights app - MVP Checklist
 
+## Prompt Architecture
+
+There are two types of LLM use cases in this app:
+
+**Hardcoded prompts** — prompt lives as a Python file in `apps/insights/prompts/`, one file per use case. The prompt text, system message, model, and max tokens are all defined in code. Users cannot edit these. Services import from the prompts file directly. The provider (openai vs anthropic) is the only runtime variable.
+
+- Use this pattern when: the prompt is product-defined and should not vary per user (e.g. table descriptions, source overviews)
+- Trigger: automatic (lazy on first view, or at end of a sync — see each use case below)
+- `InsightPrompt` DB model is NOT used for these flows
+
+**User-defined prompts** (future) — prompt text is written by the user and stored in the `InsightPrompt` database model. Versioned, named, associated with an account. Services receive an `InsightPrompt` object and use its `.prompt` field and `.provider` field.
+
+- Use this pattern when: users should be able to write and iterate on their own prompts
+- `InsightPrompt` model and `get_service(provider: str)` are the right tools for these flows
+
+### `get_service()` contract
+
+`services/provider.py` accepts a plain `provider: str` (`'openai'` or `'anthropic'`). Hardcoded flows pass the string directly. User-defined flows pass `insight_prompt.provider`. The function never receives a full model object.
+
+### Provider rules
+
+- **Hardcoded/auto-generated insights** (table descriptions, source overviews, etc.) → always use `'anthropic'`
+- **User-defined prompts** → user selects provider via `InsightPrompt.provider` field (openai or anthropic)
+
+---
+
 ## Models
 
 - [x] `Insight` — LLM-generated or manual insight content (text, type, status)
-- [x] `InsightTarget` — links an insight to a specific table (polymorphic linking deferred, just table FK for MVP)
-- [x] `InsightPrompt` — versioned LLM prompt templates stored in database
+- [ ] `InsightTarget` — polymorphic link from an insight to any target object (Table, Source, Column, etc.) — see GenericForeignKey section below
+- [x] `InsightPrompt` — versioned LLM prompt templates stored in database (for user-defined flows only)
+
+### InsightTarget: GenericForeignKey
+
+`InsightTarget` needs to support linking insights to any model — Tables, Sources, Columns, Schemas, and more in the future. The right Django pattern is `GenericForeignKey` from `django.contrib.contenttypes`.
+
+**How it works:**
+- `content_type` FK → stores *which model* the target is (e.g. `catalog.Table`)
+- `object_id` → stores the pk of the target object
+- `target` → a virtual `GenericForeignKey` field that combines the two; not stored in the DB itself
+
+**Model change** in `apps/insights/models.py`:
+```python
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.fields import GenericForeignKey
+
+class InsightTarget(TenantAwareModel):
+    insight = models.ForeignKey(Insight, on_delete=models.CASCADE)
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    target = GenericForeignKey('content_type', 'object_id')
+```
+
+Note: `django.contrib.contenttypes` is already in `INSTALLED_APPS` by default — no settings change needed.
+
+Run `makemigrations` and `migrate` after updating the model.
+
+**Places that need updating after this change:**
+
+1. **`apps/catalog/views.py` line 30** — `InsightTarget.objects.filter(target=self.object, ...)` won't work with GenericForeignKey. Replace with:
+   ```python
+   content_type = ContentType.objects.get_for_model(Table)
+   insight_targets = InsightTarget.objects.filter(
+       content_type=content_type,
+       object_id=self.object.pk,
+       account=request.account,
+   ).select_related('insight')
+   ```
+   Import `ContentType` from `django.contrib.contenttypes.models` at the top of the file.
+
+2. **`apps/insights/views.py` line 53** — `InsightTarget.objects.create(..., target=table)` won't work. Replace with:
+   ```python
+   content_type = ContentType.objects.get_for_model(table)
+   InsightTarget.objects.create(
+       account=request.account,
+       insight=insight,
+       content_type=content_type,
+       object_id=table.pk,
+   )
+   ```
+
+3. **`apps/insights/insight_detail.html`** — `insight.insighttarget_set.first().target` still works correctly; `GenericForeignKey` resolves the object transparently when accessed on an instance.
+
+- [ ] Update `InsightTarget` model to use `GenericForeignKey`
+- [ ] Run `makemigrations` and `migrate`
+- [ ] Update `apps/catalog/views.py` — replace `filter(target=...)` with `filter(content_type=..., object_id=...)`
+- [ ] Update `apps/insights/views.py` — replace `create(..., target=table)` with `create(..., content_type=..., object_id=...)`
 
 ## Admin
 
@@ -12,61 +94,83 @@
 
 ## Prompts
 
-Prompts live in `apps/insights/prompts/` — one file per use case. Services import from here rather than defining prompts inline.
+Prompts live in `apps/insights/prompts/` — one file per use case. Each file owns: system message, model constant, max tokens constant, and a `build_*_prompt()` function.
 
 - [x] `prompts/__init__.py` — empty, makes it a package
-- [x] `prompts/table_insights.py` — `build_table_description_prompt(table: Table) -> str` function that builds the prompt string from a Table object (name, schema, source, columns)
+- [x] `prompts/table_insights.py` — `build_table_description_prompt(table: Table) -> str`
+- [ ] `prompts/source_insights.py` — `build_source_overview_prompt(source: Source) -> str` — context: source name, source type, and list of all table names discovered in the sync
 
 ## Services
 
-- [x] LLM provider abstraction — base interface for generating insights (`services/base.py`)
-- [x] OpenAI provider — call OpenAI API to generate table descriptions (`services/openai_service.py`)
-- [x] Anthropic provider — call Anthropic API to generate table descriptions (`services/anthropic_service.py`)
-- [x] Provider config — `InsightPrompt.provider` field selects provider per prompt; `services/provider.py` returns the correct service instance
+- [x] LLM provider abstraction — base interface (`services/base.py`)
+- [x] OpenAI provider — `services/openai_service.py`
+- [x] Anthropic provider — `services/anthropic_service.py`
+- [ ] Fix `get_service()` in `services/provider.py` — change parameter from `InsightPrompt` object to `provider: str`
 
 ## Views
 
-- [x] Generate insight action — trigger LLM description generation for a single table (sync call)
-- [x] Insight detail view — view a generated insight
-- [x] Insight list view — browse all insights for the account
+- [x] Insight detail view — `InsightDetailView`
+- [x] Insight list view — `InsightListView`
+- [ ] Remove `GenerateInsightView` and its URL — table descriptions are now auto-generated, not manually triggered
 
 ## Templates
 
 - [x] `insights/insight_list.html` — list of generated insights
 - [x] `insights/insight_detail.html` — full insight view
-- [x] Inline insight display on `catalog/table_detail.html` (generate button + result)
+- [ ] Update `catalog/table_detail.html` — remove the generate form; insight auto-displays when present
+- [ ] Add source overview insight card to `sources/source_detail.html`
 
 ## URLs
 
 - [x] `/insights/` — list
 - [x] `/insights/<id>/` — detail
-- [x] `/insights/generate/<table_id>/` — trigger generation for a table
+- [ ] Remove `/insights/generate/<table_id>/` — no longer needed
 
-## Prompt Architecture
+---
 
-There are two types of LLM use cases in this app:
+## Use Case: Table Description
 
-**Hardcoded prompts** (e.g. table descriptions) — prompt lives as a Python file in `apps/insights/prompts/`. The prompt text, model, max tokens, and system message are all defined in code. Users cannot edit these. Services import from the prompts file directly. Provider is the only user choice.
+**Prompt file:** `prompts/table_insights.py`
+**Trigger:** Lazy — generated automatically on first view of `catalog/table_detail.html` if no insight exists yet
+**Provider:** Always `'anthropic'` — hardcoded for all auto-generated insights
+**Target:** `InsightTarget` linking `Insight` → `Table`
 
-**User-defined prompts** (future) — prompt text is written by the user and stored in the `InsightPrompt` database model. These are versioned, named, and associated with an account. The `InsightPrompt.provider` field controls which LLM is used. Services receive an `InsightPrompt` object and use its `.prompt` field.
+### Implementation steps
 
-The `InsightPrompt` model and `get_service()` in `provider.py` are designed for user-defined prompt flows. Do not use them for hardcoded prompt flows.
+- [ ] Fix `get_service()` to accept `provider: str`
+- [ ] Update `TableDetailView.get_context_data` in `apps/catalog/views.py`:
+  - After fetching insights, if list is empty: call `get_service('openai')`, call `service.generate_table_description(table)`, create `Insight` + `InsightTarget`, wrap in try/except so a failed LLM call doesn't break the page
+  - Import `get_service`, `build_table_description_prompt`, `Insight`, `InsightTarget`
+- [ ] Update `catalog/table_detail.html` — remove the generate `<form>`, just render insights inline
+- [ ] Remove `GenerateInsightView` from `apps/insights/views.py` and its URL from `apps/insights/urls.py`
 
-### Fix needed: table description generate flow
+---
 
-Currently `GenerateInsightView` looks up an `InsightPrompt` from the database to determine the provider. This is wrong for the table description use case — the prompt is hardcoded in `table_insights.py` and the only user input is provider choice.
+## Use Case: Source Overview
 
-Steps to fix:
+**Prompt file:** `prompts/source_insights.py` (to build)
+**Trigger:** End of first sync — called from `sync_source` view in `apps/sources/views.py` after tables are saved, only if no source-level insight exists yet
+**Provider:** Always `'anthropic'` — hardcoded for all auto-generated insights
+**Target:** `InsightTarget` linking `Insight` → ??? — `InsightTarget.target` is currently a FK to `Table`. For a source-level insight we need a different target. Options:
+  - Add a `source` FK to `InsightTarget` alongside the existing `table` FK (both nullable) — simplest
+  - Defer and just store source pk in a separate field for now
 
-1. **Update `get_service()` in `services/provider.py`** — change the parameter from `insight_prompt: InsightPrompt` to `provider: str`. The if/elif already only uses `insight_prompt.provider`, so swap that to the plain string.
+**What the prompt should include:**
+- Source name and type (e.g. PostgreSQL)
+- Full list of table names discovered across all schemas
+- Ask the model to describe what this data source likely contains and how an analyst might use it
 
-2. **Update `GenerateInsightView.post()` in `views.py`** — remove the `InsightPrompt` DB lookup. Read `provider = request.POST.get('provider', 'openai')` from the form instead. Call `get_service(provider)` directly. Pass `insight_prompt=None` when creating the `Insight`.
+**Display:** A new card on `sources/source_detail.html` showing the insight text
 
-3. **Update the generate form in `catalog/table_detail.html`** — add a `<select name="provider">` with `openai` and `anthropic` options inside the existing form.
+### Implementation steps
 
-- [ ] Fix `get_service()` to accept `str` instead of `InsightPrompt`
-- [ ] Fix `GenerateInsightView` to read provider from POST, bypass DB lookup
-- [ ] Add provider selector to the generate form in `catalog/table_detail.html`
+- [ ] Create `prompts/source_insights.py` with system message, model, max tokens, and `build_source_overview_prompt(source: Source) -> str`
+- [ ] Update `InsightTarget` model to support source-level targeting (add nullable `source` FK or similar)
+- [ ] Add `generate_source_overview(source: Source) -> str` to `BaseService` and both provider implementations
+- [ ] Update `sync_source` view in `apps/sources/views.py` — after sync completes and tables are saved, check if a source-level insight exists; if not, generate one
+- [ ] Add source overview insight card to `sources/source_detail.html`
+
+---
 
 ## MVP Notes
 Note to self: use branch review skill before merging to main. And then create a new branch for the next item
