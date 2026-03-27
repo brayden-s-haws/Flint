@@ -4,6 +4,7 @@ from typing import Any
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
+from django.contrib.contenttypes.models import ContentType
 from django.db.models import QuerySet
 from django.views.generic import ListView, DetailView, View
 from django.shortcuts import redirect, get_object_or_404
@@ -43,12 +44,12 @@ class GenerateInsightView(LoginRequiredMixin, View):
         if not insight_prompt:
             messages.error(request, "No prompt configured.")
             return redirect('catalog:detail', pk=pk)
-        service = get_service(insight_prompt)
+        service = get_service(insight_prompt.provider)
         try:
             text = service.generate_table_description(table)
         except Exception as e:
             messages.error(request, f"Failed to generate insight: {e}")
             return redirect('catalog:detail', pk=pk)
         insight = Insight.objects.create(account=request.account, text=text, insight_type='ai', status='active', insight_prompt=insight_prompt) # type: ignore[attr-defined]
-        InsightTarget.objects.create(account=request.account, insight=insight, target=table) # type: ignore[attr-defined]
+        InsightTarget.objects.create(account=request.account, insight=insight, content_type=ContentType.objects.get_for_model(table), object_id=table.pk) # type: ignore[attr-defined]
         return redirect('catalog:detail', pk=pk)

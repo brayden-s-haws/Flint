@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from django.db import models
 from apps.core.models import TenantAwareModel
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.fields import GenericForeignKey
 
 class Insight(TenantAwareModel):
     text = models.TextField()
@@ -21,7 +23,9 @@ class Insight(TenantAwareModel):
 
 class InsightTarget(TenantAwareModel):
     insight = models.ForeignKey(Insight, on_delete=models.CASCADE)
-    target = models.ForeignKey('catalog.Table', on_delete=models.CASCADE)
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    target = GenericForeignKey('content_type', 'object_id')
 
     def __str__(self) -> str:
         return f"{self.insight} -> {self.target}"

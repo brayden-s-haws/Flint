@@ -29,7 +29,7 @@ There are two types of LLM use cases in this app:
 ## Models
 
 - [x] `Insight` — LLM-generated or manual insight content (text, type, status)
-- [ ] `InsightTarget` — polymorphic link from an insight to any target object (Table, Source, Column, etc.) — see GenericForeignKey section below
+- [x] `InsightTarget` — polymorphic link from an insight to any target object (Table, Source, Column, etc.) — see GenericForeignKey section below
 - [x] `InsightPrompt` — versioned LLM prompt templates stored in database (for user-defined flows only)
 
 ### InsightTarget: GenericForeignKey
@@ -83,10 +83,10 @@ Run `makemigrations` and `migrate` after updating the model.
 
 3. **`apps/insights/insight_detail.html`** — `insight.insighttarget_set.first().target` still works correctly; `GenericForeignKey` resolves the object transparently when accessed on an instance.
 
-- [ ] Update `InsightTarget` model to use `GenericForeignKey`
-- [ ] Run `makemigrations` and `migrate`
-- [ ] Update `apps/catalog/views.py` — replace `filter(target=...)` with `filter(content_type=..., object_id=...)`
-- [ ] Update `apps/insights/views.py` — replace `create(..., target=table)` with `create(..., content_type=..., object_id=...)`
+- [x] Update `InsightTarget` model to use `GenericForeignKey`
+- [x] Run `makemigrations` and `migrate`
+- [x] Update `apps/catalog/views.py` — replace `filter(target=...)` with `filter(content_type=..., object_id=...)`
+- [x] Update `apps/insights/views.py` — replace `create(..., target=table)` with `create(..., content_type=..., object_id=...)`
 
 ## Admin
 
@@ -105,7 +105,7 @@ Prompts live in `apps/insights/prompts/` — one file per use case. Each file ow
 - [x] LLM provider abstraction — base interface (`services/base.py`)
 - [x] OpenAI provider — `services/openai_service.py`
 - [x] Anthropic provider — `services/anthropic_service.py`
-- [ ] Fix `get_service()` in `services/provider.py` — change parameter from `InsightPrompt` object to `provider: str`
+- [x] Fix `get_service()` in `services/provider.py` — change parameter from `InsightPrompt` object to `provider: str`
 
 ## Views
 
@@ -137,9 +137,9 @@ Prompts live in `apps/insights/prompts/` — one file per use case. Each file ow
 
 ### Implementation steps
 
-- [ ] Fix `get_service()` to accept `provider: str`
-- [ ] Update `TableDetailView.get_context_data` in `apps/catalog/views.py`:
-  - After fetching insights, if list is empty: call `get_service('openai')`, call `service.generate_table_description(table)`, create `Insight` + `InsightTarget`, wrap in try/except so a failed LLM call doesn't break the page
+- [x] Fix `get_service()` to accept `provider: str`
+- [x] Update `TableDetailView.get_context_data` in `apps/catalog/views.py`:
+  - After fetching insights, if list is empty: call `get_service('anthropic')`, call `service.generate_table_description(table)`, create `Insight` + `InsightTarget`, wrap in try/except so a failed LLM call doesn't break the page
   - Import `get_service`, `build_table_description_prompt`, `Insight`, `InsightTarget`
 - [ ] Update `catalog/table_detail.html` — remove the generate `<form>`, just render insights inline
 - [ ] Remove `GenerateInsightView` from `apps/insights/views.py` and its URL from `apps/insights/urls.py`
@@ -151,9 +151,7 @@ Prompts live in `apps/insights/prompts/` — one file per use case. Each file ow
 **Prompt file:** `prompts/source_insights.py` (to build)
 **Trigger:** End of first sync — called from `sync_source` view in `apps/sources/views.py` after tables are saved, only if no source-level insight exists yet
 **Provider:** Always `'anthropic'` — hardcoded for all auto-generated insights
-**Target:** `InsightTarget` linking `Insight` → ??? — `InsightTarget.target` is currently a FK to `Table`. For a source-level insight we need a different target. Options:
-  - Add a `source` FK to `InsightTarget` alongside the existing `table` FK (both nullable) — simplest
-  - Defer and just store source pk in a separate field for now
+**Target:** `InsightTarget` linking `Insight` → `Source` — now that `InsightTarget` uses `GenericForeignKey`, it can target any model including `Source`
 
 **What the prompt should include:**
 - Source name and type (e.g. PostgreSQL)
@@ -165,7 +163,6 @@ Prompts live in `apps/insights/prompts/` — one file per use case. Each file ow
 ### Implementation steps
 
 - [ ] Create `prompts/source_insights.py` with system message, model, max tokens, and `build_source_overview_prompt(source: Source) -> str`
-- [ ] Update `InsightTarget` model to support source-level targeting (add nullable `source` FK or similar)
 - [ ] Add `generate_source_overview(source: Source) -> str` to `BaseService` and both provider implementations
 - [ ] Update `sync_source` view in `apps/sources/views.py` — after sync completes and tables are saved, check if a source-level insight exists; if not, generate one
 - [ ] Add source overview insight card to `sources/source_detail.html`
