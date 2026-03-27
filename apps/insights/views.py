@@ -3,17 +3,11 @@ from __future__ import annotations
 from typing import Any
 
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib import messages
-from django.contrib.contenttypes.models import ContentType
 from django.db.models import QuerySet
-from django.views.generic import ListView, DetailView, View
-from django.shortcuts import redirect, get_object_or_404
-from django.http import HttpRequest, HttpResponse
+from django.views.generic import ListView, DetailView
 
 from apps.core.mixins import TenantQuerysetMixin
-from apps.insights.models import Insight, InsightPrompt, InsightTarget
-from apps.catalog.models import Table
-from apps.insights.services.provider import get_service
+from apps.insights.models import Insight
 
 class InsightListView(TenantQuerysetMixin, LoginRequiredMixin, ListView):
     model = Insight
@@ -32,24 +26,6 @@ class InsightDetailView(TenantQuerysetMixin, LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
-        target = self.object.insighttarget_set.select_related('target').first()
+        target = self.object.insighttarget_set.first()
         context['table'] = target.target if target else None
         return context
-
-
-class GenerateInsightView(LoginRequiredMixin, View):
-    def post(self, request: HttpRequest, pk: int) -> HttpResponse:
-        table = get_object_or_404(Table, pk=pk, account=request.account) # type: ignore[attr-defined]
-        insight_prompt = InsightPrompt.objects.filter(account=request.account).first() # type: ignore[attr-defined]
-        if not insight_prompt:
-            messages.error(request, "No prompt configured.")
-            return redirect('catalog:detail', pk=pk)
-        service = get_service(insight_prompt.provider)
-        try:
-            text = service.generate_table_description(table)
-        except Exception as e:
-            messages.error(request, f"Failed to generate insight: {e}")
-            return redirect('catalog:detail', pk=pk)
-        insight = Insight.objects.create(account=request.account, text=text, insight_type='ai', status='active', insight_prompt=insight_prompt) # type: ignore[attr-defined]
-        InsightTarget.objects.create(account=request.account, insight=insight, content_type=ContentType.objects.get_for_model(table), object_id=table.pk) # type: ignore[attr-defined]
-        return redirect('catalog:detail', pk=pk)

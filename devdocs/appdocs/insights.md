@@ -111,20 +111,20 @@ Prompts live in `apps/insights/prompts/` — one file per use case. Each file ow
 
 - [x] Insight detail view — `InsightDetailView`
 - [x] Insight list view — `InsightListView`
-- [ ] Remove `GenerateInsightView` and its URL — table descriptions are now auto-generated, not manually triggered
+- [x] Remove `GenerateInsightView` and its URL — table descriptions are now auto-generated, not manually triggered
 
 ## Templates
 
 - [x] `insights/insight_list.html` — list of generated insights
 - [x] `insights/insight_detail.html` — full insight view
-- [ ] Update `catalog/table_detail.html` — remove the generate form; insight auto-displays when present
+- [x] Update `catalog/table_detail.html` — remove the generate form; insight auto-displays when present
 - [ ] Add source overview insight card to `sources/source_detail.html`
 
 ## URLs
 
 - [x] `/insights/` — list
 - [x] `/insights/<id>/` — detail
-- [ ] Remove `/insights/generate/<table_id>/` — no longer needed
+- [x] Remove `/insights/generate/<table_id>/` — no longer needed
 
 ---
 
@@ -141,8 +141,8 @@ Prompts live in `apps/insights/prompts/` — one file per use case. Each file ow
 - [x] Update `TableDetailView.get_context_data` in `apps/catalog/views.py`:
   - After fetching insights, if list is empty: call `get_service('anthropic')`, call `service.generate_table_description(table)`, create `Insight` + `InsightTarget`, wrap in try/except so a failed LLM call doesn't break the page
   - Import `get_service`, `build_table_description_prompt`, `Insight`, `InsightTarget`
-- [ ] Update `catalog/table_detail.html` — remove the generate `<form>`, just render insights inline
-- [ ] Remove `GenerateInsightView` from `apps/insights/views.py` and its URL from `apps/insights/urls.py`
+- [x] Update `catalog/table_detail.html` — remove the generate `<form>`, just render insights inline
+- [x] Remove `GenerateInsightView` from `apps/insights/views.py` and its URL from `apps/insights/urls.py`
 
 ---
 
