@@ -2,21 +2,43 @@ from __future__ import annotations
 
 from apps.sources.models import Source
 
-# TODO(stub): Add a SOURCE_OVERVIEW_SYSTEM_MESSAGE constant (str) — describe the AI's role.
-#   It should position the model as an expert data analyst who can infer what a data source
-#   contains and how analysts would use it, based on source metadata and table names.
 
-# TODO(stub): Add an ANTHROPIC_SOURCE_OVERVIEW_MODEL constant — use 'claude-haiku-4-5'
+SOURCE_OVERVIEW_SYSTEM_MESSAGE: str = ("You are an expert in database architecture, SaaS application data, and data warehousing. Your job is to produce clear, concise descriptions of data sources "
+                                       "for a technical business audience. Write in clear, direct prose for a technical business audience. Do not reference specific personas or job titles. Use "
+                                       "markdown formatting including headings and bold text to make descriptions scannable and useful.")
 
-# TODO(stub): Add a SOURCE_OVERVIEW_MAX_TOKENS constant — 400 is a reasonable starting point
+OPENAI_SOURCE_OVERVIEW_MODEL: str = "gpt-5.4-mini"
+ANTHROPIC_SOURCE_OVERVIEW_MODEL: str = "claude-haiku-4-5"
+SOURCE_OVERVIEW_MAX_TOKENS: int = 1000
 
+def build_source_overview_prompt(source: Source) -> str:
+    source_details = f"""
+    Source: {source.name}
+    Type: {source.source_type}
+    Tables: {', '.join([table.name for schema in source.schema_set.all() for table in schema.table_set.all()])}
+    """
+    source_details += """
+    Based on the above, write a description of this data source using markdown formatting.
+    Use a short title (## heading) followed by 2 short paragraphs.
+    First paragraph: describe what this source contains and its role — infer from the source type and table names.
+    Second paragraph: describe how this data could be used — for analysis, product features, operational workflows, or business intelligence. Be specific to the tables present.
+    Use bold to highlight key table names or concepts where useful.
+    Do not mention specific personas or reference who uses the data.
 
-# TODO(stub): Define build_source_overview_prompt(source: Source) -> str
-#   This function builds the prompt string passed to the LLM. Include:
-#   1. Source name (source.name)
-#   2. Source type (source.source_type)
-#   3. All table names across all schemas — iterate source.schema_set.all(), then
-#      for each schema iterate schema.table_set.all() to collect table names.
-#      Flatten into a single list and format as a bullet list or comma-separated string.
-#   4. A closing instruction asking the model to describe what this source likely contains
-#      and how an analyst might use it — 2-3 sentences, no markdown formatting.
+    Example (proprietary app database):
+    ## E-Commerce Application Database
+    Contains the core transactional data for an e-commerce platform, including **orders**, **products**, **customers**, and **inventory**. \
+Covers the full purchase lifecycle from cart to fulfillment, along with supporting data for catalog management and customer accounts.
+
+    Supports revenue reporting, customer segmentation, and inventory analysis. \
+Can be used to track conversion rates, identify high-value customers, monitor stock levels, and power operational dashboards for fulfillment teams.
+
+    Example (SaaS source):
+    ## HubSpot CRM
+    Contains customer relationship and marketing data from HubSpot, including **contacts**, **companies**, **deals**, and **engagement activity**. \
+Represents the full sales pipeline and marketing touchpoint history for the organization.
+
+    Useful for pipeline reporting, lead conversion analysis, and campaign attribution. \
+Can be combined with product or financial data to build a complete view of the customer journey from first touch to closed revenue.
+    """
+    return source_details

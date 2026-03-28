@@ -162,7 +162,7 @@ Prompts live in `apps/insights/prompts/` — one file per use case. Each file ow
 
 ### Implementation steps
 
-- [ ] Create `prompts/source_insights.py` with system message, model, max tokens, and `build_source_overview_prompt(source: Source) -> str`
+- [x] Create `prompts/source_insights.py` with system message, model, max tokens, and `build_source_overview_prompt(source: Source) -> str`
 - [ ] Add `generate_source_overview(source: Source) -> str` to `BaseService` and both provider implementations
 - [ ] Update `sync_source` view in `apps/sources/views.py` — after sync completes and tables are saved, check if a source-level insight exists; if not, generate one
 - [ ] Add source overview insight card to `sources/source_detail.html`
@@ -170,6 +170,11 @@ Prompts live in `apps/insights/prompts/` — one file per use case. Each file ow
 ---
 
 ## MVP Notes
+- [x] Have claude help me update table prompt, be descriptive, dont reference row counts, don't reference a data analyst ("a data analyst would use this...") instead just describe how the data 
+  could be used
+- [ ] Delete the existing source data and re-sync to see if the prompt is working
+
+
 Note to self: use branch review skill before merging to main. And then create a new branch for the next item
 
 - Sync LLM calls only (no Celery, no background tasks)
