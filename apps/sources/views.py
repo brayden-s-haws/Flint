@@ -121,6 +121,18 @@ def sync_source(request: HttpRequest, pk:int) -> HttpResponse:
             source.first_synced_at = timezone.now()
             source.save()
         source_sync.save()
+        # TODO(stub): After the sync completes, generate a source overview insight if one doesn't exist yet.
+        #   1. Import ContentType from django.contrib.contenttypes.models at the top of the file
+        #   2. Import Insight, InsightTarget from apps.insights.models at the top of the file
+        #   3. Import get_service from apps.insights.services.provider at the top of the file
+        #   4. Check if a source-level InsightTarget already exists:
+        #      content_type = ContentType.objects.get_for_model(Source)
+        #      already_exists = InsightTarget.objects.filter(content_type=content_type, object_id=source.pk, account=source.account).exists()
+        #   5. If not already_exists, wrap the following in try/except Exception (just pass on failure):
+        #      - Call get_service('anthropic') to get the service
+        #      - Call service.generate_source_overview(source) to get the text
+        #      - Create an Insight: Insight.objects.create(account=source.account, text=text, insight_type='ai', status='active', insight_prompt=None)
+        #      - Create an InsightTarget: InsightTarget.objects.create(account=source.account, insight=insight, content_type=content_type, object_id=source.pk)
         messages.success(request, 'Source sync completed successfully')
         return redirect('sources:detail', pk=pk)
     except Exception as e:

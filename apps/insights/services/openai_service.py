@@ -3,7 +3,9 @@ from __future__ import annotations
 from openai import OpenAI
 
 from apps.catalog.models import Table
+from apps.sources.models import Source
 from apps.insights.prompts.table_insights import build_table_description_prompt, TABLE_DESCRIPTION_SYSTEM_MESSAGE, OPENAI_TABLE_DESCRIPTION_MODEL, TABLE_DESCRIPTION_MAX_TOKENS
+from apps.insights.prompts.source_insights import OPENAI_SOURCE_OVERVIEW_MODEL, SOURCE_OVERVIEW_SYSTEM_MESSAGE, SOURCE_OVERVIEW_MAX_TOKENS, build_source_overview_prompt
 from .base import BaseService
 
 
@@ -21,5 +23,17 @@ class OpenAIService(BaseService):
                 {"role": "user", "content": prompt},
             ],
             max_tokens = TABLE_DESCRIPTION_MAX_TOKENS,
+        )
+        return response.choices[0].message.content.strip()
+
+    def generate_source_overview(self, source: Source) -> str:
+        prompt = build_source_overview_prompt(source)
+        response = self.client.chat.completions.create(
+            model=OPENAI_SOURCE_OVERVIEW_MODEL,
+            messages=[ # type: ignore
+                {"role": "system", "content": SOURCE_OVERVIEW_SYSTEM_MESSAGE},
+                {"role": "user", "content": prompt},
+            ],
+            max_tokens=SOURCE_OVERVIEW_MAX_TOKENS,
         )
         return response.choices[0].message.content.strip()
