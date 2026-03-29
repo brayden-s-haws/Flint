@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load markdown_extras %}
 
 {% block title %}{{ source.name }} | Flint{% endblock %}
 
@@ -90,10 +91,16 @@
             </table>
         </div>
     </div>
-
-
-    <!-- CATALOG PLACEHOLDER: replace with schema/table loop once catalog app is built.
-         See devdocs/appdocs/catalog.md cross-app integration note. -->
+    <div>
+        <div class="bg-flint-card rounded-lg border border-flint-border p-6 mb-6 card">
+            <h2 class="text-lg font-semibold text-flint-text mb-4">Source Overview</h2>
+            {% if source_overview %}
+                <div class="text-sm text-flint-text markdown-content">{{ source_overview|render_markdown }}</div>
+            {% else %}
+                <p class="text-sm text-flint-muted">No overview yet.</p>
+            {% endif %}
+        </div>
+    </div>
 
 </main>
 {% endblock content %}

@@ -5,6 +5,7 @@ from typing import Any
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
+from django.contrib.contenttypes.models import ContentType
 from django.db.models import Max, QuerySet
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import ListView, CreateView, DetailView
@@ -16,6 +17,8 @@ from apps.core.mixins import TenantQuerysetMixin
 from .connectors.registry import get_connector
 
 from apps.catalog.models import Schema, Table, Column
+from apps.insights.models import InsightTarget, Insight
+from apps.insights.services.provider import get_service
 from .models import Source, SourceSyncLog
 from .forms import SourceForm
 from .encryption import encrypt_credentials, decrypt_credentials
@@ -61,6 +64,10 @@ class SourceDetailView(LoginRequiredMixin, TenantQuerysetMixin, DetailView):
         context['sync_logs'] = self.object.sourcesynclog_set.order_by('-started_at')
         context['last_synced_at'] = self.object.sourcesynclog_set.filter(status='success').order_by('-completed_at').values_list('completed_at', flat=True).first()
         context['schemas'] = self.object.schema_set.prefetch_related('table_set')
+        content_type = ContentType.objects.get_for_model(self.object)
+        target = InsightTarget.objects.filter(content_type=content_type, object_id=self.object.pk, account=self.request.account).select_related('insight').first()
+        context['source_overview'] = target.insight.text if target else None
+
         return context
 
 @login_required
@@ -121,18 +128,16 @@ def sync_source(request: HttpRequest, pk:int) -> HttpResponse:
             source.first_synced_at = timezone.now()
             source.save()
         source_sync.save()
-        # TODO(stub): After the sync completes, generate a source overview insight if one doesn't exist yet.
-        #   1. Import ContentType from django.contrib.contenttypes.models at the top of the file
-        #   2. Import Insight, InsightTarget from apps.insights.models at the top of the file
-        #   3. Import get_service from apps.insights.services.provider at the top of the file
-        #   4. Check if a source-level InsightTarget already exists:
-        #      content_type = ContentType.objects.get_for_model(Source)
-        #      already_exists = InsightTarget.objects.filter(content_type=content_type, object_id=source.pk, account=source.account).exists()
-        #   5. If not already_exists, wrap the following in try/except Exception (just pass on failure):
-        #      - Call get_service('anthropic') to get the service
-        #      - Call service.generate_source_overview(source) to get the text
-        #      - Create an Insight: Insight.objects.create(account=source.account, text=text, insight_type='ai', status='active', insight_prompt=None)
-        #      - Create an InsightTarget: InsightTarget.objects.create(account=source.account, insight=insight, content_type=content_type, object_id=source.pk)
+        content_type = ContentType.objects.get_for_model(Source)
+        already_exists = InsightTarget.objects.filter(content_type=content_type, object_id=source.pk, account=source.account).exists()
+        if not already_exists:
+            try:
+                service = get_service('anthropic')
+                text = service.generate_source_overview(source)
+                insight = Insight.objects.create(account=source.account, text=text, insight_type='ai', status='active', insight_prompt=None)
+                InsightTarget.objects.create(account=source.account, insight=insight, content_type=content_type, object_id=source.pk)
+            except Exception as e:
+                print(f"Failed to generate source overview: {e}")
         messages.success(request, 'Source sync completed successfully')
         return redirect('sources:detail', pk=pk)
     except Exception as e:

@@ -98,7 +98,7 @@ Prompts live in `apps/insights/prompts/` — one file per use case. Each file ow
 
 - [x] `prompts/__init__.py` — empty, makes it a package
 - [x] `prompts/table_insights.py` — `build_table_description_prompt(table: Table) -> str`
-- [ ] `prompts/source_insights.py` — `build_source_overview_prompt(source: Source) -> str` — context: source name, source type, and list of all table names discovered in the sync
+- [x] `prompts/source_insights.py` — `build_source_overview_prompt(source: Source) -> str` — context: source name, source type, and list of all table names discovered in the sync
 
 ## Services
 
@@ -118,7 +118,7 @@ Prompts live in `apps/insights/prompts/` — one file per use case. Each file ow
 - [x] `insights/insight_list.html` — list of generated insights
 - [x] `insights/insight_detail.html` — full insight view
 - [x] Update `catalog/table_detail.html` — remove the generate form; insight auto-displays when present
-- [ ] Add source overview insight card to `sources/source_detail.html`
+- [x] Add source overview insight card to `sources/source_detail.html`
 
 ## URLs
 
@@ -164,15 +164,15 @@ Prompts live in `apps/insights/prompts/` — one file per use case. Each file ow
 
 - [x] Create `prompts/source_insights.py` with system message, model, max tokens, and `build_source_overview_prompt(source: Source) -> str`
 - [x] Add `generate_source_overview(source: Source) -> str` to `BaseService` and both provider implementations
-- [ ] Update `sync_source` view in `apps/sources/views.py` — after sync completes and tables are saved, check if a source-level insight exists; if not, generate one
-- [ ] Add source overview insight card to `sources/source_detail.html`
+- [x] Update `sync_source` view in `apps/sources/views.py` — after sync completes and tables are saved, check if a source-level insight exists; if not, generate one
+- [x] Add source overview insight card to `sources/source_detail.html`
 
 ---
 
 ## MVP Notes
 - [x] Have claude help me update table prompt, be descriptive, dont reference row counts, don't reference a data analyst ("a data analyst would use this...") instead just describe how the data 
   could be used
-- [ ] Delete the existing source data and re-sync to see if the prompt is working
+- [x] Delete the existing source data and re-sync to see if the prompt is working
 
 
 Note to self: use branch review skill before merging to main. And then create a new branch for the next item

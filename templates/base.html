@@ -35,8 +35,22 @@
         }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js" integrity="sha384-/TgkGk7p307TH7EXJDuUlgG3Ce1UVolAOFopFekQkkXihi5u/6OCvVKyz1W+idaz" crossorigin="anonymous"></script>
+    <style>
+          .markdown-content h2 {
+              font-size: 1.1rem;
+              font-weight: 600;
+              margin-bottom: 0.75rem;
+          }
+          .markdown-content p {
+              margin-bottom: 0.75rem;
+          }
+          .markdown-content strong {
+              font-weight: 600;
+          }
+        </style>
     <title>{% block title %}Flint{% endblock %}</title>
     {% block extra_head %}
+
     {% endblock extra_head %}
 </head>
 <body class="bg-flint-bg text-flint-text">
