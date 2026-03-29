@@ -27,5 +27,6 @@ class InsightDetailView(TenantQuerysetMixin, LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
         target = self.object.insighttarget_set.first()
+        # TODO(review): Context key is named 'table' but InsightTarget now uses GenericForeignKey and can point to a Source or other model. Rename to 'target_object' (and update insight_detail.html) to avoid confusion when source-overview insights are viewed here.
         context['table'] = target.target if target else None
         return context

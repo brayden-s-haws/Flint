@@ -17,10 +17,12 @@
     <div>
         <div class="bg-flint-card rounded-lg border border-flint-border p-6 mb-6">
             <h2 class="text-lg font-semibold text-flint-text mb-4">Details</h2>
+            <!-- TODO(review): insight.insight_prompt is NULL for all auto-generated insights — this line will silently render "Prompt: " with nothing after it. Wrap in {% if insight.insight_prompt %} or show insight.insight_type as a fallback. -->
             <p class="text-sm text-flint-muted">Prompt: {{ insight.insight_prompt.name }}</p>
             <p class="text-sm text-flint-muted">Type: {{ insight.insight_type }}</p>
             <p class="text-sm text-flint-muted">Status: {{ insight.status }}</p>
             {% if table %}
+                <!-- TODO(review): 'table' context variable will also hold a Source object for source-overview insights. The catalog:detail URL will be wrong in that case. This needs to branch on the target type, or wait until the context key is renamed to 'target_object' and the template handles both types. -->
                 <p class="text-sm text-flint-muted">Target: <a href="{% url 'catalog:detail' table.pk %}">{{ table.name }}</a></p>
             {% endif %}
         </div>
