@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -137,8 +140,7 @@ def sync_source(request: HttpRequest, pk:int) -> HttpResponse:
                 insight = Insight.objects.create(account=source.account, text=text, insight_type='ai', status='active', insight_prompt=None)
                 InsightTarget.objects.create(account=source.account, insight=insight, content_type=content_type, object_id=source.pk)
             except Exception as e:
-                # TODO(review): Use `logger.exception(e)` instead of print so failures surface in production logs.
-                print(f"Failed to generate source overview: {e}")
+                logger.exception("Failed to generate source overview for source %s", source.pk)
         messages.success(request, 'Source sync completed successfully')
         return redirect('sources:detail', pk=pk)
     except Exception as e:

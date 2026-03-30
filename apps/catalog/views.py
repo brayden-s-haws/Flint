@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.contenttypes.models import ContentType
@@ -29,8 +32,6 @@ class TableDetailView(TenantQuerysetMixin, LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
         context['columns'] = self.object.column_set.all().order_by('name')
-        # TODO(review): Long line (>120 chars). Break this across multiple lines for readability.
-        # TODO(review): `print(f"Error generating insights: {e}")` below uses print instead of logging — replace with `import logging; logger.exception(...)` so errors are captured in production logs.
         insight_targets = InsightTarget.objects.filter(account=self.request.account, content_type=ContentType.objects.get_for_model(self.object), object_id=self.object.pk) # type: ignore[attr-defined]
         context['insights'] = [it.insight for it in insight_targets]
         if not context['insights']:
@@ -38,9 +39,8 @@ class TableDetailView(TenantQuerysetMixin, LoginRequiredMixin, DetailView):
                 service = get_service('anthropic')
                 text = service.generate_table_description(self.object)
                 insight = Insight.objects.create(account=self.request.account, text=text, insight_type='ai', status='active', insight_prompt=None) # type: ignore[attr-defined]
-                # TODO(review): Long line (>120 chars). Break this across multiple lines for readability.
                 InsightTarget.objects.create(account=self.request.account, insight=insight, content_type=ContentType.objects.get_for_model(self.object), object_id=self.object.pk) # type: ignore[ attr-defined]
                 context['insights'] = [insight]
-            except Exception as e:
-                print(f"Error generating insights: {e}")
+            except Exception:
+                logger.exception("Error generating table description for table %s", self.object.pk)
         return context

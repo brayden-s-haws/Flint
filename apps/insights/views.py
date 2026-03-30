@@ -4,10 +4,13 @@ from typing import Any
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import QuerySet
+from django.urls import reverse
 from django.views.generic import ListView, DetailView
 
+from apps.catalog.models import Table
 from apps.core.mixins import TenantQuerysetMixin
 from apps.insights.models import Insight
+from apps.sources.models import Source
 
 class InsightListView(TenantQuerysetMixin, LoginRequiredMixin, ListView):
     model = Insight
@@ -27,6 +30,11 @@ class InsightDetailView(TenantQuerysetMixin, LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
         target = self.object.insighttarget_set.first()
-        # TODO(review): Context key is named 'table' but InsightTarget now uses GenericForeignKey and can point to a Source or other model. Rename to 'target_object' (and update insight_detail.html) to avoid confusion when source-overview insights are viewed here.
-        context['table'] = target.target if target else None
+        context['target_object'] = target.target if target else None
+        if isinstance(context['target_object'], Table):
+            context['target_url'] = reverse('catalog:detail', args=[context['target_object'].pk])
+        elif isinstance(context['target_object'], Source):
+            context['target_url'] = reverse('sources:detail', args=[context['target_object'].pk])
+        else:
+            context['target_url'] = None
         return context

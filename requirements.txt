@@ -12,8 +12,7 @@ cffi==2.0.0       # cryptography dependency
 pycparser==3.0    # cffi dependency
 
 
-# TODO(review): openai, anthropic, psycopg2-binary, and markdown are unpinned. Pin to minimum compatible versions (e.g. openai>=1.0.0) to prevent accidental breaking upgrades.
-openai            # LLM insights - OpenAI provider
-anthropic         # LLM insights - Anthropic provider
-psycopg2-binary   # PostgreSQL connector (native metadata extraction)
-markdown
+openai==2.29.0            # LLM insights - OpenAI provider
+anthropic==0.86.0         # LLM insights - Anthropic provider
+psycopg2-binary==2.9.11   # PostgreSQL connector (native metadata extraction)
+markdown==3.10.2
