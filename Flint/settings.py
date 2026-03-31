@@ -131,8 +131,8 @@ STATIC_URL = 'static/'
 AUTH_USER_MODEL = 'users.User'
 
 LOGIN_URL = 'users:login'
-LOGIN_REDIRECT_URL = '/'
-LOGOUT_REDIRECT_URL = '/'
+LOGIN_REDIRECT_URL = 'core:dashboard'
+LOGOUT_REDIRECT_URL = 'users:login'
 
 ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY')
 

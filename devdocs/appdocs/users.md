@@ -29,10 +29,10 @@
 
 - [x] `AUTH_USER_MODEL = 'users.User'`
 - [x] `LOGIN_URL = 'users:login'`
-- [x] `LOGIN_REDIRECT_URL` — currently `'/'`, will 404 until home view exists
-- [x] `LOGOUT_REDIRECT_URL` — currently `'/'`, will 404 until home view exists
+- [x] `LOGIN_REDIRECT_URL = 'core:dashboard'`
+- [x] `LOGOUT_REDIRECT_URL = 'users:login'`
 
 ## Deferred
 
-- [ ] **Post-login/logout redirects** — `LOGIN_REDIRECT_URL` and `LOGOUT_REDIRECT_URL` are both set to `'/'`. Update both in `settings.py` once the home/dashboard view is built and wired to that route.
-- [ ] **Post-registration redirect** — `RegisterUser.success_url` is also `'/'`. Update on the view in `apps/users/views.py` at the same time.
+- [x] **Post-login/logout redirects** — updated to `core:dashboard` and `users:login` in `settings.py`
+- [x] **Post-registration redirect** — `RegisterUser.success_url` updated to `reverse_lazy('core:dashboard')`
