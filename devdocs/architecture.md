@@ -325,20 +325,20 @@ Use **Airbyte** when:
 
 ---
 
-## MVP Scope (Phase 1)
+## MVP Scope (Phase 1) — COMPLETE
 
 **Goal**: Validate core value proposition - generate useful table descriptions from PostgreSQL.
 
 ### MVP Features
-1. User registration/login (email-based, Django auth)
-2. Single account per user (1:1 initially)
-3. Connect PostgreSQL sources
-4. Test connection functionality
-5. Manual sync trigger
-6. View discovered schemas, tables, columns (Django templates)
-7. Generate LLM table descriptions (sync call, one table at a time)
-8. View/manage insights
-9. Django Admin for superuser management
+1. [x] User registration/login (email-based, Django auth)
+2. [x] Single account per user (1:1 initially)
+3. [x] Connect PostgreSQL sources
+4. [x] Test connection functionality
+5. [x] Manual sync trigger
+6. [x] View discovered schemas, tables, columns (Django templates)
+7. [x] Generate LLM table descriptions (sync call, one table at a time)
+8. [x] View/manage insights
+9. [x] Django Admin for superuser management
 
 ### MVP Tech Stack (Simplified)
 - Django 6.0.2 + Django templates + HTMX
@@ -474,14 +474,14 @@ ipython
 
 ---
 
-## Verification Plan
+## Verification Plan — COMPLETE
 
-After MVP implementation, verify by:
-1. Create user account via registration form
-2. Login and see empty dashboard
-3. Add PostgreSQL source (test database)
-4. Test connection - see success message
-5. Trigger sync - see tables appear
-6. Click into a table - see columns
-7. Click "Generate Description" - see LLM insight
-8. View insight on table detail page
+~~After MVP implementation, verify by:~~
+1. [x] ~~Create user account via registration form~~
+2. [x] ~~Login and see empty dashboard~~
+3. [x] ~~Add PostgreSQL source (test database)~~
+4. [x] ~~Test connection - see success message~~
+5. [x] ~~Trigger sync - see tables appear~~
+6. [x] ~~Click into a table - see columns~~
+7. [x] ~~Click "Generate Description" - see LLM insight~~
+8. [x] ~~View insight on table detail page~~

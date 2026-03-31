@@ -1,8 +1,9 @@
+{% load static %}
 <nav class="bg-flint-surface border-b border-flint-border w-full">
     <div class="flex justify-between items-center px-4 py-2.5 max-w-7xl mx-auto">
         <div>
             <a class="flex items-center px-4" href="{% url 'core:dashboard' %}">
-                <span class="text-xl font-bold text-flint-text tracking-tight">Flint</span>
+                <img src="{% static 'images/flint_logo.png' %}" alt="Flint" class="h-8">
             </a>
         </div>
         <div class="flex items-center">

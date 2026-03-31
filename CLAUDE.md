@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Working Style
 
-**Act as a coach, not a coder.** Guide me through building the MVP rather than writing the code for me.
+**Act as a coach, not a coder.** Guide me through building features rather than writing the code for me.
 
 - Provide pseudocode, examples, and explanations
 - Point me to relevant documentation and patterns
@@ -69,7 +69,7 @@ python manage.py shell
 - **devdocs/**: Developer documentation (architecture, models, views, getting started)
 - **manage.py**: Django management CLI entry point
 
-### Planned Apps Structure (in apps/ directory)
+### Apps Structure (in apps/ directory)
 - **core/**: Shared utilities, base models (TimeStampedModel, TenantAwareModel), tenant middleware
 - **accounts/**: Multi-tenancy - Account, AccountMembership models
 - **users/**: Custom User model with email-based auth
@@ -122,8 +122,6 @@ All application credentials and secrets are stored in `.env` (not committed). Co
 Current variables:
 - `SECRET_KEY`: Django secret key (required)
 - `DEBUG`: Enable debug mode (default: False)
-
-Planned additions:
 - `OPENAI_API_KEY`: OpenAI API key for LLM insights
 - `ANTHROPIC_API_KEY`: Anthropic API key for LLM insights
 - `ENCRYPTION_KEY`: Fernet key for credential encryption
@@ -131,13 +129,16 @@ Planned additions:
 
 Add new credentials to `.env` and access via `os.getenv('VAR_NAME')` in settings.py. Customer database credentials are stored encrypted in the database, not in `.env`.
 
-## MVP Scope
+## Current Status
 
-The MVP focuses on validating the core value proposition:
+**MVP is complete.** All five core features are built and working:
 1. User registration/login (email-based)
 2. Connect PostgreSQL sources with encrypted credentials
 3. Sync metadata (schemas, tables, columns)
 4. Generate LLM table descriptions
 5. Browse and view insights
 
-See `devdocs/architecture.md` for full MVP scope and phased roadmap.
+Active work is now post-MVP. See:
+- `devdocs/ui/cleanup.md` — UI polish backlog
+- `devdocs/appdocs/post_mvp.md` — Phase 2 feature backlog
+- `devdocs/architecture.md` for full architecture and phased roadmap
