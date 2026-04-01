@@ -6,14 +6,22 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.views.generic import TemplateView
 
+from apps.sources.models import Source
+from apps.catalog.models import Table
+from apps.insights.models import Insight
+
 class DashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'core/dashboard.html'
     login_url = reverse_lazy('users:login')
 
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
-        context['account'] = getattr(self.request, 'account', None)
-        context['source_count'] = 0
-        context['table_count'] = 0
-        context['insight_count'] = 0
+        account = getattr(self.request, 'account', None)
+        context['account'] = account
+        context['source_count'] = Source.objects.filter(account=account).count()
+        context['table_count'] = Table.objects.filter(account=account).count()
+        context['insight_count'] = Insight.objects.filter(account=account, status='active').count()
+        context['recent_sources'] = Source.objects.filter(account=account).order_by('-created_at')[:5]
+        context['recent_tables'] = Table.objects.filter(account=account).order_by('-created_at')[:5]
+        context['recent_insights'] = Insight.objects.filter(account=account, status='active').order_by('-created_at')[:5]
         return context

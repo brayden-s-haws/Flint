@@ -22,12 +22,12 @@
             <div class="bg-flint-card rounded-lg border border-flint-border p-6">
                 <h3 class="text-sm text-flint-muted">Tables</h3>
                 <h1 class="text-3xl font-bold text-flint-text">{{ table_count }}</h1>
-                <a href="#" class="text-flint-orange hover:underline">View all</a>
+                <a href="{% url 'catalog:list' %}" class="text-flint-orange hover:underline">View all</a>
             </div>
             <div class="bg-flint-card rounded-lg border border-flint-border p-6">
                 <h3 class="text-sm text-flint-muted">Insights</h3>
                 <h1 class="text-3xl font-bold text-flint-text">{{ insight_count }}</h1>
-                <a href="#" class="text-flint-orange hover:underline">View all</a>
+                <a href="{% url 'insights:list' %}" class="text-flint-orange hover:underline">View all</a>
             </div>
         </div>
     </div>
@@ -39,10 +39,40 @@
             <a href="{% url 'sources:add' %}" class="bg-flint-orange hover:bg-flint-orange-hover text-white font-semibold py-3 px-6 rounded-md transition-colors inline-block mt-4">Connect a data source</a>
             {% endif %}
             {% if source_count > 0 %}
-            <h3 class="text-xl font-medium text-flint-muted">Your sources are connected.</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-8 ">
+                <div class="bg-flint-card rounded-lg border border-flint-border p-6">
+                    <h3 class="text-sm text-flint-muted">Recent Sources</h3>
+                    {% for source in recent_sources %}
+                    <div class="mb-2">
+                        <a href="{% url 'sources:detail' source.pk %}" class="text-flint-text hover:underline">{{ source.name }}</a>
+                    </div>
+                    {% empty %}
+                    <p class="text-sm text-flint-muted">No sources found.</p>
+                    {% endfor %}
+                </div>
+                <div class="bg-flint-card rounded-lg border border-flint-border p-6">
+                    <h3 class="text-sm text-flint-muted">Recent Tables</h3>
+                    {% for table in recent_tables %}
+                    <div class="mb-2">
+                        <a href="{% url 'catalog:detail' table.pk %}" class="text-flint-text hover:underline">{{ table.name }}</a>
+                    </div>
+                    {% empty %}
+                    <p class="text-sm text-flint-muted">No tables found.</p>
+                    {% endfor %}
+                </div>
+                <div class="bg-flint-card rounded-lg border border-flint-border p-6">
+                    <h3 class="text-sm text-flint-muted">Recent Insights</h3>
+                    {% for insight in recent_insights %}
+                    <div class="mb-2">
+                        <a href="{% url 'insights:list' %}" class="text-flint-text hover:underline">{{ insight.insight_name|capfirst }} insight</a>
+                    </div>
+                    {% empty %}
+                    <p class="text-sm text-flint-muted">No insights found.</p>
+                    {% endfor %}
+                </div>
+            </div>
             {% endif %}
         </div>
     </div>
-
 </main>
 {% endblock content %}

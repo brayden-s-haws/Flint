@@ -10,6 +10,83 @@ For speculative or longer-horizon ideas, see `devdocs/potential_features.md`.
 
 
 ---
+
+## sources — Intra-Source Suggested Use Cases
+
+### Overview
+
+On the source detail page, directly below the Source Overview section, add a **"Suggested Uses"** section. This section contains a set of cards, each describing a specific analytical use case that can be derived by combining two or more tables within the same source. Each card also includes an AI-generated starter SQL query so the user can immediately act on the suggestion.
+
+This is the single-source counterpart to the cross-source agentic discovery feature (see the `insights — Agentic Cross-Source Discovery` section). That feature surfaces what's possible *across* sources; this surfaces what's possible *within* one source. Single-source suggestions are cheaper to generate, require no cross-source join reasoning, and are immediately actionable with the credentials the user has already connected.
+
+**Example cards for a music store database:**
+- *"Analyze customer purchase patterns"* — Join `Customer`, `Invoice`, and `InvoiceLine` to calculate average order value, purchase frequency, and top-spending customers. Starter SQL: a CTE grouping invoices by customer with `SUM(total)` and `COUNT(*)`.
+- *"Track catalog performance by genre"* — Join `Track`, `Genre`, `InvoiceLine` to identify which genres generate the most revenue. Starter SQL: `GROUP BY genre.name ORDER BY revenue DESC`.
+- *"Identify employee sales performance"* — Join `Employee`, `Customer`, `Invoice` to see which support reps are linked to the most revenue.
+
+---
+
+### Where It Lives in the UI
+
+The section appears on `sources/source_detail.html`, below the existing Source Overview card. It uses the same card visual style as the rest of the page. Each use case card contains:
+
+1. **Title** — a short, plain-English name for the use case (e.g., "Customer Purchase Pattern Analysis")
+2. **Description** — 2–3 sentences explaining what insight can be derived and why it's useful
+3. **Tables involved** — a row of small badges naming each table used (e.g., `Customer` `Invoice` `InvoiceLine`)
+4. **Starter SQL** — a collapsible code block with a real, runnable SELECT query against the source's actual schema. The query should be genuinely useful — not a toy example — but intentionally left as a starting point (no WHERE filters, no date ranges) so the user can adapt it.
+
+On initial page load, if no suggestions have been generated yet, show an empty state with a "Generate Suggestions" button. Once generated, suggestions are cached and displayed immediately on future loads. A "Regenerate" button allows refreshing them.
+
+---
+
+### How Generation Works
+
+1. **Trigger** — manual button click ("Generate Suggestions") on first load; optionally auto-triggered after a successful sync once a Source Overview insight already exists.
+
+2. **Prompt inputs** — the LLM is given:
+   - The source name and type
+   - A DDL-style summary of all tables and columns (same format as the Source Overview prompt — reconstruct `CREATE TABLE` statements from `Schema`, `Table`, and `Column` models)
+   - The existing Source Overview insight text (so the LLM has high-level context about what the source is used for)
+   - An instruction to generate 4–6 distinct, concrete use cases with starter SQL
+
+3. **Structured output** — request JSON from the LLM:
+   ```json
+   {
+     "use_cases": [
+       {
+         "title": "Customer Purchase Pattern Analysis",
+         "description": "Join Customer, Invoice, and InvoiceLine to calculate average order value and purchase frequency per customer. Useful for identifying high-value segments and churn risk.",
+         "tables": ["Customer", "Invoice", "InvoiceLine"],
+         "starter_sql": "SELECT c.first_name, c.last_name, COUNT(i.invoice_id) AS purchase_count, SUM(i.total) AS total_spent\nFROM customer c\nJOIN invoice i ON i.customer_id = c.customer_id\nGROUP BY c.customer_id\nORDER BY total_spent DESC;"
+       }
+     ]
+   }
+   ```
+
+4. **Storage** — store each use case as an `Insight` record with `insight_type='use_case_suggestion'`, linked to the source via `InsightTarget`. The full structured JSON (title, description, tables, sql) can be stored in the `text` field as JSON, or the model can be extended with a `JSONField` for structured insight data (preferred — avoids parsing JSON out of a text field at render time). The latter is a small model change worth making.
+
+5. **Re-generation** — deletes existing `use_case_suggestion` insights for the source and reruns the prompt. Rate-limit to once per 24 hours to avoid runaway LLM costs.
+
+---
+
+### Relationship to Existing Code
+
+- **Reuses the LLM abstraction** from `apps/insights/` — same provider layer, same prompt management pattern
+- **Reuses `InsightTarget`** to link use case suggestions to the source record
+- **Source Overview insight** is a prerequisite input — generate use cases only after a Source Overview exists; if it doesn't, prompt the user to generate one first
+- **No new app needed** — lives in `apps/insights/` (generation service) and `apps/sources/` (view and template)
+- **The starter SQL is display-only** — it is not executed. When the `queries` app is built (Phase 4), these starter queries become the natural seed queries for that feature.
+
+---
+
+### Phased Build
+
+1. **Phase 1** — manual trigger only; generate and display cards; store as `Insight` records; collapsible SQL block
+2. **Phase 2** — auto-trigger after sync when Source Overview already exists; "Regenerate" button with rate limiting
+3. **Phase 3 (queries app)** — "Run this query" button that pre-populates the query builder with the starter SQL
+
+---
+
 ## accounts
 
 - **Account settings page** — allow the account owner to rename their account (`/account/settings/`)
@@ -344,6 +421,151 @@ LLM calls per account per run scale with the number of source pairs, not the num
 - **Benefits from text-to-SQL** (queries app): the same pgvector embedding infrastructure serves both deduplication (Step 5) and text-to-SQL table selection
 - **Reuses the existing LLM abstraction** from `apps/insights/` — the provider layer, prompt management, and `Insight` model are all shared; this is additive, not a rewrite
 
+## Demo Mode
+
+### Overview
+
+Add a demo mode that pre-loads two realistic, multi-source datasets so anyone can experience Flint's cross-source intelligence features without connecting a real database. The demo data is stored locally as JSON files and served through lightweight demo connectors that implement the same interface as real connectors — so sync, catalog browsing, insight generation, and cross-source discovery all work exactly as they would in production.
+
+The goal is a convincing product demo: a prospect clicks "Load Demo Data", two pre-built workspaces appear (Sales and Product), and Flint immediately surfaces interesting cross-source insights.
+
+---
+
+### Demo Connector Architecture
+
+Each demo source is backed by a JSON file (or set of files) in a `demo/data/` directory at the project root. A `DemoConnector` class implements the same `BaseConnector` interface as the PostgreSQL connector — `test_connection()`, `discover_catalog()`, `get_table_metadata()` — but reads from local JSON instead of a live database.
+
+In the connector registry, demo sources are registered as normal `SourceType` records with a `is_demo=True` flag (a small model addition). During sync, the registry routes to `DemoConnector` instead of making a real network call. From the perspective of every other part of the app — catalog, insights, cross-source discovery — demo data is indistinguishable from real data.
+
+When real connectors for HubSpot, Salesforce, etc. are eventually built, demo mode continues to work unchanged. The demo connector is never replaced — it just coexists alongside the real one.
+
+---
+
+### Scenario 1: Sales Intelligence
+
+**Sources:** HubSpot (CRM), Google Analytics (web), Customer Database (PostgreSQL-style)
+
+**HubSpot tables:**
+- `contacts` — email, first_name, last_name, lifecycle_stage, lead_score, last_activity_date, company_id
+- `companies` — company_id, name, industry, employee_count, annual_revenue, country
+- `deals` — deal_id, company_id, contact_id, stage, amount, close_date, owner
+
+**Google Analytics tables:**
+- `sessions` — session_id, user_email, date, source, medium, campaign, pages_viewed, session_duration_sec, converted
+- `page_events` — session_id, page_path, time_on_page_sec, scroll_depth_pct
+- `goal_completions` — session_id, user_email, goal_name, completed_at
+
+**Customer Database tables:**
+- `customers` — customer_id, email, company_name, plan_tier, mrr, subscription_start_date, renewal_date
+- `feature_usage` — customer_id, feature_name, usage_count, last_used_date
+- `invoices` — invoice_id, customer_id, amount, status, due_date
+
+**Overlap keys designed in:**
+- `contacts.email` ↔ `sessions.user_email` ↔ `customers.email` — the shared join key across all three sources
+- `companies.company_id` ↔ `customers.company_name` — company-level link
+- `deals.stage` + `customers.plan_tier` — pipeline vs. subscription state for upgrade analysis
+
+**Cross-source insights this enables:**
+- **Upgrade candidates** — customers on `starter` plan (Customer DB) with high `session_duration_sec` and `pages_viewed` (GA) but no open deal in HubSpot → strong signal to reach out
+- **Cross-sell candidates** — companies in specific industries (HubSpot) with multiple active contacts using high-value features (Customer DB feature_usage) but low `mrr`
+- **Prospect strength scoring** — HubSpot leads not yet customers, scored by GA engagement: time on pricing page, campaign source, goal completions
+- **At-risk renewals** — customers with upcoming `renewal_date` (Customer DB) + declining `usage_count` (feature_usage) + no recent HubSpot activity
+
+---
+
+### Scenario 2: Product Intelligence
+
+**Sources:** App Database (usage), Salesforce (accounts + contracts), Intercom (customer feedback)
+
+**App Database tables:**
+- `users` — user_id, email, account_id, role, created_at, last_login_date
+- `feature_events` — event_id, user_id, feature_name, event_type, occurred_at
+- `sessions` — session_id, user_id, started_at, duration_sec, platform
+
+**Salesforce tables:**
+- `accounts` — account_id, name, industry, plan_tier, arr, renewal_date, csm_owner
+- `contacts` — contact_id, account_id, email, role, is_champion
+- `contracts` — contract_id, account_id, start_date, end_date, arr, expansion_arr
+
+**Intercom tables:**
+- `conversations` — conversation_id, user_email, subject, sentiment, created_at, resolved_at
+- `feature_requests` — request_id, user_email, feature_name, vote_count, status, submitted_at
+- `nps_responses` — response_id, user_email, score, comment, submitted_at
+
+**Overlap keys designed in:**
+- `users.email` ↔ `contacts.email` ↔ `conversations.user_email` ↔ `feature_requests.user_email` — shared join key
+- `users.account_id` ↔ `accounts.account_id` — account-level rollup
+- `feature_events.feature_name` ↔ `feature_requests.feature_name` — feature-level link between usage and requests
+
+**Cross-source insights this enables:**
+- **Feature adoption by tier** — which `plan_tier` accounts (Salesforce) are actually using each feature (App DB `feature_events`) — identifies features stuck in enterprise-only adoption
+- **High-ARR customers not using key features** — `accounts.arr` (Salesforce) + low `feature_events` count for a flagship feature (App DB) → churn risk list for CSMs
+- **Feature request prioritization by revenue impact** — `feature_requests` (Intercom) ranked by total `arr` of requesting accounts (Salesforce) — not just vote count
+- **NPS drivers** — correlate `nps_responses.score` (Intercom) with `feature_events` activity (App DB) to identify which features drive promoter vs. detractor sentiment
+- **Expansion candidates** — accounts below enterprise `plan_tier` (Salesforce) with high feature usage breadth (App DB) and positive NPS (Intercom)
+
+---
+
+### Data Design Principles
+
+- **~50–100 rows per table** — enough to make insights meaningful, small enough to be readable as JSON
+- **Overlap is intentional** — email addresses, account IDs, and feature names are shared across sources so cross-source joins always find results
+- **Include edge cases** — a few contacts with no GA sessions, a few customers with no HubSpot deal, a few high-ARR accounts with low usage. Interesting insights come from gaps, not just matches.
+- **Realistic names and values** — use plausible company names, deal stages, feature names. The data should feel real during a demo.
+- **Temporal coherence** — dates should be recent (within the last 90 days) and internally consistent (subscription start before first feature event, etc.)
+
+---
+
+### File Structure
+
+```
+demo/
+├── data/
+│   ├── sales/
+│   │   ├── hubspot_contacts.json
+│   │   ├── hubspot_companies.json
+│   │   ├── hubspot_deals.json
+│   │   ├── ga_sessions.json
+│   │   ├── ga_page_events.json
+│   │   ├── ga_goal_completions.json
+│   │   ├── customerdb_customers.json
+│   │   ├── customerdb_feature_usage.json
+│   │   └── customerdb_invoices.json
+│   └── product/
+│       ├── appdb_users.json
+│       ├── appdb_feature_events.json
+│       ├── appdb_sessions.json
+│       ├── salesforce_accounts.json
+│       ├── salesforce_contacts.json
+│       ├── salesforce_contracts.json
+│       ├── intercom_conversations.json
+│       ├── intercom_feature_requests.json
+│       └── intercom_nps_responses.json
+└── connectors/
+    └── demo_connector.py   # DemoConnector implementing BaseConnector
+```
+
+---
+
+### UI Entry Point
+
+A "Load Demo" button or link on the dashboard empty state (when no sources are connected). Clicking it:
+1. Creates two `Source` records flagged as demo sources
+2. Runs demo sync (reads from JSON, populates catalog)
+3. Redirects to dashboard showing both sources ready
+
+A banner on demo sources makes clear this is demo data. A "Clear Demo Data" button removes all demo sources and their catalog/insight records.
+
+---
+
+### Phased Build
+
+1. **Phase 1** — `DemoConnector` + JSON data files for sales scenario only; manual "Load Demo" button; catalog populates correctly
+2. **Phase 2** — product scenario data; auto-trigger insight generation (Source Overview + use case suggestions) after demo load
+3. **Phase 3** — cross-source discovery runs automatically on demo data; showcase the full agentic pipeline
+
+---
+
 ## core / infrastructure
 
 - **Celery + Redis** — background task queue for scheduled syncs and batch insight generation
@@ -662,6 +884,16 @@ The ontology is a **projection, not a store**. It describes how to interpret dat
 * ~~Update all references to 'Luminetiq'~~ DONE
 * Create logo and add to UI
 
-# DEMO MODE
-* Add a demo mode to the UI
-* Have claude mock up data locally for a few connectors that will generate interesting cross source insights
+---
+
+## infrastructure — Tailwind CDN to Production Build
+
+Currently using the Tailwind CDN play script (`<script src="https://cdn.tailwindcss.com">`). This is fine for development but not suitable for production — it's larger, slower, and doesn't support purging unused classes.
+
+Before production deployment, replace the CDN script with a proper Tailwind build step:
+1. Install Tailwind via npm: `npm install -D tailwindcss`
+2. Create `tailwind.config.js` with the `content` paths pointing at all templates
+3. Create a `static/css/input.css` with the Tailwind directives
+4. Add a build script to `package.json` that outputs to `static/css/output.css`
+5. Replace the CDN `<script>` in `base.html` with a `<link>` to the compiled stylesheet
+6. Move the inline `tailwind.config` block from `base.html` into `tailwind.config.js`

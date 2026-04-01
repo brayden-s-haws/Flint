@@ -15,17 +15,17 @@
             </div>
             {% endif %}
             <div class="mb-4">
-                {{ form.email.label_tag }}
+                <label class="block text-sm font-medium text-flint-muted mb-1" for="{{ form.username.id_for_label }}">Email</label>
                 {{ form.email }}
                 {{ form.email.errors }}
             </div>
             <div class="mb-4">
-                {{ form.password1.label_tag }}
+                <label class="block text-sm font-medium text-flint-muted mb-1" for="{{ form.password1.id_for_label }}">Password</label>
                 {{ form.password1 }}
                 {{ form.password1.errors }}
             </div>
             <div class="mb-4">
-                {{ form.password2.label_tag }}
+                <label class="block text-sm font-medium text-flint-muted mb-1" for="{{ form.password2.id_for_label }}">Confirm Password</label>
                 {{ form.password2 }}
                 {{ form.password2.errors }}
             </div>

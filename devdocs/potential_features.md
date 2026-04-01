@@ -142,6 +142,13 @@ This reduces LLM costs, speeds up onboarding for common sources, and still suppo
 
 ---
 
+## UI Enhancements
+
+- **Dashboard recent activity dates** — Show last synced date next to sources and creation date next to tables/insights in the dashboard recent activity section. Requires annotating the `recent_sources` queryset with `Max('sourcesynclog__completed_at')` and surfacing timestamps on `Table` and `Insight` records.
+- **Source type logos** — Display the logo/icon for each connector type (PostgreSQL, HubSpot, Salesforce, etc.) alongside the source name in the source list, source detail header, and dashboard recent sources list. Logos should be stored in `static/images/connectors/` and looked up via the `SourceType.name` field.
+
+---
+
 ## Notes
 
 Features should be prioritized based on:

@@ -15,12 +15,12 @@
             {% endif %}
             <input type="hidden" name="next" value="{{ next }}">
             <div class="mb-4">
-                {{ form.username.label_tag }}
+                <label class="block text-sm font-medium text-flint-muted mb-1" for="{{ form.username.id_for_label }}">Email</label>
                 {{ form.username }}
                 {{ form.username.errors }}
             </div>
             <div class="mb-4">
-                {{ form.password.label_tag }}
+                <label class="block text-sm font-medium text-flint-muted mb-1" for="{{ form.password.id_for_label }}">Password</label>
                 {{ form.password }}
                 {{ form.password.errors }}
             </div>

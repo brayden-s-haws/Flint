@@ -108,6 +108,23 @@ def process_sources(sources: list[Source], limit: int = 10) -> dict[str, int]:
     ...
 ```
 
+### Forms
+
+**Every new form must include styled widgets.** Add an `__init__` method that applies Tailwind classes to all fields via `widget.attrs.update()`.
+
+Input classes: `w-full bg-flint-card border border-flint-border-em rounded-md px-3 py-2 text-sm text-flint-text focus:outline-none focus:ring-2 focus:ring-flint-orange`
+
+Label classes (in templates): `block text-sm font-medium text-flint-muted mb-1`
+
+```python
+def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    for field in self.fields.values():
+        field.widget.attrs.update({'class': 'w-full bg-flint-card border border-flint-border-em rounded-md px-3 py-2 text-sm text-flint-text focus:outline-none focus:ring-2 focus:ring-flint-orange'})
+```
+
+Note: `ModelChoiceField` renders as `<select>` — the classes apply but may need `appearance-none` added if the browser's native styling bleeds through.
+
 ## Configuration Notes
 
 - Database: SQLite3 (development) at `db.sqlite3`
