@@ -9,4 +9,5 @@ urlpatterns = [
     path('<int:pk>/', views.SourceDetailView.as_view(), name='detail'),
     path('<int:pk>/test/', views.test_connection, name='test_connection'),
     path('<int:pk>/sync/', views.sync_source, name='sync'),
+    path('<int:pk>/edit/', views.SourceUpdateView.as_view(), name='edit'),
 ]

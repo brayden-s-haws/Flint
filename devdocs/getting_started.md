@@ -333,5 +333,5 @@ Once the MVP is complete and verified (see Verification Plan in `devdocs/archite
 
 
 
-- **`devdocs/ui/cleanup.md`** — UI polish items that were intentionally deferred during the MVP build. Work through these before adding new features so the product feels solid.
+- ~~**`devdocs/ui/cleanup.md`** — UI polish items that were intentionally deferred during the MVP build. Work through these before adding new features so the product feels solid.~~ COMPLETE
 - **`devdocs/appdocs/post_mvp.md`** — Concrete features scoped out of the MVP, organised by app. Use this as your backlog for Phase 2.

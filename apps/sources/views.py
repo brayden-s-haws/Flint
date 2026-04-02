@@ -11,8 +11,8 @@ from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Max, QuerySet
 from django.shortcuts import get_object_or_404, redirect
-from django.views.generic import ListView, CreateView, DetailView
-from django.urls import reverse_lazy
+from django.views.generic import ListView, CreateView, DetailView, UpdateView
+from django.urls import reverse_lazy, reverse
 from django.http import HttpResponse, HttpRequest
 from django.forms import BaseModelForm
 from django.utils import timezone
@@ -56,6 +56,39 @@ class SourceCreateView(LoginRequiredMixin, CreateView):
         source_instance.save()
         self.object = source_instance
         return super().form_valid(form)
+
+class SourceUpdateView(LoginRequiredMixin, TenantQuerysetMixin, UpdateView):
+    model = Source
+    form_class = SourceForm
+    template_name = 'sources/source_form.html'
+
+    def get_initial(self) -> dict[str, Any]:
+        initial = super().get_initial()
+        source = self.object
+        credentials_dict = decrypt_credentials(source.credentials)
+        initial['host'] = credentials_dict['host']
+        initial['port'] = credentials_dict['port']
+        initial['dbname'] = credentials_dict['dbname']
+        initial['user'] = credentials_dict['user']
+        initial['password'] = credentials_dict['password']
+        return initial
+
+    def form_valid(self, form: BaseModelForm) -> HttpResponse:
+        source_instance = form.save(commit=False)
+        credentials_dict = {
+            'host': form.cleaned_data['host'],
+            'port': form.cleaned_data['port'],
+            'dbname': form.cleaned_data['dbname'],
+            'user': form.cleaned_data['user'],
+            'password': form.cleaned_data['password'],
+        }
+        source_instance.credentials = encrypt_credentials(credentials_dict)
+        source_instance.save()
+        self.object = source_instance
+        return super().form_valid(form)
+
+    def get_success_url(self) -> str:
+        return reverse('sources:detail', kwargs={'pk': self.object.pk})
 
 class SourceDetailView(LoginRequiredMixin, TenantQuerysetMixin, DetailView):
     model = Source
