@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load markdown_filters %}
 
 {% block title %}Dashboard | Flint{% endblock %}
 
@@ -32,7 +33,7 @@
         </div>
     </div>
     <div>
-        <div class="text-center mt-16">
+        <div class="mt-16">
             {% if source_count == 0 %}
             <h1 class="text-2xl font-semibold text-flint-text">Connect your first data source</h1>
             <h3 class="text-xl font-medium text-flint-muted">Flint will help you discover insights from your data</h3>
@@ -41,34 +42,34 @@
             {% if source_count > 0 %}
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-8 ">
                 <div class="bg-flint-card rounded-lg border border-flint-border p-6">
-                    <h3 class="text-sm text-flint-muted">Recent Sources</h3>
-                    {% for source in recent_sources %}
-                    <div class="mb-2">
-                        <a href="{% url 'sources:detail' source.pk %}" class="text-flint-text hover:underline">{{ source.name }}</a>
-                    </div>
-                    {% empty %}
-                    <p class="text-sm text-flint-muted">No sources found.</p>
-                    {% endfor %}
+                    <h3 class="text-base font-semibold text-flint-text underline mb-3">Recent Sources</h3>
+                    <ul class="space-y-2 list-disc list-inside">
+                      {% for source in recent_sources %}
+                      <li><a href="{% url 'sources:detail' source.pk %}" class="text-flint-muted hover:text-flint-text text-sm">{{ source.name }}</a></li>
+                      {% empty %}
+                      <li class="text-sm text-flint-muted">No sources found.</li>
+                      {% endfor %}
+                    </ul>
                 </div>
                 <div class="bg-flint-card rounded-lg border border-flint-border p-6">
-                    <h3 class="text-sm text-flint-muted">Recent Tables</h3>
-                    {% for table in recent_tables %}
-                    <div class="mb-2">
-                        <a href="{% url 'catalog:detail' table.pk %}" class="text-flint-text hover:underline">{{ table.name }}</a>
-                    </div>
-                    {% empty %}
-                    <p class="text-sm text-flint-muted">No tables found.</p>
-                    {% endfor %}
+                    <h3 class="text-base font-semibold text-flint-text underline mb-3">Recent Tables</h3>
+                    <ul class="space-y-2 list-disc list-inside">
+                        {% for table in recent_tables %}
+                        <li><a href="{% url 'catalog:detail' table.pk %}" class="text-flint-muted hover:text-flint-text text-sm">{{ table.name }}</a></li>
+                        {% empty %}
+                        <li class="text-sm text-flint-muted">No tables found.</li>
+                        {% endfor %}
+                    </ul>
                 </div>
                 <div class="bg-flint-card rounded-lg border border-flint-border p-6">
-                    <h3 class="text-sm text-flint-muted">Recent Insights</h3>
-                    {% for insight in recent_insights %}
-                    <div class="mb-2">
-                        <a href="{% url 'insights:list' %}" class="text-flint-text hover:underline">{{ insight.insight_name|capfirst }} insight</a>
-                    </div>
-                    {% empty %}
-                    <p class="text-sm text-flint-muted">No insights found.</p>
-                    {% endfor %}
+                    <h3 class="text-base font-semibold text-flint-text underline mb-3">Recent Insights</h3>
+                    <ul class="space-y-2 list-disc list-inside">
+                        {% for insight in recent_insights %}
+                        <li><a href="{% url 'insights:list' %}" class="text-flint-muted hover:text-flint-text text-sm">{{ insight.target_name }}: {{ insight.insight.text|strip_markdown|truncatewords:6 }}</a></li>
+                        {% empty %}
+                        <li class="text-sm text-flint-muted">No insights found.</li>
+                        {% endfor %}
+                    </ul>
                 </div>
             </div>
             {% endif %}

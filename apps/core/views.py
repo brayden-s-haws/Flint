@@ -8,7 +8,8 @@ from django.views.generic import TemplateView
 
 from apps.sources.models import Source
 from apps.catalog.models import Table
-from apps.insights.models import Insight
+from apps.insights.models import Insight, InsightTarget
+
 
 class DashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'core/dashboard.html'
@@ -23,5 +24,12 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         context['insight_count'] = Insight.objects.filter(account=account, status='active').count()
         context['recent_sources'] = Source.objects.filter(account=account).order_by('-created_at')[:5]
         context['recent_tables'] = Table.objects.filter(account=account).order_by('-created_at')[:5]
-        context['recent_insights'] = Insight.objects.filter(account=account, status='active').order_by('-created_at')[:5]
+        insights = Insight.objects.filter(account=account, status='active').order_by('-created_at')[:5]
+        recent_insights = []
+        for insight in insights:
+            target = InsightTarget.objects.filter(insight=insight).first()
+            target_name = target.target.name if target and target.target else 'Insight'
+            recent_insights.append({'insight': insight, 'target_name': target_name})
+        context['recent_insights'] = recent_insights
+
         return context

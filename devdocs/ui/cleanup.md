@@ -29,7 +29,7 @@ Items to revisit when polishing the UI. Not blockers — functional code comes f
 
 - [x] **Wire up stat card "View all" links** — `templates/core/dashboard.html` lines 20, 25, 30. Currently `href=""` placeholders. Replace with `{% url 'sources:list' %}`, `{% url 'catalog:list' %}`, and `{% url 'insights:list' %}` once each app has its list view defined.
 - [x] **Wire up empty state CTA button** — `templates/core/dashboard.html` line 39. Currently `href=""`. Replace with `{% url 'sources:list' %}` once the sources list view exists.
-- [ ] **Flesh out dashboard active state** — `templates/core/dashboard.html`. The `{% if source_count > 0 %}` block is currently a placeholder. Return to this after the sources and catalog apps are complete. At that point: update `DashboardView.get_context_data` in `apps/core/views.py` to query real counts (`Source`, `Table`, `Insight` models), and build out the active state section with a recent sources list, recently discovered tables, and latest insights. **Note:** stat cards currently show 0 for all counts even when data exists — the view is not yet querying real data.
+- [x] **Flesh out dashboard active state** — `templates/core/dashboard.html`. The `{% if source_count > 0 %}` block is currently a placeholder. Return to this after the sources and catalog apps are complete. At that point: update `DashboardView.get_context_data` in `apps/core/views.py` to query real counts (`Source`, `Table`, `Insight` models), and build out the active state section with a recent sources list, recently discovered tables, and latest insights. **Note:** stat cards currently show 0 for all counts even when data exists — the view is not yet querying real data.
 
 ---
 
@@ -38,5 +38,4 @@ Items to revisit when polishing the UI. Not blockers — functional code comes f
 - [x] **Tailwind CDN to production build** — Moved to `devdocs/appdocs/post_mvp.md` (infrastructure section at bottom).
 - [x] **Add favicon** — Currently using the default Django favicon. Replace with a custom favicon.
 - [x] **Add logo** - Currently using the default Django logo.
-- [ ] **Add breadcrumbs** - Add to pages like we do for http://127.0.0.1:8000/catalog/1/
 
