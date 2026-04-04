@@ -18,6 +18,8 @@
                 {% csrf_token %}
                 <button type="submit" class="border border-flint-border text-flint-muted hover:bg-flint-card px-4 py-2 rounded-md">Test Connection</button>
             </form>
+            <a class="border border-flint-border text-flint-muted hover:bg-flint-card px-4 py-2 rounded-md" href="{% url 'sources:edit' source.pk %}">Edit</a>
+            <a class="border border-red-500 text-red-400 hover:bg-red-900/20 px-4 py-2 rounded-md" href="{% url 'sources:delete' source.pk %}">Delete</a>
         </div>
     </div>
     <div>

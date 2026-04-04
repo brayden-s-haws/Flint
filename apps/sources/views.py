@@ -11,7 +11,7 @@ from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Max, QuerySet
 from django.shortcuts import get_object_or_404, redirect
-from django.views.generic import ListView, CreateView, DetailView, UpdateView
+from django.views.generic import ListView, CreateView, DetailView, UpdateView, DeleteView
 from django.urls import reverse_lazy, reverse
 from django.http import HttpResponse, HttpRequest
 from django.forms import BaseModelForm
@@ -89,6 +89,11 @@ class SourceUpdateView(LoginRequiredMixin, TenantQuerysetMixin, UpdateView):
 
     def get_success_url(self) -> str:
         return reverse('sources:detail', kwargs={'pk': self.object.pk})
+
+class SourceDeleteView(LoginRequiredMixin, TenantQuerysetMixin, DeleteView):
+    model = Source
+    template_name = 'sources/source_delete.html'
+    success_url = reverse_lazy('sources:list')
 
 class SourceDetailView(LoginRequiredMixin, TenantQuerysetMixin, DetailView):
     model = Source
