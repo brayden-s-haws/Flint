@@ -9,7 +9,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
-from django.db.models import Max, QuerySet
+from django.db.models import Max, QuerySet, Q
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import ListView, CreateView, DetailView, UpdateView, DeleteView
 from django.urls import reverse_lazy, reverse
@@ -18,11 +18,10 @@ from django.forms import BaseModelForm
 from django.utils import timezone
 from apps.core.mixins import TenantQuerysetMixin
 from .connectors.registry import get_connector
-
 from apps.catalog.models import Schema, Table, Column
 from apps.insights.models import InsightTarget, Insight
 from apps.insights.services.provider import get_service
-from .models import Source, SourceSyncLog
+from .models import Source, SourceSyncLog, SourceType
 from .forms import SourceForm
 from .encryption import encrypt_credentials, decrypt_credentials
 
@@ -33,7 +32,21 @@ class SourceListView(LoginRequiredMixin, TenantQuerysetMixin, ListView):
     context_object_name = 'sources'
 
     def get_queryset(self) -> QuerySet[Source]:
-        return super().get_queryset().annotate(last_synced_at=Max('sourcesynclog__completed_at'))
+        q = self.request.GET.get('q')
+        source_type = self.request.GET.get('type')
+        qs = super().get_queryset().annotate(last_synced_at=Max('sourcesynclog__completed_at'))
+        if q:
+            qs = qs.filter(Q(name__icontains=q) | Q(source_type__name__icontains=q))
+        if source_type:
+            qs = qs.filter(source_type__name=source_type)
+        return qs
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        context['source_types'] = SourceType.objects.all()
+        context['q'] = self.request.GET.get('q')
+        context['source_type'] = self.request.GET.get('type')
+        return context
 
 
 class SourceCreateView(LoginRequiredMixin, CreateView):
