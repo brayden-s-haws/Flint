@@ -1,7 +1,7 @@
 # Feature: Source List Filtering and Search
 
 **Source:** `devdocs/appdocs/post_mvp.md` — sources section
-**Status:** In progress
+**Status:** Complete
 **Target phase:** Post-MVP Phase 1
 
 ---
@@ -25,7 +25,7 @@ The MVP source list shows all sources for an account with no way to filter or se
 - [x] `SourceListView.get_context_data()` — passes `q`, `source_type`, and `source_types` (all `SourceType` objects) to the template
 
 #### Templates
-- [ ] `sources/source_list.html` — add a filter/search bar above the source list containing:
+- [x] `sources/source_list.html` — add a filter/search bar above the source list containing:
   - A text input for name search bound to the `q` query param
   - A `<select>` dropdown for source type bound to the `type` query param, populated from `SourceType` objects (pass them in context from the view)
   - A submit button to apply filters; form uses `method="get"` with no `action` so it submits to the current URL
