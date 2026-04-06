@@ -9,8 +9,7 @@
         <a href="{% url 'sources:add' %}" class="bg-flint-orange hover:bg-flint-orange-hover text-white font-semibold py-2 px-4 rounded-md">Connect Source</a>
     </div>
     <form class="flex gap-3 items-center mb-6">
-        <input type="text" name="q" value="{{ q|default:'' }}" placeholder="Search sources by name" class="w-full bg-flint-card border border-flint-border-em rounded-md px-3 py-2 text-sm text-flint-text focus:outline-none focus:ring-2 focus:ring-flint-orange
-">
+        <input type="text" name="q" value="{{ q|default:'' }}" placeholder="Search sources by name" class="w-full bg-flint-card border border-flint-border-em rounded-md px-3 py-2 text-sm text-flint-text focus:outline-none focus:ring-2 focus:ring-flint-orange">
         <select name="type" class="w-full bg-flint-card border border-flint-border-em rounded-md px-3 py-2 text-sm text-flint-text focus:outline-none focus:ring-2 focus:ring-flint-orange">
             <option value="">All Types</option>
             {% for st in source_types %}
@@ -19,7 +18,6 @@
         </select>
         <button type="submit" class="bg-flint-orange hover:bg-flint-orange-hover text-white font-semibold py-2 px-4 rounded-md">Search</button>
         <a href="{% url 'sources:list' %}" class="border border-flint-border-em rounded-md text-flint-muted hover:text-flint-text px-4 py-2 whitespace-nowrap">Clear</a>
-
     </form>
     <div>
         {% if sources %}
