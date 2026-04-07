@@ -310,8 +310,9 @@ Pass surviving hypotheses into the existing `apps/insights/` LLM pipeline (the s
 - Explains **what** the data combination reveals
 - Gives a concrete **how** (what to join, what to measure)
 - States the **business decision** it supports
+- Includes a **starter SQL query** — a runnable cross-source query (or two separate queries if the sources can't be directly joined) that makes the insight immediately actionable. The query should reference real table and column names from the catalog and be genuinely useful, not a toy example. It is display-only at this stage; when the `queries` app is built it becomes a seed query.
 
-This reuses the existing `Insight` model with `insight_type = 'cross_source_agent'` and `status = 'pending_review'` (surfaced in a review queue before becoming fully published, at least initially).
+This reuses the existing `Insight` model with `insight_type = 'cross_source_agent'` and `status = 'pending_review'` (surfaced in a review queue before becoming fully published, at least initially). Store the structured output (insight text + starter SQL) in a `JSONField` on `Insight` (or extend the model) rather than embedding SQL in the `text` field — this matches the approach used for intra-source use case suggestions and avoids parsing SQL out of prose at render time.
 
 ---
 
