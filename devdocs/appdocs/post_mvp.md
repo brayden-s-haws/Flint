@@ -102,21 +102,21 @@ On initial page load, if no suggestions have been generated yet, show an empty s
 
 ## sources
 
-- **Source edit view** — allow users to rename a source or update its connection credentials. The MVP has no edit UI; sources can only be created or deleted. Needs a `SourceEditView` (likely `UpdateView`) at `/sources/<id>/edit/` with a form pre-populated from the existing `Source` record. Credential fields should remain encrypted on save (re-encrypt with Fernet if changed). Add an "Edit" link on `source_detail.html`.
-- **Source list filtering and search** — filter the source list by source type (e.g. PostgreSQL) and add a text search so users can find sources by name. Implement as URL query params (`?type=postgresql&q=my+db`) processed in the view's `get_queryset`; no JavaScript required.
+- ~~**Source edit view** — allow users to rename a source or update its connection credentials. The MVP has no edit UI; sources can only be created or deleted. Needs a `SourceEditView` (likely `UpdateView`) at `/sources/<id>/edit/` with a form pre-populated from the existing `Source` record. Credential fields should remain encrypted on save (re-encrypt with Fernet if changed). Add an "Edit" link on `source_detail.html`.~~ COMPLETE (also added source delete)
+- ~~**Source list filtering and search** — filter the source list by source type (e.g. PostgreSQL) and add a text search so users can find sources by name. Implement as URL query params (`?type=postgresql&q=my+db`) processed in the view's `get_queryset`; no JavaScript required.~~ COMPLETE
 
 ---
 
 ## catalog
 
 - **TableStatistics** — snapshot-based stats (row counts, column null rates, etc.); model planned but not built for MVP
-- **Schema filter on table list** — filter table list by source or schema (UI enhancement)
+- ~~**Schema filter on table list** — filter table list by source or schema (UI enhancement)~~ COMPLETE
 
 ---
 
 ## insights
 
-- **Insight list filtering and search** — filter by insight type (table description, source overview, etc.) or by source/table target, and add text search across insight content. Same URL query param approach as sources.
+- ~~**Insight list filtering and search** — filter by insight type (table description, source overview, etc.) or by source/table target, and add text search across insight content. Same URL query param approach as sources.~~ COMPLETE (also added source dropdown filtering via InsightTarget)
 - **InsightBuilder** — cross-source exploration sessions; model planned (`InsightBuilder`) but deferred
 - **Cross-source insights** — insights that span multiple sources or tables
 - **Batch insight generation** — generate descriptions for all tables in a source at once (requires Celery)

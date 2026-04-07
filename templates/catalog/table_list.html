@@ -7,6 +7,18 @@
     <div class="flex justify-between">
         <h1 class="text-2xl font-bold text-flint-text">Catalog</h1>
     </div>
+    <form class="flex gap-3 items-center mb-6">
+        <input type="text" name="q" value="{{ q|default:'' }}" placeholder="Search tables" class="w-full bg-flint-card border border-flint-border-em rounded-md px-3 py-2 text-sm text-flint-text
+        focus:outline-none focus:ring-2 focus:ring-flint-orange">
+        <select name="source" class="w-full bg-flint-card border border-flint-border-em rounded-md px-3 py-2 text-sm text-flint-text focus:outline-none focus:ring-2 focus:ring-flint-orange">
+            <option value="">All Sources</option>
+            {% for source in sources %}
+                <option value="{{ source.pk }}" {% if selected_source == source.pk|stringformat:"s" %}selected{% endif %} >{{ source.name }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="bg-flint-orange hover:bg-flint-orange-hover text-white font-semibold py-2 px-4 rounded-md">Search</button>
+        <a href="{% url 'catalog:list' %}" class="border border-flint-border-em rounded-md text-flint-muted hover:text-flint-text px-4 py-2 whitespace-nowrap">Clear</a>
+    </form>
     <div>
         {% if tables %}
             {%  for table in tables %}

@@ -13,6 +13,7 @@ from django.views.generic import ListView, DetailView
 from apps.core.mixins import TenantQuerysetMixin
 from apps.insights.models import InsightTarget, Insight
 from apps.insights.services.provider import get_service
+from apps.sources.models import Source
 
 from .models import Table
 
@@ -22,7 +23,21 @@ class TableListView(TenantQuerysetMixin, LoginRequiredMixin, ListView):
     context_object_name = 'tables'
 
     def get_queryset(self) -> QuerySet[Table]:
-        return super().get_queryset().select_related('schema', 'schema__source')
+        q = self.request.GET.get('q')
+        source_pk = self.request.GET.get('source')
+        qs = super().get_queryset().select_related('schema', 'schema__source')
+        if q:
+            qs = qs.filter(name__icontains=q)
+        if source_pk:
+            qs = qs.filter(schema__source_id=source_pk, schema__source__account=self.request.account) # type: ignore[attr-defined]
+        return qs
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        context['q'] = self.request.GET.get('q')
+        context['sources'] = Source.objects.filter(account=self.request.account) # type: ignore[attr-defined]
+        context['selected_source'] = self.request.GET.get('source')
+        return context
 
 
 class TableDetailView(TenantQuerysetMixin, LoginRequiredMixin, DetailView):
