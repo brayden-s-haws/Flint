@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from django.db import models
+
 from apps.core.models import TenantAwareModel
 
 class Schema(TenantAwareModel):
@@ -29,5 +30,13 @@ class Column(TenantAwareModel):
 
     def __str__(self) -> str:
         return f'{self.table.name}.{self.name}'
+
+class TableStatistics(TenantAwareModel):
+    table = models.ForeignKey(Table, on_delete=models.CASCADE)
+    row_count = models.BigIntegerField(null=True, blank=True)
+    column_stats = models.JSONField(default=dict)
+
+    def __str__(self) -> str:
+        return f'{self.table.name} stats (synced at {self.created_at.strftime("%Y-%m-%d %H:%M:%S")})'
 
 

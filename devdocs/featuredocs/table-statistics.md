@@ -1,7 +1,7 @@
 # Feature: Table Statistics
 
 **Source:** `devdocs/appdocs/post_mvp.md` — catalog section; `devdocs/architecture.md` — Phase 2 roadmap  
-**Status:** Not started  
+**Status:** In progress  
 **Target phase:** Post-MVP Phase 2
 
 ---
@@ -26,11 +26,11 @@ Table Statistics captures a snapshot of quantitative metadata for each table at 
 ### Phase 1 — Model & Sync Collection
 
 #### Models
-- [ ] `TableStatistics` in `apps/catalog/models.py` — one record per table per sync; key fields:
+- [x] `TableStatistics` in `apps/catalog/models.py` — one record per table per sync; key fields:
   - `table` — FK to `Table` (CASCADE)
   - `account` — FK (inherit `TenantAwareModel`)
   - `row_count` — `BigIntegerField(null=True)` — total rows at snapshot time
-  - `synced_at` — `DateTimeField(auto_now_add=True)` — when this snapshot was taken
+  - `synced_at` — uses inherited `created_at` from `TenantAwareModel`
   - `column_stats` — `JSONField(default=dict)` — per-column stats keyed by column name; each entry contains:
     - `null_fraction` — float 0.0–1.0 (nulls / total rows)
     - `distinct_count` — integer (approx or exact)
@@ -47,7 +47,7 @@ Table Statistics captures a snapshot of quantitative metadata for each table at 
   - Pass `account=source.account`, `table=table`, `row_count=metadata['row_count']`, `column_stats=metadata.get('column_stats', {})`
 
 #### Migrations
-- [ ] Run `makemigrations catalog` to generate the migration for `TableStatistics`
+- [x] Run `makemigrations catalog` to generate the migration for `TableStatistics`
 
 #### Tests
 - [ ] Test that `sync_source` creates a `TableStatistics` record for each table after a successful sync
