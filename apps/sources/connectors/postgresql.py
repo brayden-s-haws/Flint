@@ -69,8 +69,21 @@ class PostgreSQLConnector(BaseConnector):
                     cursor.execute("SELECT reltuples::bigint AS row_count FROM pg_class JOIN pg_namespace ON pg_class.relnamespace = pg_namespace.oid WHERE nspname = %s AND relname = %s", (schema_name, table_name))
                     row = cursor.fetchone()
                     if row is None:
-                        return {'row_count': None}
-                    return {'row_count': row['row_count']}
+                        return { 'row_count': None, 'column_stats': {}}
+                    cursor.execute("SELECT attname, null_frac, n_distinct, most_common_vals FROM pg_stats WHERE schemaname = %s and tablename = %s", (schema_name, table_name))
+                    column_stats = cursor.fetchall()
+                    stats = {}
+                    for col in column_stats:
+                        raw_mcv = col['most_common_vals']
+                        common_values = raw_mcv.strip('{}').split(',') if raw_mcv else []
+                        n_distinct = col['n_distinct']
+                        distinct_count = int(abs(n_distinct) * row['row_count']) if n_distinct < 0 else int(n_distinct)
+                        stats[col['attname']] = {
+                            'null_fraction': col['null_frac'],
+                            'distinct_count': distinct_count,
+                            'common_values': common_values
+                        }
+                    return {'row_count': row['row_count'], 'column_stats': stats}
         except Exception as e:
             logger.error(f"Count not query row counts: {e}")
-            return { 'row_count': None}
+            return { 'row_count': None, 'column_stats': {}}

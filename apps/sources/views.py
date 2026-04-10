@@ -18,7 +18,7 @@ from django.forms import BaseModelForm
 from django.utils import timezone
 from apps.core.mixins import TenantQuerysetMixin
 from .connectors.registry import get_connector
-from apps.catalog.models import Schema, Table, Column
+from apps.catalog.models import Schema, Table, Column, TableStatistics
 from apps.insights.models import InsightTarget, Insight
 from apps.insights.services.provider import get_service
 from .models import Source, SourceSyncLog, SourceType
@@ -165,6 +165,10 @@ def sync_source(request: HttpRequest, pk:int) -> HttpResponse:
                 table.row_count = metadata['row_count']
                 table.table_type = table_data['table_type']
                 table.save()
+                TableStatistics.objects.create(
+                    account=source.account, table=table,
+                    row_count=metadata['row_count'], column_stats=metadata.get('column_stats', {})
+                )
                 for col_data in table_data['columns']:
                     col, _ = Column.objects.get_or_create(
                         table=table, name=col_data['name'],

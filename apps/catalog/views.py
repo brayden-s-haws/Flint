@@ -15,7 +15,7 @@ from apps.insights.models import InsightTarget, Insight
 from apps.insights.services.provider import get_service
 from apps.sources.models import Source
 
-from .models import Table
+from .models import Table, TableStatistics
 
 class TableListView(TenantQuerysetMixin, LoginRequiredMixin, ListView):
     model = Table
@@ -58,4 +58,5 @@ class TableDetailView(TenantQuerysetMixin, LoginRequiredMixin, DetailView):
                 context['insights'] = [insight]
             except Exception:
                 logger.exception("Error generating table description for table %s", self.object.pk)
+        context['statistics'] = TableStatistics.objects.filter(table=self.object).order_by('-created_at').first()
         return context

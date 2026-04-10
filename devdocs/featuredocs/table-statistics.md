@@ -1,7 +1,7 @@
 # Feature: Table Statistics
 
 **Source:** `devdocs/appdocs/post_mvp.md` — catalog section; `devdocs/architecture.md` — Phase 2 roadmap  
-**Status:** In progress  
+**Status:** Phases 1 & 2 complete — tests and Phase 3 (LLM context injection) deferred  
 **Target phase:** Post-MVP Phase 2
 
 ---
@@ -37,12 +37,12 @@ Table Statistics captures a snapshot of quantitative metadata for each table at 
     - `common_values` — list of up to 5 most frequent values (strings)
 
 #### Connector Changes
-- [ ] Extend `get_table_metadata` return type in `apps/sources/connectors/base.py` to include `column_stats: dict` alongside `row_count`
-- [ ] Implement column statistics query in `apps/sources/connectors/postgresql.py` — query `pg_stats` (populated by `ANALYZE`) for `null_frac`, `n_distinct`, and `most_common_vals` per column; fall back to `None` if `pg_stats` has no data for the table yet
+- [x] Extend `get_table_metadata` return type in `apps/sources/connectors/base.py` to include `column_stats: dict` alongside `row_count`
+- [x] Implement column statistics query in `apps/sources/connectors/postgresql.py` — query `pg_stats` (populated by `ANALYZE`) for `null_frac`, `n_distinct`, and `most_common_vals` per column; fall back to `None` if `pg_stats` has no data for the table yet
   - SQL: `SELECT attname, null_frac, n_distinct, most_common_vals FROM pg_stats WHERE schemaname = %s AND tablename = %s`
 
 #### Sync Wiring
-- [ ] In `apps/sources/views.py` `sync_source`, after saving `table.row_count`, create a `TableStatistics` record from the expanded `get_table_metadata` result
+- [x] In `apps/sources/views.py` `sync_source`, after saving `table.row_count`, create a `TableStatistics` record from the expanded `get_table_metadata` result
   - Use `TableStatistics.objects.create(...)` — always create a new snapshot; do not `update_or_create`; old snapshots are historical records
   - Pass `account=source.account`, `table=table`, `row_count=metadata['row_count']`, `column_stats=metadata.get('column_stats', {})`
 
@@ -59,16 +59,16 @@ Table Statistics captures a snapshot of quantitative metadata for each table at 
 ### Phase 2 — UI Display on Table Detail
 
 #### Views
-- [ ] In `apps/catalog/views.py` `TableDetailView.get_context_data`, fetch the most recent `TableStatistics` for the table:
-  - `TableStatistics.objects.filter(table=self.object).order_by('-synced_at').first()`
+- [x] In `apps/catalog/views.py` `TableDetailView.get_context_data`, fetch the most recent `TableStatistics` for the table:
+  - `TableStatistics.objects.filter(table=self.object).order_by('-created_at').first()`
   - Add to context as `context['statistics']` (may be `None` if no sync has run yet)
 
 #### Templates
-- [ ] `templates/catalog/table_detail.html` — add a "Statistics" section below the columns list:
-  - Show `row_count` as a formatted number (e.g., `1,234,567`)
-  - Show `synced_at` as a relative or absolute timestamp (e.g., "Last updated 3 hours ago")
-  - If `column_stats` is populated, render a small table with columns: Column Name | Null Rate | Distinct Values | Common Values
-  - Show an empty state ("No statistics available — run a sync to collect them") when `statistics` is `None`
+- [x] `templates/catalog/table_detail.html` — add a "Statistics" section below the columns list:
+  - Show `row_count` as a formatted number using `|intcomma` (`django.contrib.humanize`)
+  - Show `created_at` as snapshot timestamp
+  - Render a table with columns: Column Name | Null Rate | Distinct Values | Common Values (capped at 5 via `|slice:":5"`)
+  - Show an empty state ("No statistics available. Sync source to generate stats.") when `statistics` is `None`
 
 ---
 

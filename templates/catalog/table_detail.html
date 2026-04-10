@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load markdown_extras %}
+{% load humanize %}
 
 {% block title %} {{ object.name }} | Flint {% endblock %}
 
@@ -14,7 +15,7 @@
         <div class="bg-flint-card rounded-lg border border-flint-border p-6 mb-6">
             <h2 class="text-lg font-semibold text-flint-text mb-4">Table Metadata</h2>
             <p class="text-sm text-flint-muted">Table type: {{ object.table_type }}</p>
-            <p class="text-sm text-flint-muted">Row count: {{ object.row_count|default:"Unknown" }}</p>
+            <p class="text-sm text-flint-muted">Row count: {{ object.row_count|default:"Unknown"|intcomma }}</p>
         </div>
     </div>
     <div>
@@ -44,6 +45,40 @@
                 {% endfor %}
                 </tbody>
             </table>
+        </div>
+    </div>
+    <div>
+        <div class="bg-flint-card rounded-lg border border-flint-border p-6 mb-6">
+            <h2 class="text-lg font-semibold text-flint-text mb-4">Statistics</h2>
+            {% if statistics %}
+            <p class="text-sm text-flint-muted mb-4">{{ statistics.row_count|intcomma }} rows · Snapshot taken {{ statistics.created_at }}</p>
+            <table class="w-full">
+                <thead class="text-flint-muted text-left text-sm font-medium pb-3">
+                    <tr>
+                        <th>Name</th>
+                        <th>Null Rate</th>
+                        <th>Distinct Values</th>
+                        <th>Most Common Values</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for col_name, col_stats in statistics.column_stats.items %}
+                    <tr class="border-t border-flint-border text-sm text-flint-text">
+                        <td>{{ col_name }}</td>
+                        <td>{{ col_stats.null_fraction }}</td>
+                        <td>{{ col_stats.distinct_count }}</td>
+                        <td>{{ col_stats.common_values|slice:":5"|join:", " }}</td>
+                    </tr>
+                {%  empty %}
+                    <tr>
+                        <td colspan="4" class="text-center text-flint-muted">No stats found.</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+                <p class="text-sm text-flint-muted">No statistics available. Sync source to generate stats.</p>
+            {% endif %}
         </div>
     </div>
     <div>
