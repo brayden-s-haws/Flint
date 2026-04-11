@@ -51,6 +51,11 @@ _(fill in once catalog views are built)_
 - Schema/table/column list views return 200
 - Views are scoped to the correct account (no cross-tenant leakage)
 
+**TableStatistics**
+- Sync creates a `TableStatistics` record linked to the correct `Table`
+- PostgreSQL connector returns `column_stats` in the expected shape
+- `TableStatistics` model defaults (null rates, row count) are set correctly when stats are missing or partial
+
 ---
 
 ## apps.insights

@@ -4,6 +4,8 @@ Concrete features that are out of scope for the MVP but will need to be built. O
 
 For speculative or longer-horizon ideas, see `devdocs/potential_features.md`.
 
+> **After all features in this doc are complete:** Address `devdocs/testing.md` and `devdocs/logging.md` in full. Do not work on testing or logging until all features here are done.
+
 ---
 ## general
 - Add docstrings to all files
@@ -110,7 +112,6 @@ On initial page load, if no suggestions have been generated yet, show an empty s
 ## catalog
 
 - ~~**TableStatistics** — snapshot-based stats (row counts, column null rates, etc.); `TableStatistics` model built, PostgreSQL connector extended to query `pg_stats`, sync wiring complete, UI display on table detail page complete~~ COMPLETE (phases 1 & 2)
-  - **Remaining:** tests for sync creating `TableStatistics` records, connector returning `column_stats`, and model defaults; see `devdocs/featuredocs/table-statistics.md`
   - **Remaining:** Phase 3 — LLM context injection (inject column stats into prompt builder when generating table descriptions and SQL); deferred until `queries` app is built; see `devdocs/featuredocs/table-statistics.md`
 - ~~**Schema filter on table list** — filter table list by source or schema (UI enhancement)~~ COMPLETE
 
