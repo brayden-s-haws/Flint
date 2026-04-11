@@ -1,7 +1,7 @@
 # Feature: Intra-Source Suggested Use Cases + Demo Mode (Phase 1)
 
 **Source:** `devdocs/appdocs/post_mvp.md` — "sources — Intra-Source Suggested Use Cases" and "Demo Mode"
-**Status:** Not started
+**Status:** In progress
 **Target phase:** Post-MVP Phase 2
 
 ---
@@ -31,11 +31,11 @@ To make this feature demonstrable without requiring the user to connect a real n
 Build this first so use case generation can be tested on interesting multi-table sources without connecting a real database.
 
 #### Model Change
-- [ ] Add `is_demo` boolean field (default `False`) to `SourceType` model
-- [ ] Run `makemigrations` and `migrate`
+- [x] Add `is_demo` boolean field (default `False`) to `SourceType` model
+- [x] Run `makemigrations` and `migrate`
 
 #### Demo Data Files
-- [ ] Create `demo/data/sales/` directory with JSON files for the Sales scenario:
+- [x] Create `demo/data/sales/` directory with JSON files for the Sales scenario:
   - `hubspot_contacts.json` — ~50 rows: `email`, `first_name`, `last_name`, `lifecycle_stage`, `lead_score`, `last_activity_date`, `company_id`
   - `hubspot_companies.json` — ~20 rows: `company_id`, `name`, `industry`, `employee_count`, `annual_revenue`, `country`
   - `hubspot_deals.json` — ~30 rows: `deal_id`, `company_id`, `contact_id`, `stage`, `amount`, `close_date`, `owner`
@@ -45,8 +45,8 @@ Build this first so use case generation can be tested on interesting multi-table
   - `customerdb_customers.json` — ~50 rows: `customer_id`, `email`, `company_name`, `plan_tier`, `mrr`, `subscription_start_date`, `renewal_date`
   - `customerdb_feature_usage.json` — ~100 rows: `customer_id`, `feature_name`, `usage_count`, `last_used_date`
   - `customerdb_invoices.json` — ~60 rows: `invoice_id`, `customer_id`, `amount`, `status`, `due_date`
-- [ ] Data must have intentional overlap: `contacts.email` ↔ `ga_sessions.user_email` ↔ `customerdb_customers.email`; include edge cases (contacts with no GA sessions, customers with no deals)
-- [ ] Dates must be recent (within last 90 days) and internally consistent
+- [x] Data must have intentional overlap: `contacts.email` ↔ `ga_sessions.user_email` ↔ `customerdb_customers.email`; include edge cases (contacts with no GA sessions, customers with no deals)
+- [x] Dates must be recent (within last 90 days) and internally consistent
 
 #### Demo Connector
 - [ ] Create `demo/connectors/demo_connector.py` — `DemoConnector` implementing `BaseConnector` interface:

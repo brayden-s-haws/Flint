@@ -1,0 +1,22 @@
+[
+  {"company_id": 1, "name": "Acme Corp", "industry": "SaaS", "employee_count": 320, "annual_revenue": 18000000, "country": "US"},
+  {"company_id": 2, "name": "Brightwave", "industry": "Healthcare", "employee_count": 85, "annual_revenue": 4200000, "country": "US"},
+  {"company_id": 3, "name": "Cornerstone Analytics", "industry": "Finance", "employee_count": 210, "annual_revenue": 22000000, "country": "US"},
+  {"company_id": 4, "name": "Driftwood Studios", "industry": "Media", "employee_count": 45, "annual_revenue": 1800000, "country": "US"},
+  {"company_id": 5, "name": "Ember Technologies", "industry": "SaaS", "employee_count": 130, "annual_revenue": 9500000, "country": "CA"},
+  {"company_id": 6, "name": "Foxhill Consulting", "industry": "Professional Services", "employee_count": 60, "annual_revenue": 3100000, "country": "US"},
+  {"company_id": 7, "name": "Groundswell Inc", "industry": "Retail", "employee_count": 500, "annual_revenue": 47000000, "country": "US"},
+  {"company_id": 8, "name": "Harbor Digital", "industry": "SaaS", "employee_count": 95, "annual_revenue": 6800000, "country": "US"},
+  {"company_id": 9, "name": "Ironclad Systems", "industry": "Manufacturing", "employee_count": 740, "annual_revenue": 85000000, "country": "US"},
+  {"company_id": 10, "name": "Juniper Health", "industry": "Healthcare", "employee_count": 180, "annual_revenue": 12000000, "country": "US"},
+  {"company_id": 11, "name": "Keystone Ventures", "industry": "Finance", "employee_count": 55, "annual_revenue": 2900000, "country": "US"},
+  {"company_id": 12, "name": "Lakeview Marketing", "industry": "Marketing", "employee_count": 38, "annual_revenue": 1600000, "country": "CA"},
+  {"company_id": 13, "name": "Meridian Software", "industry": "SaaS", "employee_count": 265, "annual_revenue": 31000000, "country": "US"},
+  {"company_id": 14, "name": "Northgate Retail", "industry": "Retail", "employee_count": 1200, "annual_revenue": 140000000, "country": "US"},
+  {"company_id": 15, "name": "Outpost Security", "industry": "Cybersecurity", "employee_count": 72, "annual_revenue": 5400000, "country": "US"},
+  {"company_id": 16, "name": "Pinnacle Data", "industry": "SaaS", "employee_count": 48, "annual_revenue": 2700000, "country": "US"},
+  {"company_id": 17, "name": "Quicksand Games", "industry": "Gaming", "employee_count": 22, "annual_revenue": 980000, "country": "US"},
+  {"company_id": 18, "name": "Riverstone Energy", "industry": "Energy", "employee_count": 390, "annual_revenue": 62000000, "country": "US"},
+  {"company_id": 19, "name": "Solstice Media", "industry": "Media", "employee_count": 115, "annual_revenue": 8200000, "country": "CA"},
+  {"company_id": 20, "name": "Tidal Commerce", "industry": "E-commerce", "employee_count": 67, "annual_revenue": 4500000, "country": "US"}
+]

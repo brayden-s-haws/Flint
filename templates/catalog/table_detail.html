@@ -65,7 +65,7 @@
                 {% for col_name, col_stats in statistics.column_stats.items %}
                     <tr class="border-t border-flint-border text-sm text-flint-text">
                         <td>{{ col_name }}</td>
-                        <td>{{ col_stats.null_fraction }}</td>
+                        <td>{{ col_stats.null_fraction|floatformat:2 }}</td>
                         <td>{{ col_stats.distinct_count }}</td>
                         <td>{{ col_stats.common_values|slice:":5"|join:", " }}</td>
                     </tr>
