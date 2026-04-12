@@ -49,11 +49,11 @@ Build this first so use case generation can be tested on interesting multi-table
 - [x] Dates must be recent (within last 90 days) and internally consistent
 
 #### Demo Connector
-- [ ] Create `demo/connectors/demo_connector.py` — `DemoConnector` implementing `BaseConnector` interface:
+- [x] Create `demo/connectors/demo_connector.py` — `DemoConnector` implementing `BaseConnector` interface:
   - `test_connection() -> bool` — always returns `True`
   - `discover_catalog() -> list[Schema]` — reads JSON files, returns schema/table/column structure
   - `get_table_metadata(table) -> TableMetadata` — returns column metadata from JSON structure
-- [ ] Register `DemoConnector` in the connector registry — route to it when `source_type.is_demo is True`
+- [x] Register `DemoConnector` in the connector registry — route to it when `source_type.is_demo is True`
 
 #### Demo Source Types & Seeding
 - [ ] Add three demo `SourceType` records (via data migration or management command): `HubSpot (Demo)`, `Google Analytics (Demo)`, `Customer Database (Demo)` — all with `is_demo=True`

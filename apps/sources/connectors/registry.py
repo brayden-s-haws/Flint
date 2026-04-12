@@ -4,9 +4,13 @@ from typing import Type
 
 from .base import BaseConnector
 from .postgresql import PostgreSQLConnector
+from demo.connectors.demo_connector import DemoConnector
 
 _REGISTRY: dict[str, Type[BaseConnector]] = {
     'postgresql': PostgreSQLConnector,
+    'hubspot_demo': DemoConnector,
+    'ga_demo': DemoConnector,
+    'customerdb_demo': DemoConnector,
 }
 
 
