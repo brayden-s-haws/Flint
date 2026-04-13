@@ -6,7 +6,15 @@
 <main class="max-w-7xl mx-auto px-4 py-8">
     <div class="flex justify-between items-center mb-8">
         <h1 class="text-2xl font-bold text-flint-text">Sources</h1>
-        <a href="{% url 'sources:add' %}" class="bg-flint-orange hover:bg-flint-orange-hover text-white font-semibold py-2 px-4 rounded-md">Connect Source</a>
+        <div class="flex gap-2">
+            <a href="{% url 'sources:add' %}" class="bg-flint-orange hover:bg-flint-orange-hover text-white font-semibold py-2 px-4 rounded-md">Connect Source</a>
+            {%  if request.user.is_staff %}
+                <form method="post" action="{% url 'sources:load_demo' %}">
+                {% csrf_token %}
+                <button class="border border-flint-border-em rounded-md text-flint-muted hover:text-flint-text px-4 py-2 whitespace-nowrap" type="submit">Load Demo Data</button>
+            </form>
+            {% endif %}
+        </div>
     </div>
     <form class="flex gap-3 items-center mb-6">
         <input type="text" name="q" value="{{ q|default:'' }}" placeholder="Search sources by name" class="w-full bg-flint-card border border-flint-border-em rounded-md px-3 py-2 text-sm text-flint-text focus:outline-none focus:ring-2 focus:ring-flint-orange">

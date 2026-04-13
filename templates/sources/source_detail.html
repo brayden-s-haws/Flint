@@ -22,6 +22,13 @@
             <a class="border border-red-500 text-red-400 hover:bg-red-900/20 px-4 py-2 rounded-md" href="{% url 'sources:delete' source.pk %}">Delete</a>
         </div>
     </div>
+    {% if source.source_type.is_demo %}
+        <div class="bg-yellow-900/20 border border-yellow-700/40 rounded-md px-4 py-3 mb-6 flex items-center justify-between">
+            <p class="text-sm text-yellow-300">This is a demo source.</p>
+            <a href="{% url 'sources:delete' source.pk %}" class="text-sm text-red-400 hover:underline whitespace-nowrap">(Remove demo
+                source)</a>
+        </div>
+    {% endif %}
     <div>
         <div class="bg-flint-card rounded-lg border border-flint-border p-6 mb-6 card">
             <p class="text-sm text-flint-muted">Source type: {{ source.source_type }}</p>

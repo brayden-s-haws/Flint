@@ -58,14 +58,13 @@ Build this first so use case generation can be tested on interesting multi-table
 #### Demo Source Types & Seeding
 - [x] Add three demo `SourceType` records (via data migration or management command): `HubSpot (Demo)`, `Google Analytics (Demo)`, `Customer Database (Demo)` — all with `is_demo=True`
 
-#### UI Entry Point
-- [ ] Add a "Load Demo Data" button on the source list page (`sources/source_list.html`), visible only to `request.user.is_staff` — always shown regardless of source count, not gated on empty state
+#### UI Entry Point- [x] Add a "Load Demo Data" button on the source list page (`sources/source_list.html`), visible only to `request.user.is_staff` — always shown regardless of source count, not gated on empty state
 - [x] Create a `load_demo_data` view in `apps/sources/views.py` — `POST /sources/demo/load/`:
   - Creates three `Source` records (one per demo source type) linked to the current account
   - Redirects to source list
 - [x] Add URL for `load_demo_data` view in `apps/sources/urls.py`
-- [ ] Show a "Demo Data" banner on source cards/detail pages when `source.source_type.is_demo is True`
-- [ ] Add a "Clear Demo Data" button on each demo source detail page — deletes demo sources and their associated catalog/insight records
+- [x] Show a "Demo Data" banner on source detail page when `source.source_type.is_demo is True`
+- [x] Add a "Remove demo source" link in the banner — uses existing `SourceDeleteView` via `sources:delete`
 
 ---
 

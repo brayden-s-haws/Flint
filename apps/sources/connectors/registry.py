@@ -8,9 +8,9 @@ from demo.connectors.demo_connector import DemoConnector
 
 _REGISTRY: dict[str, Type[BaseConnector]] = {
     'postgresql': PostgreSQLConnector,
-    'hubspot_demo': DemoConnector,
-    'ga_demo': DemoConnector,
-    'customerdb_demo': DemoConnector,
+    'HubSpot (Demo)': DemoConnector,
+    'Google Analytics (Demo)': DemoConnector,
+    'Customer Database (Demo)': DemoConnector,
 }
 
 
