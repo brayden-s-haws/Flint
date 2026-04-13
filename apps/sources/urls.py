@@ -11,4 +11,5 @@ urlpatterns = [
     path('<int:pk>/sync/', views.sync_source, name='sync'),
     path('<int:pk>/edit/', views.SourceUpdateView.as_view(), name='edit'),
     path('<int:pk>/delete/', views.SourceDeleteView.as_view(), name='delete'),
+    path('demo/load/', views.load_demo_data, name='load_demo'),
 ]

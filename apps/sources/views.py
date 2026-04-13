@@ -205,3 +205,25 @@ def sync_source(request: HttpRequest, pk:int) -> HttpResponse:
         source_sync.save()
         messages.error(request, f'Source sync failed: {e}')
         return redirect('sources:detail', pk=pk)
+
+@login_required
+def load_demo_data(request: HttpRequest) -> HttpResponse:
+    if request.method != 'POST':
+        return HttpResponse('Method not allowed', status=405)
+    demo_sources = [
+        {'source_type_name': 'HubSpot (Demo)', 'source_name': 'HubSpot (Demo)', 'scenario': 'sales', 'source': 'hubspot'},
+        {'source_type_name': 'Google Analytics (Demo)', 'source_name': 'Google Analytics (Demo)', 'scenario': 'sales', 'source': 'ga'},
+        {'source_type_name': 'Customer Database (Demo)', 'source_name': 'Customer Database (Demo)', 'scenario': 'sales', 'source': 'customerdb'},
+    ]
+    for demo in demo_sources:
+        source_type = SourceType.objects.get(name=demo['source_type_name'])
+        credentials = encrypt_credentials({'scenario': demo['scenario'], 'source': demo['source']})
+        Source.objects.get_or_create(
+            account=request.account , # type: ignore[attr-defined]
+            source_type=source_type,
+            defaults={'name': demo['source_name'], 'credentials': credentials}
+        )
+
+    messages.success(request, 'Demo sources loaded. Sync each one to populate the catalog.')
+    return redirect('sources:list')
+
