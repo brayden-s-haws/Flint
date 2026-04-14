@@ -70,16 +70,16 @@ Build this first so use case generation can be tested on interesting multi-table
 
 ### Phase B — `Insight` Model: `structured_data` Field
 
-- [ ] Add `structured_data = models.JSONField(null=True, blank=True)` to `Insight` model
-- [ ] Run `makemigrations` and `migrate`
-- [ ] No changes needed to existing insight flows — field is optional and null by default
+- [x] Add `structured_data = models.JSONField(null=True, blank=True)` to `Insight` model
+- [x] Run `makemigrations` and `migrate`
+- [x] No changes needed to existing insight flows — field is optional and null by default
 
 ---
 
 ### Phase C — Use Case Generation (Core Feature)
 
 #### Prompt
-- [ ] Create `apps/insights/prompts/use_case_suggestions.py`:
+- [x] Create `apps/insights/prompts/intra_source_use_cases.py`:
   - System message instructing the LLM to act as a senior data analyst
   - `build_use_case_suggestions_prompt(source: Source) -> str` — builds DDL-style table/column summary from `Schema`/`Table`/`Column` models, appends existing Source Overview insight text as context, asks for 4–6 distinct use cases with starter SQL
   - Model constant and max tokens constant (use `anthropic`)

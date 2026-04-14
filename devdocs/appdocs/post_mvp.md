@@ -424,6 +424,7 @@ LLM calls per account per run scale with the number of source pairs, not the num
 - **Benefits from the ontology layer** (Phase 3+ of the ontology section): if object types have been defined, the agent can reason about "Customer" rather than `tbl_cust_master`, producing much better hypotheses
 - **Benefits from text-to-SQL** (queries app): the same pgvector embedding infrastructure serves both deduplication (Step 5) and text-to-SQL table selection
 - **Reuses the existing LLM abstraction** from `apps/insights/` — the provider layer, prompt management, and `Insight` model are all shared; this is additive, not a rewrite
+- **`apps/insights/prompts/intra_source_use_cases.py` is the natural starting point** for the cross-source prompt — the DDL summary pattern and JSON output structure are identical; the difference is passing multiple sources' schemas instead of one
 
 ## Demo Mode
 

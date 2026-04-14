@@ -10,6 +10,7 @@ class Insight(TenantAwareModel):
     insight_type = models.CharField(max_length=255, choices=[
         ('ai', 'AI Generated'),
         ('manual', 'Manual'),
+        ('use_case_suggestion', 'Use Case Suggestion'),
     ])
     status = models.CharField(max_length=255, choices=[
         ('active', 'Active'),
@@ -17,6 +18,7 @@ class Insight(TenantAwareModel):
         ('deleted', 'Deleted'),
     ])
     insight_prompt = models.ForeignKey('InsightPrompt', on_delete=models.SET_NULL, null=True)
+    structured_data = models.JSONField(null=True, blank=True)
 
     def __str__(self) -> str:
         return f"{self.insight_type}"
