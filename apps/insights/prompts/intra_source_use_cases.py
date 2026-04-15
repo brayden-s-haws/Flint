@@ -13,6 +13,7 @@ USE_CASE_SYSTEM_MESSAGE: str = (
     "Return only valid JSON — no prose, no markdown, no explanation outside the JSON structure."
 )
 
+OPENAI_USE_CASE_MODEL: str = "gpt-5.4-mini"
 ANTHROPIC_USE_CASE_MODEL: str = "claude-haiku-4-5"
 USE_CASE_MAX_TOKENS: int = 4000
 

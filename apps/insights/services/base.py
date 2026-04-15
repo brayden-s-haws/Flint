@@ -16,3 +16,7 @@ class BaseService(ABC):
     @abstractmethod
     def generate_source_overview(self, source: Source) -> str:
         ...
+
+    @abstractmethod
+    def generate_intra_source_use_case(self, source: Source) -> list[dict]:
+        ...

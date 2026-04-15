@@ -98,9 +98,9 @@ Build this first so use case generation can be tested on interesting multi-table
     ```
 
 #### Service
-- [ ] Add `generate_use_case_suggestions(source: Source) -> list[dict]` to `BaseService` (`services/base.py`)
-- [ ] Implement in `services/anthropic_service.py` — calls LLM with structured JSON output, parses and returns list of use case dicts
-- [ ] Implement stub in `services/openai_service.py` (or full implementation — match anthropic)
+- [x] Add `generate_intra_source_use_case(source: Source) -> list[dict]` to `BaseService` (`services/base.py`)
+- [x] Implement in `services/anthropic_service.py` — calls LLM, parses JSON response, returns `result['use_cases']`
+- [x] Implement stub in `services/openai_service.py` (or full implementation — match anthropic)
 
 #### Storage
 - [ ] In the generation view, for each use case dict returned by the service:

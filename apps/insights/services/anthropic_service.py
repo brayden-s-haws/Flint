@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import anthropic
+import json
 
 from apps.catalog.models import Table
 from apps.sources.models import Source
 from .base import BaseService
 from apps.insights.prompts.table_insights import ANTHROPIC_TABLE_DESCRIPTION_MODEL, build_table_description_prompt, TABLE_DESCRIPTION_SYSTEM_MESSAGE, TABLE_DESCRIPTION_MAX_TOKENS
 from apps.insights.prompts.source_insights import ANTHROPIC_SOURCE_OVERVIEW_MODEL, SOURCE_OVERVIEW_SYSTEM_MESSAGE, SOURCE_OVERVIEW_MAX_TOKENS, build_source_overview_prompt
+from apps.insights.prompts.intra_source_use_cases import ANTHROPIC_USE_CASE_MODEL, build_use_case_suggestions_prompt, USE_CASE_MAX_TOKENS, USE_CASE_SYSTEM_MESSAGE
 
 
 class AnthropicService(BaseService):
@@ -37,3 +39,16 @@ class AnthropicService(BaseService):
             ],
         )
         return response.content[0].text.strip()
+
+    def generate_intra_source_use_case(self, source: Source) -> list[dict]:
+        prompt = build_use_case_suggestions_prompt(source)
+        response = self.client.messages.create(
+            model=ANTHROPIC_USE_CASE_MODEL,
+            max_tokens=USE_CASE_MAX_TOKENS,
+            system=USE_CASE_SYSTEM_MESSAGE,
+            messages=[ # type: ignore
+                {"role": "user", "content": prompt},
+            ],
+        )
+        result = json.loads(response.content[0].text.strip())
+        return result['use_cases']
