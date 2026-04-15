@@ -103,19 +103,19 @@ Build this first so use case generation can be tested on interesting multi-table
 - [x] Implement stub in `services/openai_service.py` (or full implementation — match anthropic)
 
 #### Storage
-- [ ] In the generation view, for each use case dict returned by the service:
-  - Create one `Insight` record with `insight_type='use_case_suggestion'`, `status='complete'`, `text=use_case['title']`, `structured_data=use_case` (full dict)
+- [x] In the generation view, for each use case dict returned by the service:
+  - Create one `Insight` record with `insight_type='use_case_suggestion'`, `status='active'`, `text=use_case['title']`, `structured_data=use_case` (full dict)
   - Create one `InsightTarget` linking the `Insight` to the `Source` via `GenericForeignKey`
 
 #### View
-- [ ] Add `GenerateUseCaseSuggestionsView` to `apps/insights/views.py` — `POST /insights/use-cases/generate/<source_id>/`:
+- [x] Add `generate_intra_use_case_suggestions` to `apps/insights/views.py` — `POST /insights/use-cases/generate/<source_id>/`:
   - Checks that a Source Overview insight exists for the source; if not, return an error response prompting the user to generate one first
   - Checks rate limit: if `use_case_suggestion` insights exist for this source and the most recent was created within the last 24 hours, return an error response
   - Deletes existing `use_case_suggestion` insights for this source (and their `InsightTarget` records)
-  - Calls `generate_use_case_suggestions(source)`
+  - Calls `generate_intra_source_use_case(source)` via `get_service('anthropic')`
   - Stores results as `Insight` + `InsightTarget` records
-  - Returns HTMX partial re-rendering the Suggested Uses section
-- [ ] Add URL in `apps/insights/urls.py`: `POST /insights/use-cases/generate/<int:source_id>/`
+  - Returns redirect to `sources:detail` (placeholder until HTMX partial is built)
+- [x] Add URL in `apps/insights/urls.py`: `POST /insights/use-cases/generate/<int:source_id>/`
 
 #### Template
 - [ ] Add **Suggested Uses** section to `sources/source_detail.html`, below the Source Overview card:

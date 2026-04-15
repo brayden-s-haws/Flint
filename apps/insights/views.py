@@ -1,16 +1,23 @@
 from __future__ import annotations
 
 from typing import Any
+from datetime import timedelta
 
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import QuerySet, Q
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
+from django.utils import timezone
+from django.views.decorators.http import require_POST
 from django.views.generic import ListView, DetailView
 
 from apps.catalog.models import Table
 from apps.core.mixins import TenantQuerysetMixin
-from apps.insights.models import Insight
+from apps.insights.models import Insight, InsightTarget
+from apps.insights.services.provider import get_service
 from apps.sources.models import Source
 
 class InsightListView(TenantQuerysetMixin, LoginRequiredMixin, ListView):
@@ -65,3 +72,45 @@ class InsightDetailView(TenantQuerysetMixin, LoginRequiredMixin, DetailView):
         else:
             context['target_url'] = None
         return context
+
+@login_required
+@require_POST
+def generate_intra_use_case_suggestions(request, source_id: int) -> HttpResponse:
+    source = get_object_or_404(Source, pk=source_id, account=request.account)
+    source_ct = ContentType.objects.get_for_model(Source)
+
+    has_overview = InsightTarget.objects.filter(
+        content_type=source_ct, object_id=source.pk, account=source.account,
+        insight__insight_type='ai'
+        ).exists()
+    if not has_overview:
+        return HttpResponse("Generate a Source Overview before generating use case suggestions.", status=400)
+
+    recent_suggestion = InsightTarget.objects.filter(
+        content_type=source_ct, object_id=source.pk, account=source.account,
+        insight__insight_type='use_case_suggestion'
+    ).select_related('insight').order_by('-insight__created_at').first()
+    if recent_suggestion and recent_suggestion.insight.created_at > timezone.now() - timedelta(hours=24):
+        return HttpResponse("Use case suggestions were generated recently. Try again in 24 hours.", status=400)
+
+    existing_targets = InsightTarget.objects.filter(
+        content_type=source_ct, object_id=source.pk, account=source.account,
+        insight__insight_type='use_case_suggestion'
+    )
+    insight_ids = list(existing_targets.values_list('insight_id', flat=True))
+    existing_targets.delete()
+    Insight.objects.filter(pk__in=insight_ids).delete()
+
+    try:
+        use_cases = get_service('anthropic').generate_intra_source_use_case(source)
+    except Exception as exc:
+        return HttpResponse(f"Failed to generate use cases: {exc}", status=500)
+
+    for use_case in use_cases:
+        insight = Insight.objects.create(account=source.account, text=use_case['title'],
+            insight_type='use_case_suggestion', status='active',
+            insight_prompt=None, structured_data=use_case)
+        InsightTarget.objects.create(account=source.account, insight=insight,
+            content_type=source_ct, object_id=source.pk)
+
+    return redirect('sources:detail', pk=source.pk)
