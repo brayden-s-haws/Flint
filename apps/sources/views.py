@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import logging
 from typing import Any
+from datetime import timedelta
 
-logger = logging.getLogger(__name__)
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -24,6 +24,8 @@ from apps.insights.services.provider import get_service
 from .models import Source, SourceSyncLog, SourceType
 from .forms import SourceForm
 from .encryption import encrypt_credentials, decrypt_credentials
+
+logger = logging.getLogger(__name__)
 
 
 class SourceListView(LoginRequiredMixin, TenantQuerysetMixin, ListView):
@@ -119,9 +121,20 @@ class SourceDetailView(LoginRequiredMixin, TenantQuerysetMixin, DetailView):
         context['last_synced_at'] = self.object.sourcesynclog_set.filter(status='success').order_by('-completed_at').values_list('completed_at', flat=True).first()
         context['schemas'] = self.object.schema_set.prefetch_related('table_set')
         content_type = ContentType.objects.get_for_model(self.object)
-        target = InsightTarget.objects.filter(content_type=content_type, object_id=self.object.pk, account=self.request.account).select_related('insight').first()
+        target = InsightTarget.objects.filter(content_type=content_type, object_id=self.object.pk, account=self.request.account, insight__insight_type='ai').select_related('insight').first()
         context['source_overview'] = target.insight.text if target else None
-
+        use_case_targets = InsightTarget.objects.filter(content_type=content_type, object_id=self.object.pk, account=self.request.account, insight__insight_type='use_case_suggestion').select_related('insight').order_by('-insight__created_at')
+        context['use_cases'] = [uct.insight.structured_data for uct in use_case_targets]
+        most_recent = use_case_targets.first()
+        if most_recent:
+            age = timezone.now() - most_recent.insight.created_at
+            if age < timedelta(hours=24):
+                context['use_case_rate_limited'] = True
+                context['use_case_hours_remaining'] = 24 - int(age.total_seconds() // 3600)
+            else:
+                context['use_case_rate_limited'] = False
+        else:
+            context['use_case_rate_limited'] = False
         return context
 
 @login_required

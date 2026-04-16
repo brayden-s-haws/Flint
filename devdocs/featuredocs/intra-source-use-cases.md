@@ -118,7 +118,7 @@ Build this first so use case generation can be tested on interesting multi-table
 - [x] Add URL in `apps/insights/urls.py`: `POST /insights/use-cases/generate/<int:source_id>/`
 
 #### Template
-- [ ] Add **Suggested Uses** section to `sources/source_detail.html`, below the Source Overview card:
+- [x] Add **Suggested Uses** section to `sources/source_detail.html`, below the Source Overview card:
   - **Empty state** (no use cases yet): prompt text + "Generate Suggestions" button that POSTs to `GenerateUseCaseSuggestionsView` via HTMX
   - **Loaded state** (use cases exist): grid of use case cards, each showing:
     - Title (bold)

@@ -113,4 +113,7 @@ def generate_intra_use_case_suggestions(request, source_id: int) -> HttpResponse
         InsightTarget.objects.create(account=source.account, insight=insight,
             content_type=source_ct, object_id=source.pk)
 
-    return redirect('sources:detail', pk=source.pk)
+    response = HttpResponse()
+    response['HX-Redirect'] = reverse('sources:detail', kwargs={'pk': source.pk})
+    return response
+

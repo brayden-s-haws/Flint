@@ -50,5 +50,9 @@ class AnthropicService(BaseService):
                 {"role": "user", "content": prompt},
             ],
         )
-        result = json.loads(response.content[0].text.strip())
+        raw = response.content[0].text.strip()
+        if raw.startswith("```"):
+            raw = raw.split("\n", 1)[1]
+            raw = raw.rsplit("```", 1)[0]
+        result = json.loads(raw.strip())
         return result['use_cases']

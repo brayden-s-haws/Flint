@@ -110,6 +110,46 @@
             {% endif %}
         </div>
     </div>
+    <div id="use-cases-section">
+        <div class="bg-flint-card rounded-lg border border-flint-border p-6 mb-6 card">
+            <h2 class="text-lg font-semibold text-flint-text mb-4">Suggested Use Cases</h2>
+            {% if not source_overview %}
+                <p class="text-sm text-flint-muted">Source must be synced before use cases are generated.</p>
+            {% elif source_overview and not use_cases %}
+                <p class="text-sm text-flint-muted mb-4">No suggestions yet, click to generate.</p>
+                <form hx-post="{% url 'insights:generate_use_cases' source.pk %}" hx-target="#use-cases-section" hx-swap="outerHTML">
+                    {% csrf_token %}
+                    <button type="submit" class="bg-flint-orange text-white px-4 py-2 rounded-md hover:bg-flint-orange-hover">Generate Use Cases</button>
+                </form>
+            {% else %}
+                <div class="grid grid-cols-1 gap-4">
+                    {% for use_case in use_cases %}
+                        <div class="bg-flint-card rounded-md border border-flint-border p-4">
+                            <h3 class="text-lg font-semibold text-flint-text">{{ use_case.title }}</h3>
+                            <p class="text-sm text-flint-muted">{{ use_case.description }}</p>
+                            <div class="mt-2">
+                                <span class="text-flint-muted mr-2">Tables:</span>
+                                {% for table in use_case.tables %}
+                                    <span class="bg-flint-border text-flint-muted text-xs px-2 py-0.5 rounded mr-1">{{ table }}</span>
+                                {% endfor %}
+                            </div>
+                            <details><summary>View SQL</summary><pre class="whitespace-pre-wrap text-xs mt-2"><code>{{ use_case.starter_sql }}</code></pre></details>
+                        </div>
+                    {% endfor %}
+                </div>
+                <div>
+                    {% if use_case_rate_limited %}
+                        <p>(Regenerating uses cases available in {{ use_case_hours_remaining }} hours)</p>
+                    {% else %}
+                    <form hx-post="{% url 'insights:generate_use_cases' source.pk %}" hx-target="#use-cases-section" hx-swap="outerHTML">
+                        {% csrf_token %}
+                        <button type="submit" class="border border-flint-border text-flint-muted hover:bg-flint-card px-4 py-2 rounded-md">Regenerate</button>
+                    </form>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
 
 </main>
 {% endblock content %}
