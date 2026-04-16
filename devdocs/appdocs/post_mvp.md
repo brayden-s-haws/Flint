@@ -7,13 +7,40 @@ For speculative or longer-horizon ideas, see `devdocs/potential_features.md`.
 > **After all features in this doc are complete:** Address `devdocs/testing.md` and `devdocs/logging.md` in full. Do not work on testing or logging until all features here are done.
 
 ---
+
+## Suggested Build Order (as of 2026-04-15)
+
+**Phase 2 — Standalone features, no infrastructure dependencies**
+1. Account settings page (rename account) — `accounts`
+2. Insight approval/rating (thumbs up/down) — `insights`
+3. Domain-based registration guard — `accounts`
+4. Team invites — `accounts`
+5. Tailwind CDN → production build — `infrastructure`
+
+**Phase 3 — Requires Celery + Redis first**
+6. Celery + Redis setup — `core/infrastructure`
+7. Batch table description generation — `insights`
+8. Scheduled syncs — `sources`
+9. Agentic cross-source discovery — `insights` (depends on 2+ sources connected)
+10. Demo Mode Phase 2 (product scenario + auto-trigger insights after load)
+
+**Phase 4 — New apps, depend on Phase 2 & 3**
+11. Queries app (natural language to SQL) — `queries`
+12. Ontology app Phase 1 (manual object type definitions) — `ontology`
+
+**Phase 5 — Advanced / long-horizon**
+13. Multi-account switching, role-based permissions — `accounts`
+14. Ontology Phases 2–6 (LLM suggestions, graph view, agent integration)
+15. Amundsen integration
+
+---
 ## general
 - Add docstrings to all files
 
 
 ---
 
-## sources — Intra-Source Suggested Use Cases
+## ~~sources — Intra-Source Suggested Use Cases~~ COMPLETE (Phases 1 & 2)
 
 ### Overview
 
@@ -426,7 +453,7 @@ LLM calls per account per run scale with the number of source pairs, not the num
 - **Reuses the existing LLM abstraction** from `apps/insights/` — the provider layer, prompt management, and `Insight` model are all shared; this is additive, not a rewrite
 - **`apps/insights/prompts/intra_source_use_cases.py` is the natural starting point** for the cross-source prompt — the DDL summary pattern and JSON output structure are identical; the difference is passing multiple sources' schemas instead of one
 
-## Demo Mode
+## ~~Demo Mode~~ COMPLETE (Phase 1 — Sales scenario)
 
 ### Overview
 
