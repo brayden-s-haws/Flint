@@ -21,7 +21,7 @@ For speculative or longer-horizon ideas, see `devdocs/potential_features.md`.
 6. Celery + Redis setup — `core/infrastructure`
 7. Batch table description generation — `insights`
 8. Scheduled syncs — `sources`
-9. Agentic cross-source discovery — `insights` (depends on 2+ sources connected)
+9. Agentic cross-source discovery — `insights` (depends on 2+ sources connected) Note: we should add this to the dashboard as one of the main cards next to the Insights card
 10. Demo Mode Phase 2 (product scenario + auto-trigger insights after load)
 
 **Phase 4 — New apps, depend on Phase 2 & 3**

@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block title %}Account Settings | Flint{% endblock %}
+
+{% block content %}
+<main class="max-w-2xl mx-auto px-4 py-8">
+    <!-- TODO(stub): Page heading — h1 "Account Settings" using text-2xl font-bold text-flint-text -->
+    <!-- TODO(stub): Optional subtitle p tag with text-flint-muted, e.g. "Manage your account" -->
+    <div>
+        <h1 class="text-2xl font-bold text-flint-text">Account Settings</h1>
+        <p class="text-flint-muted">Manage your account</p>
+    </div>
+    <div class="bg-flint-card rounded-lg border border-flint-border p-6 mt-6">
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-flint-muted mb-1" for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+                {{ form.name }}
+            </div>
+            {% if form.non_field_errors %}
+            <div class="text-sm text-red-400 mt-1">
+                {{ form.non_field_errors }}
+            </div>
+            {% endif %}
+            <div class="flex justify-between items-center mt-6">
+                <button class="bg-flint-orange hover:bg-flint-orange-hover text-white font-semibold py-2 px-4 rounded-md transition-colors" type="submit">Save</button>
+            </div>
+        </form>
+    </div>
+</main>
+{% endblock content %}

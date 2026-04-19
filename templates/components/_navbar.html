@@ -11,14 +11,17 @@
                 <a class="text-sm font-medium text-flint-muted hover:text-flint-text mr-6" href="{% url 'sources:list' %}">Sources</a>
                 <a class="text-sm font-medium text-flint-muted hover:text-flint-text mr-6" href="{% url 'catalog:list' %}">Catalog</a>
                 <a class="text-sm font-medium text-flint-muted hover:text-flint-text mr-6" href="{% url 'insights:list' %}">Insights</a>
-                <form action="{% url 'users:logout' %}" method="post">
-                    {% csrf_token %}
-                    <button class="bg-transparent border-none cursor-pointer text-sm font-medium text-flint-muted hover:text-flint-text" type="submit">Logout</button>
-                </form>
-            {% else %}
-                <a class="text-sm font-medium text-flint-muted hover:text-flint-text mr-6" href="{% url 'users:login' %}">Login</a>
-                <a class="bg-flint-orange text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-flint-orange-hover" href="{% url 'users:register' %}">Register</a>
-            {% endif %}
+                <div class="flex items-center border-l border-flint-border pl-4">
+                    <a class="text-sm font-medium text-flint-muted hover:text-flint-text mr-6" href="{% url 'accounts:settings' %}">Account</a>
+                    <form action="{% url 'users:logout' %}" method="post">
+                        {% csrf_token %}
+                        <button class="bg-transparent border-none cursor-pointer text-sm font-medium text-flint-muted hover:text-flint-text" type="submit">Logout</button>
+                    </form>
+                    {% else %}
+                    <a class="text-sm font-medium text-flint-muted hover:text-flint-text mr-6" href="{% url 'users:login' %}">Login</a>
+                    <a class="bg-flint-orange text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-flint-orange-hover" href="{% url 'users:register' %}">Register</a>
+                    {% endif %}
+                </div>
         </div>
     </div>
 </nav>
