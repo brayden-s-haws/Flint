@@ -11,7 +11,7 @@ For speculative or longer-horizon ideas, see `devdocs/potential_features.md`.
 ## Suggested Build Order (as of 2026-04-15)
 
 **Phase 2 — Standalone features, no infrastructure dependencies**
-1. Account settings page (rename account) — `accounts`
+1. ~~Account settings page (rename account) — `accounts`~~ COMPLETE
 2. Insight approval/rating (thumbs up/down) — `insights`
 3. Domain-based registration guard — `accounts`
 4. Team invites — `accounts`

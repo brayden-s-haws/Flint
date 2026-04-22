@@ -8,7 +8,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import QuerySet, Q
 from django.http import HttpResponse
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -117,3 +117,19 @@ def generate_intra_use_case_suggestions(request, source_id: int) -> HttpResponse
     response['HX-Redirect'] = reverse('sources:detail', kwargs={'pk': source.pk})
     return response
 
+@login_required
+@require_POST
+def rate_insight(request, insight_id: int) -> HttpResponse:
+    insight = get_object_or_404(Insight, pk=insight_id, account=request.account)
+    rating = request.POST.get('rating')
+
+    if rating != 'approved' and rating != 'rejected':
+        return HttpResponse("Invalid rating value", status=400)
+
+    if insight.rating == rating:
+        insight.rating = 'none'
+    else:
+        insight.rating = rating
+
+    insight.save()
+    return render(request, 'insights/_rating_buttons.html', {'insight': insight})

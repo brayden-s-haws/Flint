@@ -19,6 +19,11 @@ class Insight(TenantAwareModel):
     ])
     insight_prompt = models.ForeignKey('InsightPrompt', on_delete=models.SET_NULL, null=True)
     structured_data = models.JSONField(null=True, blank=True)
+    rating = models.CharField(max_length=20, choices=[
+        ('none', 'None'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ], default='none')
 
     def __str__(self) -> str:
         return f"{self.insight_type}"
