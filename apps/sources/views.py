@@ -124,7 +124,7 @@ class SourceDetailView(LoginRequiredMixin, TenantQuerysetMixin, DetailView):
         target = InsightTarget.objects.filter(content_type=content_type, object_id=self.object.pk, account=self.request.account, insight__insight_type='ai').select_related('insight').first()
         context['source_overview'] = target.insight.text if target else None
         use_case_targets = InsightTarget.objects.filter(content_type=content_type, object_id=self.object.pk, account=self.request.account, insight__insight_type='use_case_suggestion').select_related('insight').order_by('-insight__created_at')
-        context['use_cases'] = [uct.insight.structured_data for uct in use_case_targets]
+        context['use_cases'] = [uct.insight for uct in use_case_targets]
         most_recent = use_case_targets.first()
         if most_recent:
             age = timezone.now() - most_recent.insight.created_at

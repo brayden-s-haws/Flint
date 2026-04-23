@@ -125,15 +125,16 @@
                 <div class="grid grid-cols-1 gap-4">
                     {% for use_case in use_cases %}
                         <div class="bg-flint-card rounded-md border border-flint-border p-4">
-                            <h3 class="text-lg font-semibold text-flint-text">{{ use_case.title }}</h3>
-                            <p class="text-sm text-flint-muted">{{ use_case.description }}</p>
+                            <h3 class="text-lg font-semibold text-flint-text">{{ use_case.structured_data.title }}</h3>
+                            <p class="text-sm text-flint-muted">{{ use_case.structured_data.description }}</p>
                             <div class="mt-2">
                                 <span class="text-flint-muted mr-2">Tables:</span>
-                                {% for table in use_case.tables %}
+                                {% for table in use_case.structured_data.tables %}
                                     <span class="bg-flint-border text-flint-muted text-xs px-2 py-0.5 rounded mr-1">{{ table }}</span>
                                 {% endfor %}
                             </div>
-                            <details><summary>View SQL</summary><pre class="whitespace-pre-wrap text-xs mt-2"><code>{{ use_case.starter_sql }}</code></pre></details>
+                            <details><summary>View SQL</summary><pre class="whitespace-pre-wrap text-xs mt-2"><code>{{ use_case.structured_data.starter_sql }}</code></pre></details>
+                            <div class="mt-2">{% include 'insights/_rating_buttons.html' with insight=use_case %}</div>
                         </div>
                     {% endfor %}
                 </div>

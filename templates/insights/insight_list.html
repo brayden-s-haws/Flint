@@ -35,6 +35,7 @@
                     {% endif %}
                     <p class="text-sm text-flint-muted">Created at: {{ insight.created_at|date:"M j, Y" }}</p>
                     <a href="{% url 'insights:detail' insight.pk %}" class="text-flint-orange hover:underline">View</a>
+                    <div class="mt-2">{% include 'insights/_rating_buttons.html' %}</div>
                 </div>
             {% empty %}
                 <p class="text-flint-muted">No insights available.</p>

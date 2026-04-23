@@ -1,0 +1,20 @@
+<div id="rating-{{ insight.pk }}" class="flex items-center gap-2" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+    {% if insight.rating == 'approved' %}
+        <button class="opacity-100" hx-post="{% url 'insights:rate_insight' insight.pk %}" hx-vals='{"rating": "approved"}' hx-target="#rating-{{ insight.pk }}" hx-swap="outerHTML">
+            <span class="text-xl">&#128077;</span>
+        </button>
+    {% else %}
+        <button class="opacity-30" hx-post="{% url 'insights:rate_insight' insight.pk %}" hx-vals='{"rating": "approved"}' hx-target="#rating-{{ insight.pk }}" hx-swap="outerHTML">
+            <span class="text-xl">&#128077;</span>
+        </button>
+    {% endif %}
+    {% if insight.rating == 'rejected' %}
+        <button class="opacity-100" hx-post="{% url 'insights:rate_insight' insight.pk %}" hx-vals='{"rating": "rejected"}' hx-target="#rating-{{ insight.pk }}" hx-swap="outerHTML">
+            <span class="text-xl">&#128078;</span>
+        </button>
+    {% else %}
+        <button class="opacity-30" hx-post="{% url 'insights:rate_insight' insight.pk %}" hx-vals='{"rating": "rejected"}' hx-target="#rating-{{ insight.pk }}" hx-swap="outerHTML">
+            <span class="text-xl">&#128078;</span>
+        </button>
+    {% endif %}
+</div>

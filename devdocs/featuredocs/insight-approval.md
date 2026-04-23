@@ -27,7 +27,7 @@ Add a thumbs up/down rating mechanism to insights so users can accept or reject 
 - [x] Run `makemigrations` and `migrate`
 
 ### View
-- [ ] Add `rate_insight` view in `apps/insights/views.py` — `POST /insights/<int:pk>/rate/`:
+- [x] Add `rate_insight` view in `apps/insights/views.py` — `POST /insights/<int:pk>/rate/`:
   - Accepts a `rating` parameter from the POST body (`approved` or `rejected`)
   - Validates the rating value is one of the allowed choices
   - Updates `insight.rating` and saves
@@ -35,10 +35,10 @@ Add a thumbs up/down rating mechanism to insights so users can accept or reject 
   - Requires login (`@login_required`) and verifies `insight.account == request.account`
 
 ### URL
-- [ ] Add URL in `apps/insights/urls.py`: `path('<int:pk>/rate/', views.rate_insight, name='rate')`
+- [x] Add URL in `apps/insights/urls.py`: `path('<int:pk>/rate/', views.rate_insight, name='rate')`
 
 ### Template — Rating Partial
-- [ ] Create `templates/insights/_rating_buttons.html` — a small partial containing:
+- [x] Create `templates/insights/_rating_buttons.html` — a small partial containing:
   - Thumbs up button — highlighted (e.g., `text-flint-success`) when `insight.rating == 'approved'`, muted otherwise
   - Thumbs down button — highlighted (e.g., `text-red-400`) when `insight.rating == 'rejected'`, muted otherwise
   - Both buttons use `hx-post` to `{% url 'insights:rate' insight.pk %}` with a hidden input or `hx-vals` to send the rating value
@@ -46,16 +46,16 @@ Add a thumbs up/down rating mechanism to insights so users can accept or reject 
   - `hx-swap="outerHTML"` so the partial replaces itself
 
 ### Template — Insight Detail Page
-- [ ] Add the rating buttons partial (`{% include 'insights/_rating_buttons.html' %}`) to `insight_detail.html`, inside the first card below the description text
-- [ ] Wrap the include in a `<div id="rating-{{ insight.pk }}">` so HTMX can target it
+- [x] Add the rating buttons partial (`{% include 'insights/_rating_buttons.html' %}`) to `insight_detail.html`, inside the first card below the description text
+- [x] Wrap the include in a `<div id="rating-{{ insight.pk }}">` so HTMX can target it
 
 ### Template — Insight List Page
-- [ ] Add the rating buttons partial to each insight row/card in `insight_list.html`
-- [ ] Each instance needs a unique `id="rating-{{ insight.pk }}"` wrapper
+- [x] Add the rating buttons partial to each insight row/card in `insight_list.html`
+- [x] Each instance needs a unique `id="rating-{{ insight.pk }}"` wrapper
 
 ### Template — Source Detail Page (use case cards)
-- [ ] Add rating buttons to each use case card in `source_detail.html` within the Suggested Use Cases section
-- [ ] Pass each use case's `Insight` object (not just `structured_data`) to the template so the rating partial has access to `insight.pk` and `insight.rating`
+- [x] Add rating buttons to each use case card in `source_detail.html` within the Suggested Use Cases section
+- [x] Pass each use case's `Insight` object (not just `structured_data`) to the template so the rating partial has access to `insight.pk` and `insight.rating`
 
 ---
 
