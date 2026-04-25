@@ -57,6 +57,10 @@ Add a thumbs up/down rating mechanism to insights so users can accept or reject 
 - [x] Add rating buttons to each use case card in `source_detail.html` within the Suggested Use Cases section
 - [x] Pass each use case's `Insight` object (not just `structured_data`) to the template so the rating partial has access to `insight.pk` and `insight.rating`
 
+### HTMX partial swap for use case generation
+- [x] Extract use cases section from `source_detail.html` into `templates/sources/_use_cases_section.html` partial
+- [x] Update `generate_intra_use_case_suggestions` view to return the partial instead of `HX-Redirect`, so the section updates in place without a full page reload
+
 ---
 
 ## Key Design Decisions

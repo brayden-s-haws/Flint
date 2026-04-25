@@ -113,9 +113,28 @@ def generate_intra_use_case_suggestions(request, source_id: int) -> HttpResponse
         InsightTarget.objects.create(account=source.account, insight=insight,
             content_type=source_ct, object_id=source.pk)
 
-    response = HttpResponse()
-    response['HX-Redirect'] = reverse('sources:detail', kwargs={'pk': source.pk})
-    return response
+    overview_target = InsightTarget.objects.filter(
+        content_type=source_ct, object_id=source.pk,
+        account=source.account, insight__insight_type='ai'
+    ).select_related('insight').first()
+    source_overview = overview_target.insight.text if overview_target else None
+
+    use_case_targets = InsightTarget.objects.filter(
+        content_type=source_ct, object_id=source.pk,
+        account=source.account, insight__insight_type='use_case_suggestion'
+    ).select_related('insight').order_by('-insight__created_at')
+    use_cases = [uct.insight for uct in use_case_targets]
+
+
+    context = {
+        'source': source,
+        'source_overview': source_overview,
+        'use_cases': use_cases,
+        'use_case_rate_limited': True,
+        'use_case_hours_remaining': 24,
+    }
+
+    return render(request, 'sources/_use_cases_section.html', context)
 
 @login_required
 @require_POST
