@@ -1,0 +1,26 @@
+from __future__ import annotations
+
+EXCLUDED_DOMAINS = frozenset((
+    'aol.com',
+    'att.net',
+    'comcast.net',
+    'cox.net',
+    'gmail.com',
+    'gmx.com',
+    'hotmail.com',
+    'icloud.com',
+    'inbox.com',
+    'live.com',
+    'mail.com',
+    'mail.ru',
+    'me.com',
+    'msn.com',
+    'outlook.com',
+    'protonmail.com',
+    'sbcglobal.net',
+    'tutanota.com',
+    'verizon.net',
+    'yahoo.com',
+    'yandex.com',
+    'zoho.com',
+))

@@ -12,7 +12,7 @@ For speculative or longer-horizon ideas, see `devdocs/potential_features.md`.
 
 **Phase 2 — Standalone features, no infrastructure dependencies**
 1. ~~Account settings page (rename account) — `accounts`~~ COMPLETE
-2. Insight approval/rating (thumbs up/down) — `insights`
+2. ~~Insight approval/rating (thumbs up/down) — `insights`~~ COMPLETE
 3. Domain-based registration guard — `accounts`
 4. Team invites — `accounts`
 5. Tailwind CDN → production build — `infrastructure`
