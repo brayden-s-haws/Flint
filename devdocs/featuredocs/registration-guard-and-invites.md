@@ -49,7 +49,7 @@ Two closely related features that control how users join Flint:
 ### Phase 2 — Team Invites
 
 #### Model
-- [ ] Add `AccountInvitation` model to `apps/accounts/models.py`:
+- [x] Add `AccountInvitation` model to `apps/accounts/models.py`:
   - `account` — ForeignKey to `Account`
   - `email` — EmailField (the invited user's email)
   - `role` — CharField with choices matching `AccountMembership.role` (start with `'member'` as default; `owner` should not be assignable via invite)
@@ -57,10 +57,10 @@ Two closely related features that control how users join Flint:
   - `invited_by` — ForeignKey to `User`
   - `accepted` — BooleanField(default=False)
   - `created_at` / `updated_at` — via `TenantAwareModel` base class
-- [ ] Run `makemigrations` and `migrate`
+- [x] Run `makemigrations` and `migrate`
 
 #### Invite Form
-- [ ] Create `InviteForm` in `apps/accounts/forms.py`:
+- [x] Create `InviteForm` in `apps/accounts/forms.py`:
   - Fields: `email`, `role`
   - `clean_email()` — check the user doesn't already exist as a member of this account; check no pending invite exists for this email on this account
   - Styled widgets via `__init__`

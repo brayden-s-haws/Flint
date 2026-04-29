@@ -15,23 +15,24 @@ For speculative or longer-horizon ideas, see `devdocs/potential_features.md`.
 2. ~~Insight approval/rating (thumbs up/down) — `insights`~~ COMPLETE
 3. Domain-based registration guard — `accounts`
 4. Team invites — `accounts`
-5. Tailwind CDN → production build — `infrastructure`
+5. Loading indicators for source sync and use case generation — `sources`, `insights`
+6. Tailwind CDN → production build — `infrastructure`
 
 **Phase 3 — Requires Celery + Redis first**
-6. Celery + Redis setup — `core/infrastructure`
-7. Batch table description generation — `insights`
-8. Scheduled syncs — `sources`
-9. Agentic cross-source discovery — `insights` (depends on 2+ sources connected) Note: we should add this to the dashboard as one of the main cards next to the Insights card
-10. Demo Mode Phase 2 (product scenario + auto-trigger insights after load)
+7. Celery + Redis setup — `core/infrastructure`
+8. Batch table description generation — `insights`
+9. Scheduled syncs — `sources`
+10. Agentic cross-source discovery — `insights` (depends on 2+ sources connected) Note: we should add this to the dashboard as one of the main cards next to the Insights card
+11. Demo Mode Phase 2 (product scenario + auto-trigger insights after load)
 
 **Phase 4 — New apps, depend on Phase 2 & 3**
-11. Queries app (natural language to SQL) — `queries`
-12. Ontology app Phase 1 (manual object type definitions) — `ontology`
+12. Queries app (natural language to SQL) — `queries`
+13. Ontology app Phase 1 (manual object type definitions) — `ontology`
 
 **Phase 5 — Advanced / long-horizon**
-13. Multi-account switching, role-based permissions — `accounts`
-14. Ontology Phases 2–6 (LLM suggestions, graph view, agent integration)
-15. Amundsen integration
+14. Multi-account switching, role-based permissions — `accounts`
+15. Ontology Phases 2–6 (LLM suggestions, graph view, agent integration)
+16. Amundsen integration
 
 ---
 ## general
