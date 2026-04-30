@@ -14,5 +14,7 @@ def create_account_for_new_user(sender: type, instance: Any, created: bool, **kw
     """Create an Account and owner membership when a new user registers."""
     if not created:
         return
+    if getattr(instance, '_skip_account_creation', False) is True:
+        return
     account = Account.objects.create(name=instance.email.split('@')[0], owner=instance)
     AccountMembership.objects.create(account=account, user=instance, role='owner')

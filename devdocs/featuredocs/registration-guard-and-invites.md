@@ -66,21 +66,21 @@ Two closely related features that control how users join Flint:
   - Styled widgets via `__init__`
 
 #### Invite View
-- [ ] Add `SendInviteView` in `apps/accounts/views.py` — `POST /account/invites/send/`:
+- [x] Add `SendInviteView` in `apps/accounts/views.py` — `POST /account/invites/send/`:
   - Only account owner can send invites (check `request.user == request.account.owner`)
   - Creates `AccountInvitation` record with generated token
   - Sends invite email with a tokenised link to the accept URL
   - Redirects back to account settings (or a team management page)
 
 #### Accept Invite View
-- [ ] Add `AcceptInviteView` in `apps/accounts/views.py` — `GET/POST /account/invites/accept/<str:token>/`:
+- [x] Add `AcceptInviteView` in `apps/accounts/views.py` — `GET/POST /account/invites/accept/<str:token>/`:
   - Looks up `AccountInvitation` by token; returns 404 if not found or already accepted
   - `GET` — renders a registration-like form (password fields) pre-filled with the invited email
   - `POST` — creates the `User`, creates `AccountMembership` linking to the invitation's account with the assigned role, marks invitation as accepted, logs the user in, redirects to dashboard
   - **Important:** This view must NOT trigger the `post_save` signal's auto-account-creation — the invited user joins an existing account, not a new one
 
 #### Signal Update
-- [ ] Update `create_account_for_new_user` in `apps/accounts/signals.py`:
+- [x] Update `create_account_for_new_user` in `apps/accounts/signals.py`:
   - Before creating a new account, check if an `AccountInvitation` with `email=instance.email` and `accepted=True` exists
   - If so, skip account creation (the `AcceptInviteView` already handled the membership)
   - If not, proceed with normal account creation
@@ -91,8 +91,14 @@ Two closely related features that control how users join Flint:
   - Use Django's `send_mail()` or `EmailMessage`
 
 #### URLs
-- [ ] `path('invites/send/', views.SendInviteView.as_view(), name='send_invite')`
-- [ ] `path('invites/accept/<str:token>/', views.AcceptInviteView.as_view(), name='accept_invite')`
+- [x] `path('invites/send/', views.SendInviteView.as_view(), name='send_invite')`
+- [x] `path('invites/accept/<str:token>/', views.accept_invite_view, name='accept_invite')`
+
+#### Template — Accept Invite
+- [ ] Create `templates/accounts/accept_invite.html`:
+  - Display the invited email (read-only)
+  - Password and confirm password fields
+  - Submit button to complete registration
 
 #### Template — Team Management
 - [ ] Add a "Team Members" section to `templates/accounts/account_settings.html` (or a separate page):

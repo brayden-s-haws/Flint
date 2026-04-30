@@ -140,3 +140,5 @@ ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY')
 
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')
+
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
