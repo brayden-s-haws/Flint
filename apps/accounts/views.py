@@ -7,8 +7,10 @@ from django.http import HttpResponse, HttpRequest
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
+from django.core.mail import send_mail
 from django.shortcuts import redirect, get_object_or_404, render
-from django.urls import reverse_lazy
+from django.template.loader import render_to_string
+from django.urls import reverse_lazy, reverse
 from django.utils import timezone
 from django.views.generic import UpdateView, CreateView
 
@@ -32,6 +34,13 @@ class AccountSettingsView(LoginRequiredMixin, UpdateView):
         messages.success(self.request, "Account settings updated successfully.")
         return super().form_valid(form)
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['members'] = AccountMembership.objects.filter(account=self.request.account)
+        context['pending_invites'] = AccountInvitation.objects.filter(account=self.request.account, accepted=False)
+        context['invite_form'] = AccountInviteForm(account=self.request.account)
+        return context
+
 class SendInviteView(LoginRequiredMixin, CreateView):
     model = AccountInvitation
     form_class = AccountInviteForm
@@ -53,6 +62,19 @@ class SendInviteView(LoginRequiredMixin, CreateView):
         invitation.account = self.request.account
         invitation.invited_by = self.request.user
         invitation.save()
+        invite_url = self.request.build_absolute_uri(reverse('accounts:accept_invite', args=[invitation.token]))
+        email_context = {
+            'inviter_email': invitation.invited_by.email,
+            'account_name': invitation.account.name,
+            'invite_url': invite_url
+        }
+        send_mail(
+            subject=f"You've been invited to join {invitation.account.name} on Flint 🔥",
+            message=f"Click the link to accept the invitation: {invite_url}",
+            from_email=None,
+            recipient_list=[invitation.email],
+            html_message=render_to_string('accounts/invite_email.html', email_context, request=self.request)
+        )
         messages.success(self.request, "Invite sent successfully.")
         return redirect(self.success_url)
 
@@ -74,7 +96,7 @@ def accept_invite_view(request: HttpRequest, token: str) -> HttpResponse:
         invitation.accepted = True
         invitation.save()
         login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-        return redirect('accounts:dashboard')
+        return redirect('core:dashboard')
 
     else:
         return render(request, 'accounts/accept_invite.html', {'invitation_email': invitation.email})

@@ -25,5 +25,55 @@
             </div>
         </form>
     </div>
+    <div>
+        <h2 class="text-xl font-bold text-flint-text mt-10">Team</h2>
+    </div>
+    <div class="bg-flint-card rounded-lg border border-flint-border p-6 mt-6">
+        <h3 class="text-sm font-medium text-flint-muted mb-3">Team Members</h3>
+        <div>
+            {% for member in members %}
+            <div class="flex justify-between items-center py-3{% if not forloop.last %} border-b border-flint-border{% endif %}">
+                <span class="text-sm text-flint-text">{{ member.user.email }}</span>
+                <span class="text-sm text-flint-muted">{{ member.get_role_display }}</span>
+            </div>
+            {% empty %}
+            <p class="text-sm text-flint-muted">No team members</p>
+            {% endfor %}
+        </div>
+    </div>
+    {% if pending_invites %}
+    <div class="bg-flint-card rounded-lg border border-flint-border p-6 mt-6">
+        <h3 class="text-flint-muted text-sm font-medium">Pending Invites</h3>
+        <div>
+            {% for invite in pending_invites %}
+            <div class="flex justify-between items-center py-3{% if not forloop.last %} border-b border-flint-border{% endif %}">
+                <span class="text-sm text-flint-text">{{ invite.email }}</span>
+                <span class="text-sm text-flint-muted">{{ invite.get_role_display }}</span>
+                <span class="text-xs bg-flint-surface rounded-full px-2 py-0.5">Pending</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    {% if request.user == request.account.owner %}
+    <div class="bg-flint-card rounded-lg border border-flint-border p-6 mt-6">
+        <h3 class="text-flint-muted text-sm font-medium mb-3">Invite a Team Member</h3>
+        <form method="post" action="{% url 'accounts:send_invite' %}">
+            {% csrf_token %}
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-flint-muted mb-1" for="{{ invite_form.email.id_for_label }}">Email</label>
+                {{ invite_form.email }}
+                {% if invite_form.email.errors %}
+                <div class="text-sm text-red-400 mt-1">{{ invite_form.email.errors }}</div>
+                {% endif %}
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-flint-muted mb-1" for="{{ invite_form.role.id_for_label }}">Role</label>
+                {{ invite_form.role }}
+            </div>
+            <button class="bg-flint-orange hover:bg-flint-orange-hover text-white font-semibold py-2 px-4 rounded-md transition-colors" type="submit">Send Invite</button>
+        </form>
+    </div>
+    {% endif %}
 </main>
 {% endblock content %}

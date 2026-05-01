@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block title %}Accept Invitation – Flint{% endblock title %}
+
+{% block content %}
+<div class="flex items-center justify-center min-h-screen bg-flint-bg">
+    <div class="w-full max-w-sm bg-flint-surface rounded-lg border border-flint-border p-8">
+        <h2 class="text-center text-2xl font-bold text-flint-text mb-6">Create your account</h2>
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-flint-muted mb-1">Email</label>
+                <p class="block text-sm font-medium text-flint-muted mb-1">{{ invitation_email}}</p>
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-flint-muted mb-1" for="password1">Password</label>
+                <input type="password" name="password1" id="password1" class="w-full bg-flint-card border border-flint-border-em rounded-md px-3 py-2 text-sm text-flint-text focus:outline-none focus:ring-2 focus:ring-flint-orange">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-flint-muted mb-1" for="password2">Confirm Password</label>
+                <input type="password" name="password2" id="password2" class="w-full bg-flint-card border border-flint-border-em rounded-md px-3 py-2 text-sm text-flint-text focus:outline-none focus:ring-2 focus:ring-flint-orange">
+            </div>
+            <button class="w-full bg-flint-orange hover:bg-flint-orange-hover text-white font-semibold py-2 px-4 rounded-md transition-colors mt-2" type="submit">Create Account</button>
+        </form>
+    </div>
+</div>
+{% endblock content %}

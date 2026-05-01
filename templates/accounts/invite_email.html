@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; background-color: #0D0D0D; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0D0D0D; padding: 40px 0;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #1A1A1A; border-radius: 8px; border: 1px solid #2A2A2A;">
+                    <tr>
+                        <td style="padding: 32px 40px; border-bottom: 1px solid #2A2A2A;">
+                            <h1 style="margin: 0; font-size: 20px; font-weight: 600; color: #FF4F00;">Flint</h1>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 40px;">
+                            <h2 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 600; color: #E6E6E6;">You've been invited to join a team</h2>
+                            <p style="margin: 0 0 12px 0; font-size: 14px; line-height: 1.6; color: #9A9A9A;">
+                                <strong style="color: #E6E6E6;">{{ inviter_email }}</strong> has invited you to join
+                                <strong style="color: #E6E6E6;">{{ account_name }}</strong> on Flint.
+                            </p>
+                            <p style="margin: 0 0 32px 0; font-size: 14px; line-height: 1.6; color: #9A9A9A;">
+                                Click the button below to create your account and get started.
+                            </p>
+                            <table cellpadding="0" cellspacing="0" style="margin: 0 0 32px 0;">
+                                <tr>
+                                    <td style="background-color: #FF4F00; border-radius: 6px;">
+                                        <a href="{{ invite_url }}" style="display: inline-block; padding: 12px 24px; font-size: 14px; font-weight: 600; color: #FFFFFF; text-decoration: none;">Accept Invitation</a>
+                                    </td>
+                                </tr>
+                            </table>
+                            <p style="margin: 0 0 8px 0; font-size: 12px; color: #6A6A6A;">Or copy and paste this link into your browser:</p>
+                            <p style="margin: 0; font-size: 12px; color: #9A9A9A; word-break: break-all;">{{ invite_url }}</p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 24px 40px; border-top: 1px solid #2A2A2A;">
+                            <p style="margin: 0; font-size: 12px; color: #6A6A6A;">If you didn't expect this invitation, you can safely ignore this email.</p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

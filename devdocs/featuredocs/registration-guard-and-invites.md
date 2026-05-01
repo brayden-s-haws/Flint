@@ -1,7 +1,7 @@
 # Feature: Domain-Based Registration Guard + Team Invites
 
 **Source:** `devdocs/appdocs/post_mvp.md` — "Domain-based registration guard" and "Team invites"
-**Status:** Phase 1 complete
+**Status:** Phase 1 & 2 complete
 **Target phase:** Post-MVP Phase 2
 
 ---
@@ -86,7 +86,7 @@ Two closely related features that control how users join Flint:
   - If not, proceed with normal account creation
 
 #### Email
-- [ ] Create an invite email template `templates/accounts/invite_email.html` (or plain text):
+- [x] Create an invite email template `templates/accounts/invite_email.html` (or plain text):
   - Include the account name, who invited them, and the accept link
   - Use Django's `send_mail()` or `EmailMessage`
 
@@ -95,13 +95,13 @@ Two closely related features that control how users join Flint:
 - [x] `path('invites/accept/<str:token>/', views.accept_invite_view, name='accept_invite')`
 
 #### Template — Accept Invite
-- [ ] Create `templates/accounts/accept_invite.html`:
+- [x] Create `templates/accounts/accept_invite.html`:
   - Display the invited email (read-only)
   - Password and confirm password fields
   - Submit button to complete registration
 
 #### Template — Team Management
-- [ ] Add a "Team Members" section to `templates/accounts/account_settings.html` (or a separate page):
+- [x] Add a "Team Members" section to `templates/accounts/account_settings.html` (or a separate page):
   - List current members (from `AccountMembership`) with email and role
   - List pending invites (from `AccountInvitation` where `accepted=False`)
   - Invite form (email + role + Send button)
