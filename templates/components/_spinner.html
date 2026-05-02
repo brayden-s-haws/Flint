@@ -1,0 +1,11 @@
+{# Reusable loading spinner partial. #}
+{# Usage: {% include 'components/_spinner.html' %} or {% include 'components/_spinner.html' with label="Generating…" %} #}
+{# Place INSIDE the element that triggers an HTMX request, and point that element's hx-indicator at this span (e.g. hx-indicator="find .spinner"). #}
+
+<span class="htmx-indicator spinner inline-flex items-center gap-2 ml-2">
+    <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true">
+        <circle class="opacity-25" cx="12" cy="12" r="10" />
+        <path class="opacity-75" d="M4 12a8 8 0 018-8" />
+    </svg>
+    <span>{{ label|default:"Working…" }}</span>
+</span>

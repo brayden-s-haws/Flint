@@ -5,9 +5,10 @@
             <p class="text-sm text-flint-muted">Source must be synced before use cases are generated.</p>
         {% elif source_overview and not use_cases %}
             <p class="text-sm text-flint-muted mb-4">No suggestions yet, click to generate.</p>
-            <form hx-post="{% url 'insights:generate_use_cases' source.pk %}" hx-target="#use-cases-section" hx-swap="outerHTML">
+            <form hx-post="{% url 'insights:generate_use_cases' source.pk %}" hx-target="#use-cases-section" hx-swap="outerHTML" hx-disabled-elt="find button" hx-indicator="find .spinner">
                 {% csrf_token %}
                 <button type="submit" class="bg-flint-orange text-white px-4 py-2 rounded-md hover:bg-flint-orange-hover">Generate Use Cases</button>
+                {% include 'components/_spinner.html' with label="Generating…" %}
             </form>
         {% else %}
             <div class="grid grid-cols-1 gap-4">
@@ -30,9 +31,10 @@
                 {% if use_case_rate_limited %}
                     <p>(Regenerating uses cases available in {{ use_case_hours_remaining }} hours)</p>
                 {% else %}
-                <form hx-post="{% url 'insights:generate_use_cases' source.pk %}" hx-target="#use-cases-section" hx-swap="outerHTML">
+                <form hx-post="{% url 'insights:generate_use_cases' source.pk %}" hx-target="#use-cases-section" hx-swap="outerHTML" hx-disabled-elt="find button" hx-indicator="find .spinner">
                     {% csrf_token %}
                     <button type="submit" class="border border-flint-border text-flint-muted hover:bg-flint-card px-4 py-2 rounded-md">Regenerate</button>
+                    {% include 'components/_spinner.html' with label="Regenerating…" %}
                 </form>
                 {% endif %}
             </div>
