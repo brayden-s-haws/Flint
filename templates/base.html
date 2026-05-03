@@ -47,6 +47,15 @@
           .markdown-content strong {
               font-weight: 600;
           }
+          .htmx-indicator {
+              display: none !important;
+          }
+          .htmx-request .htmx-indicator,
+          .htmx-request.htmx-indicator {
+              display: inline-flex !important;
+          }
+          display: inline-flex;
+  }
         </style>
     <link rel="icon" type="image/x-icon" href="{% static 'favicon.ico' %}">
     <title>{% block title %}Flint{% endblock %}</title>

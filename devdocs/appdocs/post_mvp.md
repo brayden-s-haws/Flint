@@ -4,7 +4,7 @@ Concrete features that are out of scope for the MVP but will need to be built. O
 
 For speculative or longer-horizon ideas, see `devdocs/potential_features.md`.
 
-> **After all features in this doc are complete:** Address `devdocs/testing.md` and `devdocs/logging.md` in full. Do not work on testing or logging until all features here are done.
+> **After all features in this doc are complete:** Address `devdocs/testing.md` and `devdocs/logging.md` in full, and run a broad bug bash (see "bug bash" section below). Do not work on testing, logging, or the bug bash until all features here are done.
 
 ---
 
@@ -15,7 +15,7 @@ For speculative or longer-horizon ideas, see `devdocs/potential_features.md`.
 2. ~~Insight approval/rating (thumbs up/down) — `insights`~~ COMPLETE
 3. ~~Domain-based registration guard — `accounts`~~ COMPLETE
 4. ~~Team invites — `accounts`~~ COMPLETE
-5. Loading indicators for source sync and use case generation — `sources`, `insights`
+5. ~~Loading indicators for source sync and use case generation — `sources`, `insights`~~ COMPLETE
 6. Tailwind CDN → production build — `infrastructure`
 
 **Phase 3 — Requires Celery + Redis first**
@@ -616,6 +616,27 @@ The test plan lives in `devdocs/testing.md`. The `apps.users` section is complet
 - **apps.insights** — insight generation triggers LLM call (mock the LLM), insight list and detail views return 200
 
 When each section is filled in, run the full test suite (`python manage.py test`) before marking it done. Multi-tenancy boundary tests (account A cannot see account B's data) are required for every app that touches tenant-scoped models.
+
+---
+
+## bug bash
+
+After feature work is complete, run a broad sweep with Claude to surface bugs, dead code, and rough edges that accumulated during fast feature iteration. The goal is a triaged punch list, not on-the-fly fixes — separate the *finding* from the *fixing* so the scope stays bounded.
+
+Areas to cover during the sweep:
+
+- **Silent failure paths** — non-2xx responses from HTMX endpoints that don't surface to the user (e.g. the deferred error-path check in `devdocs/featuredocs/loading-indicators.md` — Phase B). Catalog each one and decide: surface inline, redirect with message, or genuinely safe to swallow.
+- **Pre-existing destructive sequences** — operations that delete state before the operation that follows might fail (e.g. `generate_intra_use_case_suggestions` deletes existing use cases at `apps/insights/views.py:96-102` *before* the LLM call at line 105; a failed LLM call leaves the user with nothing).
+- **Stale UI state** — buttons or sections rendered from page-load context that can be wrong by the time the user clicks (e.g. rate-limit guards that hide a button only at GET time).
+- **Tenancy boundary checks** — every queryset on a tenant-scoped model should filter by `request.account`. Sweep all views and managers; flag any raw `Model.objects.filter(...)` without account scoping.
+- **Encryption boundary** — verify credentials are decrypted only at connector instantiation and never logged, returned in JSON, or rendered in templates.
+- **Missing type hints** — CLAUDE.md mandates type hints on all functions; the bash should flag any module that drifted.
+- **Form widget styling** — CLAUDE.md mandates the Tailwind class block on every form; flag any form missing the `__init__` widget.attrs application.
+- **Dead URLs / unused views** — views or URL patterns that no template references after refactors.
+- **Migration cleanliness** — multiple migration files for what should have been a single change; squash candidates.
+- **N+1 query hotspots** — list views with `.all()` calls inside template loops over related objects.
+
+Output format: a single triaged list grouped by severity (blocker / should-fix / nice-to-have) with file paths and line numbers, ready to be turned into discrete tickets. Do not fix during the sweep — fixes happen in follow-up sessions.
 
 ---
 

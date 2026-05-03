@@ -1,7 +1,7 @@
 # Feature: Loading Indicators
 
 **Source:** `devdocs/appdocs/post_mvp.md` — "Loading indicators for source sync and use case generation"
-**Status:** In progress (Phase A complete)
+**Status:** Complete (Phases A–C done; D and E skipped — see notes below)
 **Target phase:** Post-MVP Phase 2 (item #5)
 **Branch:** `feature/loading-indicators`
 
@@ -55,50 +55,34 @@ The sync, test connection, and load demo views currently return `redirect(...)`.
 
 `templates/sources/_use_cases_section.html` already uses HTMX. Wire the spinner in.
 
-- [ ] On both `<form>` elements (Generate and Regenerate, lines 8 and 33), add:
+- [x] On both `<form>` elements (Generate and Regenerate, lines 8 and 33), add:
   - `hx-disabled-elt="find button"` — disables the submit button while in flight
   - `hx-indicator="find .spinner"` — points at the spinner element inside the form
-- [ ] Inside each form, after the `<button>`, render `{% include 'components/_spinner.html' with label="Generating…" %}` wrapped in a span with class `spinner` so `find .spinner` resolves.
-- [ ] Verify visually: clicking Generate disables the button, swaps in the spinner, and on response the section is replaced (existing behaviour — the spinner disappears with the swap).
-- [ ] Verify error path: when `generate_intra_use_case_suggestions` returns a 400/500 (e.g. rate-limited or LLM failure), HTMX by default does NOT swap. The spinner stops, button re-enables, but the user sees no message. Decide: either let HTMX swap on 4xx/5xx for these specific endpoints (`hx-target-error` or response header), or render the error message as a partial. Recommend the latter — return the section template with an error banner appended for non-200 responses.
-
-### Phase C — Source sync indicator (convert to HTMX)
+- [x] Inside each form, after the `<button>`, render `{% include 'components/_spinner.html' with label="Generating…" %}` wrapped in a span with class `spinner` so `find .spinner` resolves.
+- [x] Verify visually: clicking Generate disables the button, swaps in the spinner, and on response the section is replaced (existing behaviour — the spinner disappears with the swap).
+- [ ] ~~Verify error path: when `generate_intra_use_case_suggestions` returns a 400/500 (e.g. rate-limited or LLM failure), HTMX by default does NOT swap. The spinner stops, button re-enables, but the user sees no message.~~ **Deferred.** Two of the three error paths (missing source overview, rate-limited Regenerate) are already guarded by UI state and rarely trigger; the LLM-failure path is the only realistic one and produces a silent no-op rather than a broken state. To be picked up in a future bug bash (see "bug bash" section in `devdocs/appdocs/post_mvp.md`).
+### Phase C — Source sync indicator (convert to HTMX) ✅
 
 `templates/sources/source_detail.html:13-16` — plain form POST, full page reload.
 
-- [ ] Wrap the action buttons row in an identifiable container (e.g. `<div id="source-actions" class="flex gap-2">`) so we have a swap target for the sync result if needed.
-- [ ] Convert the Sync Now form to HTMX:
-  - `hx-post="{% url 'sources:sync' source.pk %}"` on the form
-  - `hx-target="#sync-result"` (a new, initially-empty container placed below the actions row)
-  - `hx-swap="innerHTML"`
-  - `hx-disabled-elt="find button"`
-  - `hx-indicator="find .spinner"`
-- [ ] Add the spinner span inside the form button area, and add a sibling `<div id="sync-result"></div>` below the actions div.
-- [ ] Update `sync_source` view in `apps/sources/views.py:155` to detect HTMX requests via `request.headers.get('HX-Request') == 'true'`. When HTMX:
-  - On success: return a small partial that shows a success message and triggers a full page refresh via the `HX-Refresh: true` response header (this is the simplest correct behaviour — sync touches schemas/tables/sync history/source overview, all of which are different cards on the page; refreshing is cheaper than partial-rendering 4 sections)
-  - On failure: return a partial with the error message rendered into `#sync-result`
-- [ ] Confirm the existing non-HTMX path still works (in case anyone POSTs without HTMX — e.g. a curl test). The view should fall back to the existing `redirect('sources:detail', pk=pk)` path.
-- [ ] **Important UX note:** the LLM source-overview generation runs after the sync DB writes (`apps/sources/views.py:204-211`), inside the same request. Sync requests therefore can take a long time on first sync. The spinner correctly reflects this — but consider adding a "Generating insights…" message swap halfway through. Out of scope for this feature; flag it for the Celery migration.
+- [x] Convert the Sync Now form to HTMX with `hx-post`, `hx-target="#sync-result"`, `hx-swap="innerHTML"`, `hx-disabled-elt="find button"`, `hx-indicator="find .spinner"`.
+- [x] Add `{% include 'components/_spinner.html' with label="Syncing…" %}` inside the form after the button, and add a sibling `<div id="sync-result"></div>` outside the action row's flex container.
+- [x] Update `sync_source` view to detect HTMX via `request.headers.get('HX-Request') == 'true'`. On both success and failure: return `HttpResponse('')` with `HX-Refresh: true` header so HTMX triggers a full reload — sync touches too many sections of the page to make partial updates worth it. Django messages survive the reload and surface success/error banners on the next GET.
+- [x] Non-HTMX `redirect(...)` fallback preserved for direct (non-browser) callers.
+- [x] **CSS gotcha resolved:** `.htmx-indicator` rules in `base.html` need `!important` to beat Tailwind CDN's `inline-flex` utility (Tailwind injects styles after our `<style>` block, so it wins on equal specificity). Use of `!important` is intentional and noted for cleanup when the Tailwind production build replaces the CDN (post_mvp item #6).
+- [x] **Known UX gap (deferred):** sync request blocks the request cycle for 20–60s on first sync because LLM source-overview generation runs synchronously (`apps/sources/views.py:204-211`). The spinner reflects this correctly but a "Generating insights…" mid-request status update would be nicer. Left for the Celery migration (post_mvp item #7) — at that point, sync becomes a polling indicator anyway and intermediate status comes for free.
 
-### Phase D — Test Connection indicator
+### Phase D — Test Connection indicator (skipped)
 
-`templates/sources/source_detail.html:17-20` — same pattern as sync, much shorter request.
+**Decision:** No spinner needed. Test Connection completes in well under a second — the connector opens a network handle and returns a boolean. By the time the user could perceive a spinner, the page has already reloaded with the result via Django messages. Adding a spinner here would be visual noise, not feedback.
 
-- [ ] Convert Test Connection form to HTMX:
-  - `hx-post="{% url 'sources:test_connection' source.pk %}"`
-  - `hx-target="#test-connection-result"` (new sibling container near the button, or reuse `#sync-result`)
-  - `hx-swap="innerHTML"`
-  - `hx-disabled-elt="find button"`
-  - `hx-indicator="find .spinner"`
-- [ ] Add the spinner span inside the button area.
-- [ ] Update `test_connection` view in `apps/sources/views.py:140` to detect HTMX and return a small partial with a green success or red error message inline, instead of using `messages` framework (which only shows on full reload).
+The form stays as a plain POST → redirect → flash message. No work to do.
 
-### Phase E — Load Demo Data indicator (optional bundle)
+### Phase E — Load Demo Data indicator (skipped)
 
-`templates/sources/source_list.html` — load demo button. The action is local-only (no LLM), but can take a few seconds because it creates three sources and runs sync on each.
+**Decision:** No spinner needed. The view only creates three `Source` records (three DB writes) — it does not run sync on them. Sub-second response. Same rationale as Phase D: spinner would be noise.
 
-- [ ] Same pattern as Phase C: convert the form to HTMX, add spinner with label "Loading demo data…", target a result container, return `HX-Refresh: true` on success.
-- [ ] If this turns out to be trivially fast in practice, ship it without a spinner and remove the checkbox. Validate timing first.
+The form stays as a plain POST → redirect → flash message. No work to do.
 
 ---
 

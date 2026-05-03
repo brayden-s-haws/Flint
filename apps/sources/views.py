@@ -210,6 +210,10 @@ def sync_source(request: HttpRequest, pk:int) -> HttpResponse:
             except Exception as e:
                 logger.exception("Failed to generate source overview for source %s", source.pk)
         messages.success(request, 'Source sync completed successfully')
+        if request.headers.get('HX-Request') == 'true':
+            response = HttpResponse('')
+            response['HX-Refresh'] = 'true'
+            return response
         return redirect('sources:detail', pk=pk)
     except Exception as e:
         source_sync.status = 'failed'
@@ -217,6 +221,10 @@ def sync_source(request: HttpRequest, pk:int) -> HttpResponse:
         source_sync.completed_at = timezone.now()
         source_sync.save()
         messages.error(request, f'Source sync failed: {e}')
+        if request.headers.get('HX-Request') == 'true':
+            response = HttpResponse('')
+            response['HX-Refresh'] = 'true'
+            return response
         return redirect('sources:detail', pk=pk)
 
 @login_required
