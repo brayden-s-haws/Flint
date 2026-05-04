@@ -39,6 +39,12 @@ source .venv/bin/activate
 # Run development server
 python manage.py runserver
 
+# Watch and rebuild Tailwind CSS in dev (run in a second terminal alongside runserver)
+npm run watch:css
+
+# One-shot Tailwind build (minified — use before deploys or after pulling changes)
+npm run build:css
+
 # Run migrations
 python manage.py migrate
 
@@ -131,6 +137,7 @@ Note: `ModelChoiceField` renders as `<select>` — the classes apply but may nee
 - Admin interface available at `/admin/`
 - Templates configured to use `templates/` directory at project root
 - Static files use Django defaults (`STATIC_URL = 'static/'`)
+- **Tailwind CSS:** config in `tailwind.config.js` (project root); custom CSS source in `static/css/input.css`; compiled output in `static/css/output.css` (committed). `base.html` loads only the compiled `output.css` — do not put colors, fonts, or custom rules back into `base.html`. Add new colors to `tailwind.config.js`, custom rules to `input.css`, then run `npm run build:css` (or keep `npm run watch:css` running).
 
 ## Environment Variables
 

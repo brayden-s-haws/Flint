@@ -133,3 +133,6 @@ secret_key.txt
 
 # Local configuration
 *.local.py
+
+# Node / npm
+node_modules/
