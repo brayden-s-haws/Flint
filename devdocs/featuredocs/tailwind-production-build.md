@@ -1,7 +1,7 @@
 # Feature: Tailwind CDN → Production Build
 
 **Source:** `devdocs/appdocs/post_mvp.md` — "infrastructure — Tailwind CDN to Production Build"
-**Status:** Not started
+**Status:** Complete
 **Target phase:** Post-MVP Phase 2 (item #6)
 **Branch:** `feature/tailwind-prod`
 
@@ -37,56 +37,42 @@ This is a small, self-contained migration. No phases — single flat checklist.
 
 ### Configure `tailwind.config.js`
 
-- [ ] Set `content` to scan all template directories that use Tailwind classes:
-  - `templates/**/*.html`
-  - `apps/**/templates/**/*.html` (if any app-local templates exist; check)
-- [ ] Move the `theme.extend` block from `templates/base.html` (lines 12–35 — `flint` color palette and `Geist`/`Inter` font family) into `tailwind.config.js`. Verbatim copy — same colors, same names.
-- [ ] Confirm `corePlugins` defaults are appropriate (no need to change unless we want to disable specific utilities)
+- [x] Set `content` to scan all template directories: `./templates/**/*.html` and `./apps/**/templates/**/*.html`.
+- [x] Moved the `theme.extend` block (flint colors + Geist/Inter font family) from `base.html` into `tailwind.config.js` verbatim.
+- [x] `corePlugins` defaults left as-is — no utilities to disable.
 
 ### Set up the CSS source file
 
-- [ ] Create `static/css/input.css` containing the three Tailwind directives:
-  ```
-  @tailwind base;
-  @tailwind components;
-  @tailwind utilities;
-  ```
-- [ ] Move the existing custom rules from `templates/base.html` `<style>` block (lines 38–57 — `.markdown-content` rules and `.htmx-indicator` rules) into `static/css/input.css`, placed after the `@tailwind` directives so they get compiled into the final stylesheet
-- [ ] Drop the `!important` from the `.htmx-indicator` rules — they are no longer needed once Tailwind compiles into a single stylesheet with predictable rule order. Verify after build that the spinner still hides/shows correctly.
+- [x] Created `static/css/input.css` with the three `@tailwind` directives and the custom CSS rules (markdown-content and htmx-indicator) appended after.
+- [x] Both `!important` flags dropped from the `.htmx-indicator` rules. Verified post-build that spinner still hides/shows correctly with natural specificity.
 
 ### Add build scripts to `package.json`
 
-- [ ] Add a `build:css` script: `tailwindcss -i ./static/css/input.css -o ./static/css/output.css --minify`
-- [ ] Add a `watch:css` script for development: `tailwindcss -i ./static/css/input.css -o ./static/css/output.css --watch`
-- [ ] Document both in `devdocs/getting_started.md` (or wherever the run instructions live) so the next-time-running developer knows to run `npm run watch:css` alongside `python manage.py runserver`
+- [x] `build:css` script (one-shot, minified) and `watch:css` script (dev watcher) both added.
+- [x] Documented in `CLAUDE.md` "Common Commands" instead of `getting_started.md` — `CLAUDE.md` is the more visible entry point for both human and AI sessions.
 
 ### Wire the compiled CSS into base.html
 
-- [ ] Replace the Tailwind CDN `<script src="https://cdn.tailwindcss.com">` and the inline `tailwind.config = {...}` `<script>` block (lines 10–36) with a single `<link rel="stylesheet" href="{% static 'css/output.css' %}">` tag
-- [ ] Remove the now-empty `<style>` block (lines 38–57) — its contents have moved to `input.css`
-- [ ] Keep the `{% load static %}` directive at the top of `base.html` (already present at line 1)
+- [x] Removed the Tailwind CDN script, the inline `tailwind.config = {...}` block, and the inline `<style>` block (which also cleared the orphaned/broken CSS lines that had accumulated).
+- [x] Replaced with a single `<link rel="stylesheet" href="{% static 'css/output.css' %}">` placed before the HTMX script.
+- [x] `{% load static %}` directive preserved.
+- [x] `base.html` now ~29 lines (down from ~75).
 
 ### Build and verify
 
-- [ ] Run `npm run build:css` once and confirm `static/css/output.css` is generated
-- [ ] Reload every page in the app and visually confirm styling is intact — particularly check:
-  - Source detail page (uses many `flint-*` colors, `card`, hover states)
-  - Source list, insight list (table rendering)
-  - Forms (the styled widget classes from CLAUDE.md)
-  - The HTMX spinner in the use case section and source sync (must still hide/show correctly without the `!important`)
-  - Markdown rendering (`.markdown-content` rules)
-  - Demo banner (yellow palette)
-- [ ] Run `python manage.py collectstatic --noinput` to confirm Django can collect the new CSS file (relevant for production deployment)
+- [x] `npm run build:css` produces `static/css/output.css` (~30KB minified).
+- [x] Visually confirmed: source detail page (flint colors, hover states, demo banner), source/insight lists, forms, markdown rendering, HTMX spinner all render correctly.
+- [ ] ~~Run `python manage.py collectstatic --noinput`~~ — **deferred until first real deploy.** Django's static-file pipeline already finds `output.css` via `STATICFILES_DIRS` during dev. The collectstatic check is relevant only when a production deployment is set up, which doesn't exist yet.
 
 ### Update `.gitignore`
 
-- [ ] Add `node_modules/` to `.gitignore`
-- [ ] Decide on `static/css/output.css` — generally **commit it** for solo-dev simplicity (Django's `collectstatic` will pick it up and Heroku/Render-style deploys won't need to install npm). If we move to a CI-driven deploy that runs the build, we can remove it from git later.
+- [x] `node_modules/` added under a "Node / npm" section.
+- [x] `static/css/output.css` committed to git per the design decision (solo dev, no CI build step).
 
 ### Documentation
 
-- [ ] Update `CLAUDE.md` "Common Commands" section to add the `npm run watch:css` instruction alongside `runserver`
-- [ ] Note in `CLAUDE.md` that Tailwind config now lives in `tailwind.config.js` (so future template edits don't try to put colors in `base.html`)
+- [x] Added `npm run build:css` and `npm run watch:css` to "Common Commands" in `CLAUDE.md`.
+- [x] Added a Tailwind bullet to "Configuration Notes" in `CLAUDE.md` naming the three files (`tailwind.config.js`, `static/css/input.css`, `static/css/output.css`) and explicitly warning future-Claude not to put rules back into `base.html`.
 
 ---
 

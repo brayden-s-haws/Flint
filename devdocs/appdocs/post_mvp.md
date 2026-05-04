@@ -16,7 +16,7 @@ For speculative or longer-horizon ideas, see `devdocs/potential_features.md`.
 3. ~~Domain-based registration guard — `accounts`~~ COMPLETE
 4. ~~Team invites — `accounts`~~ COMPLETE
 5. ~~Loading indicators for source sync and use case generation — `sources`, `insights`~~ COMPLETE
-6. Tailwind CDN → production build — `infrastructure`
+6. ~~Tailwind CDN → production build — `infrastructure`~~ COMPLETE
 
 **Phase 3 — Requires Celery + Redis first**
 7. Celery + Redis setup — `core/infrastructure`
