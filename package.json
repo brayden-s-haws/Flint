@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build:css": "tailwindcss -i ./static/css/input.css -o ./static/css/output.css --minify",
-    "watch:css": "tailwindcss -i ./static/css/input.css -o ./static/css/output.css --watch"
+    "watch:css": "tailwindcss -i ./static/css/input.css -o ./static/css/output.css --watch --minify"
   },
   "keywords": [],
   "author": "",
