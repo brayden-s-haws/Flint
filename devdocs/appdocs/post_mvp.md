@@ -4,8 +4,6 @@ Concrete features that are out of scope for the MVP but will need to be built. O
 
 For speculative or longer-horizon ideas, see `devdocs/potential_features.md`.
 
-> **After all features in this doc are complete:** Address `devdocs/testing.md` and `devdocs/logging.md` in full, and run a broad bug bash (see "bug bash" section below). Do not work on testing, logging, or the bug bash until all features here are done.
-
 ---
 
 ## Suggested Build Order (as of 2026-04-15)
@@ -25,18 +23,22 @@ For speculative or longer-horizon ideas, see `devdocs/potential_features.md`.
 10. Agentic cross-source discovery — `insights` (depends on 2+ sources connected) Note: we should add this to the dashboard as one of the main cards next to the Insights card
 11. Demo Mode Phase 2 (product scenario + auto-trigger insights after load)
 
-**Phase 4 — New apps, depend on Phase 2 & 3**
-12. Queries app (natural language to SQL) — `queries`
-13. Ontology app Phase 1 (manual object type definitions) — `ontology`
+**Phase 4 — New apps and connector expansion, depend on Phase 2 & 3**
+12. PyAirbyte integration — `sources` — adapter that lets us register PyAirbyte sources (300+) via the same `BaseConnector` interface used today, so catalog/insights/agentic discovery work uniformly across native and Airbyte-backed sources
+13. First SaaS connector batch via PyAirbyte — HubSpot, Salesforce, Stripe — `sources` — chosen to match the existing Sales demo scenario (HubSpot) and the most common enterprise CRM/payments use cases. Native connectors only where deep metadata extraction is needed; everything else routes through the PyAirbyte adapter from #12.
+14. Queries app (natural language to SQL) — `queries`
+15. Ontology app Phase 1 (manual object type definitions) — `ontology`
+16. SaaS connector batch 2 via PyAirbyte — Google Analytics, Intercom, Shopify, Zendesk, Mixpanel, Amplitude, Segment — `sources` — broadens go-to-market coverage; aligns with the Product demo scenario (Intercom) and common e-commerce/support stacks
+17. Data warehouse + storage connectors — Snowflake, BigQuery, Redshift, S3/GCS — `sources` — opens the warehouse path; PyAirbyte adapter for most, with native connectors only where deep metadata extraction (FK constraints, column statistics) justifies the work
 
 **Phase 5 — Advanced / long-horizon**
-14. Multi-account switching, role-based permissions — `accounts`
-15. Ontology Phases 2–6 (LLM suggestions, graph view, agent integration)
-16. Amundsen integration
+18. Multi-account switching, role-based permissions — `accounts`
+19. Ontology Phases 2–6 (LLM suggestions, graph view, agent integration)
 
 ---
 ## general
 - Add docstrings to all files
+-  > **After all features in this doc are complete:** Address `devdocs/testing.md` and `devdocs/logging.md` in full, and run a broad bug bash (see "bug bash" section below). Do not work on testing, logging, or the bug bash until all features here are done.
 
 
 ---
@@ -715,62 +717,6 @@ The virtuous cycle: richer catalog metadata → better SQL generation. Specifica
 - FK constraints captured during sync enable correct JOIN generation
 - Column statistics (null fraction, distinct count, common values) captured during sync give the LLM filter context
 - Successful Q/SQL pairs are stored per-source and become few-shot examples for that source
-
----
-
-## Amundsen Integration
-
-### Overview
-
-[Amundsen](https://www.amundsen.io) is an open source data discovery and metadata engine (Linux Foundation AI & Data). It is widely deployed at data-mature organizations. Flint's opportunity is to be the **AI intelligence layer on top of Amundsen** — enriching it with LLM-generated descriptions that Amundsen itself has no mechanism to produce.
-
-Amundsen has no LLM layer, no auto-generated descriptions, and no data profiling. That gap is exactly Flint's value proposition.
-
-### Integration Patterns
-
-**Pattern A — Push LLM insights to Amundsen (primary value)**
-
-For accounts that self-host Amundsen, add an optional "export to Amundsen" toggle in source settings. After generating LLM table/column descriptions, push them to Amundsen's Metadata Service REST API:
-
-```
-PUT /table/{table_uri}/description       # push table description
-PUT /column/{column_uri}/description     # push column description
-PUT /table/{table_uri}/owner             # push ownership
-POST /table/{table_uri}/badges           # push LLM-generated tags
-```
-
-Amundsen's table URI format: `{database}://{cluster}.{schema}/{table_name}` — e.g., `postgresql://prod.public/orders`.
-
-This positions Flint as a value-add service for organizations already invested in Amundsen. The pitch: "Flint generates the descriptions; your Amundsen instance surfaces them."
-
-**Pattern B — Use Databuilder extractors for Phase 3+ connectors**
-
-`amundsen-databuilder` is a pip-installable Python library that contains battle-tested metadata extractors for BigQuery, Snowflake, Redshift, Hive, dbt, Tableau, and more. Rather than writing native connectors from scratch for every Phase 3+ data warehouse, evaluate whether Databuilder's extractor classes can be used inside Flint's sync pipeline to populate `catalog.Table` and `catalog.Column` records.
-
-The extractor model: each extractor implements a `next_record()` method returning `TableMetadata` objects. These can be adapted to populate our own Django models without loading anything into Amundsen's Neo4j backend.
-
-```python
-# Pseudocode — use a Databuilder extractor in a Django management command or Celery task
-from databuilder.extractor.bigquery_metadata_extractor import BigQueryMetadataExtractor
-
-extractor = BigQueryMetadataExtractor()
-extractor.init(conf)
-while record := extractor.extract():
-    # map record fields to our catalog.Table / catalog.Column models
-    ...
-```
-
-**What not to do:** Do not deploy Amundsen's services (Neo4j + Elasticsearch + three Flask microservices) as part of Flint. The infrastructure overhead is significant and unnecessary when you can call the REST API against a user-hosted instance or use just the Databuilder library.
-
-### Where This Fits
-
-- **Near-term:** Databuilder extractors are relevant when building Phase 3 data warehouse connectors (Snowflake, BigQuery, Redshift). Evaluate extractor quality against what a native connector would produce before committing.
-- **Medium-term:** Amundsen API push is a differentiated enterprise feature. Target organizations that already have Amundsen deployed and want it enriched.
-- **No urgency:** There is no reason to integrate with Amundsen before Phase 2 is complete. Catalog metadata must be rich and LLM descriptions must be working before an Amundsen export is useful.
-
-### Note on Alternatives
-
-Amundsen's community velocity has slowed (2023–2025). DataHub (LinkedIn open source) and OpenMetadata are more actively maintained alternatives with similar REST API patterns. The same push-descriptions-via-REST-API integration approach applies to either. Design the export abstraction as a pluggable "catalog export target" rather than hardcoding Amundsen specifically.
 
 ---
 
