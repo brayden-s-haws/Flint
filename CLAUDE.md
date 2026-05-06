@@ -45,6 +45,15 @@ npm run watch:css
 # One-shot Tailwind build (minified — use before deploys or after pulling changes)
 npm run build:css
 
+# Start Celery worker (run alongside runserver; consumes background tasks from Redis)
+celery -A Flint worker -l info
+
+# Start Celery beat scheduler (only needed when periodic tasks are configured)
+celery -A Flint beat -l info
+
+# Verify Redis is running (broker for Celery)
+redis-cli ping  # expects PONG
+
 # Run migrations
 python manage.py migrate
 
@@ -138,6 +147,7 @@ Note: `ModelChoiceField` renders as `<select>` — the classes apply but may nee
 - Templates configured to use `templates/` directory at project root
 - Static files use Django defaults (`STATIC_URL = 'static/'`)
 - **Tailwind CSS:** config in `tailwind.config.js` (project root); custom CSS source in `static/css/input.css`; compiled output in `static/css/output.css` (committed). `base.html` loads only the compiled `output.css` — do not put colors, fonts, or custom rules back into `base.html`. Add new colors to `tailwind.config.js`, custom rules to `input.css`, then run `npm run build:css` (or keep `npm run watch:css` running).
+- **Background tasks (Celery + Redis):** Celery app instance is in `Flint/celery.py`; tasks live in `apps/<app>/tasks.py` per Django convention and are auto-discovered. Redis runs as a Homebrew service (`brew services start redis`) on the default port 6379. If tasks aren't running, first check `redis-cli ping` returns `PONG` and the worker is running (`celery -A Flint worker -l info`). Pass IDs to tasks, never ORM objects — Celery serializes args as JSON and would fail on Django models.
 
 ## Environment Variables
 

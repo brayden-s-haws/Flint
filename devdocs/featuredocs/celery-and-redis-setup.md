@@ -1,7 +1,7 @@
 # Feature: Celery + Redis Setup
 
 **Source:** `devdocs/appdocs/post_mvp.md` — "core / infrastructure" (build order item #7)
-**Status:** In progress (Phase 1 install steps complete)
+**Status:** In progress (Phases 1–2 complete)
 **Target phase:** Post-MVP Phase 3 (gating infrastructure)
 **Branch:** `feature/celery-and-redis-setup`
 
@@ -36,7 +36,7 @@ Scope is the infrastructure plus one proof-of-concept conversion (source sync), 
 
 ## Implementation Checklist
 
-### Phase 1 — Infrastructure setup
+### Phase 1 — Infrastructure setup ✅
 
 #### Install dependencies
 
@@ -67,6 +67,7 @@ Scope is the infrastructure plus one proof-of-concept conversion (source sync), 
   - `CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'` (uses Django models for schedule storage)
 - [x] Add `'django_celery_beat'` to `INSTALLED_APPS`.
 - [x] Add the two new env var defaults to `.env.example` (so future setup is documented).
+- [x] Also added `CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True` to silence the Celery 6.0 pending-deprecation warning by opting into the new default explicitly.
 
 #### Migrations
 
@@ -74,29 +75,28 @@ Scope is the infrastructure plus one proof-of-concept conversion (source sync), 
 
 #### First task — verify the worker works
 
-- [ ] Create a trivial `apps/core/tasks.py` with one `@shared_task` (e.g., `def ping() -> str: return 'pong'`). Use `from celery import shared_task` so the task isn't tied to a specific Celery app instance — works regardless of which app discovers it.
-- [ ] Verify task discovery: start a worker (`celery -A Flint worker -l info`) and confirm the task name (`apps.core.tasks.ping`) appears in the registered tasks list.
-- [ ] In a Django shell, run `from apps.core.tasks import ping; result = ping.delay(); result.get(timeout=5)` and confirm it returns `'pong'`. This proves: Django can enqueue, Redis is mediating, the worker is consuming, and the result backend is delivering the return value.
+- [x] Created `apps/core/tasks.py` with a trivial `@shared_task def ping() -> str: return 'pong'`.
+- [x] Worker starts cleanly (`celery -A Flint worker -l info`) and `apps.core.tasks.ping` appears in the registered `[tasks]` list.
+- [x] `ping.delay().get(timeout=5)` returns `'pong'`. Worker logs show `received` then `succeeded in 0.005s` — full pipeline (Django → Redis broker → worker → Redis result backend → caller) verified end-to-end.
 
-### Phase 2 — Dev workflow
+### Phase 2 — Dev workflow ✅
 
-#### Run scripts
+#### Daily commands (reference)
 
-- [ ] No `package.json` or `manage.py` integration needed — Celery runs as its own process. Daily commands:
-  - `celery -A Flint worker -l info` — start the worker
-  - `celery -A Flint beat -l info` — start the scheduler (only needed when periodic tasks are configured; not yet)
-  - `redis-cli ping` — verify Redis is alive
-- [ ] Document the worker command in `CLAUDE.md` "Common Commands" alongside the existing entries.
+Celery runs as its own process — no integration with `manage.py` or `package.json`. Raw commands for fallback / CI / outside-PyCharm use:
+
+- `celery -A Flint worker -l info` — start the worker
+- `celery -A Flint beat -l info` — start the scheduler (only needed when periodic tasks are configured; not yet)
+- `redis-cli ping` — verify Redis is alive (expects `PONG`)
+
+These are also documented in `CLAUDE.md` "Common Commands".
 
 #### PyCharm run configurations
 
-- [ ] Add a Python run config for the Celery worker:
-  - **Module name:** `celery`
-  - **Parameters:** `-A Flint worker -l info`
-  - **Working directory:** project root
-  - **Python interpreter:** project venv
-- [ ] Add another Python run config for Celery beat (parameters `-A Flint beat -l info`). Don't add to the compound yet — beat is unused until item #9.
-- [ ] Update the existing "Dev Workflow" compound to include the worker config alongside Django Server and the Tailwind watcher. Now `Run Dev Workflow` brings up everything you need in one click.
+- [x] `celery worker` config: Python module run, module name `celery`, parameters `-A Flint worker -l info`, project venv interpreter, project root working directory. `PYTHONUNBUFFERED=1` env var (PyCharm default).
+- [x] `celery beat` config: same shape, parameters `-A Flint beat -l info`. Created but not yet added to the compound — beat does nothing until scheduled tasks exist (deferred to item #9).
+- [x] `Dev Workflow` compound updated: now starts Django + Tailwind watcher + Celery worker in three console tabs. One click brings up everything.
+- [x] Worker commands + Redis check documented in `CLAUDE.md` "Common Commands"; Celery configuration notes added to `CLAUDE.md` "Configuration Notes" section.
 
 ### Phase 3 — Convert source sync to async (proof of concept)
 

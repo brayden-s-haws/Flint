@@ -27,13 +27,14 @@ For speculative or longer-horizon ideas, see `devdocs/potential_features.md`.
 12. PyAirbyte integration — `sources` — adapter that lets us register PyAirbyte sources (300+) via the same `BaseConnector` interface used today, so catalog/insights/agentic discovery work uniformly across native and Airbyte-backed sources
 13. First SaaS connector batch via PyAirbyte — HubSpot, Salesforce, Stripe — `sources` — chosen to match the existing Sales demo scenario (HubSpot) and the most common enterprise CRM/payments use cases. Native connectors only where deep metadata extraction is needed; everything else routes through the PyAirbyte adapter from #12.
 14. Queries app (natural language to SQL) — `queries`
-15. Ontology app Phase 1 (manual object type definitions) — `ontology`
-16. SaaS connector batch 2 via PyAirbyte — Google Analytics, Intercom, Shopify, Zendesk, Mixpanel, Amplitude, Segment — `sources` — broadens go-to-market coverage; aligns with the Product demo scenario (Intercom) and common e-commerce/support stacks
-17. Data warehouse + storage connectors — Snowflake, BigQuery, Redshift, S3/GCS — `sources` — opens the warehouse path; PyAirbyte adapter for most, with native connectors only where deep metadata extraction (FK constraints, column statistics) justifies the work
+15. ERD generator/viewer — `catalog` — visual entity-relationship diagrams generated from catalog FK metadata, with optional LLM-inferred relationships and ontology-aware labelling
+16. Ontology app Phase 1 (manual object type definitions) — `ontology`
+17. SaaS connector batch 2 via PyAirbyte — Google Analytics, Intercom, Shopify, Zendesk, Mixpanel, Amplitude, Segment — `sources` — broadens go-to-market coverage; aligns with the Product demo scenario (Intercom) and common e-commerce/support stacks
+18. Data warehouse + storage connectors — Snowflake, BigQuery, Redshift, S3/GCS — `sources` — opens the warehouse path; PyAirbyte adapter for most, with native connectors only where deep metadata extraction (FK constraints, column statistics) justifies the work
 
 **Phase 5 — Advanced / long-horizon**
-18. Multi-account switching, role-based permissions — `accounts`
-19. Ontology Phases 2–6 (LLM suggestions, graph view, agent integration)
+19. Multi-account switching, role-based permissions — `accounts`
+20. Ontology Phases 2–6 (LLM suggestions, graph view, agent integration)
 
 ---
 ## general
@@ -717,6 +718,159 @@ The virtuous cycle: richer catalog metadata → better SQL generation. Specifica
 - FK constraints captured during sync enable correct JOIN generation
 - Column statistics (null fraction, distinct count, common values) captured during sync give the LLM filter context
 - Successful Q/SQL pairs are stored per-source and become few-shot examples for that source
+
+---
+
+## catalog — ERD Generator / Viewer
+
+### Overview
+
+A visual entity-relationship diagram view generated from catalog metadata. Tables become nodes, foreign-key relationships become edges. Users can browse the structure of a source visually instead of clicking through the table list, which is especially useful for unfamiliar databases or for sharing schema context with stakeholders.
+
+The ERD is a **derived view of the catalog** — it stores no extra data. Every node and edge is computed at view time from `Schema`, `Table`, `Column`, and the FK relationship records captured during sync. When the source schema changes and a re-sync runs, the diagram updates automatically.
+
+This pairs naturally with the queries app: a user exploring "what's in this database?" can flip between the ERD (structural view) and the natural-language query box (analytical view) on the same source.
+
+---
+
+### Where It Lives in the UI
+
+A new **"Diagram"** tab on `sources/source_detail.html`, alongside the existing Overview, Schemas, and Insights tabs. The diagram occupies the full width of the content area below the tab nav.
+
+Controls along the top of the diagram:
+
+1. **Schema filter** — multi-select dropdown of all schemas in the source; default is "all"
+2. **Search** — text input that highlights matching tables and dims the rest (does not remove edges, so neighbourhoods stay visible)
+3. **Focus mode** — click a table to enter focus mode: show only that table and its direct neighbours (1-hop); click again or press Esc to exit
+4. **Label mode** — toggle between **Physical** (raw `tbl_cust_master`) and **Business** (ontology-mapped "Customer") labels; Business mode is only available for tables that have an `ObjectType` defined (Phase 2 of `ontology`)
+5. **Export** — download as PNG or SVG (Phase 3)
+
+Each node displays:
+- Table name (or business label, depending on mode)
+- Schema badge (if multiple schemas are visible)
+- Column list — primary keys marked with a key icon, FK columns with a link icon; collapsible if the table has more than ~10 columns
+- Row count badge if `TableStatistics` exists for the table
+
+Each edge displays:
+- A line from the FK column on the source table to the PK column on the target table
+- Cardinality indicator at the endpoints (`1`, `N`) — derived from whether the FK column has a unique constraint
+- Hover tooltip with the FK constraint name and column pair
+
+---
+
+### How Generation Works
+
+1. **Build graph data** — view queries `Schema`, `Table`, `Column`, and the FK relationship records (captured during sync — already required by the queries app for correct JOIN generation, so this dependency is shared) for the requested source, scoped to `request.account`. Apply the schema filter if provided.
+
+2. **Serialize to JSON** — the view returns a JSON payload shaped for the rendering library:
+
+   ```json
+   {
+     "nodes": [
+       {
+         "id": "schema.table",
+         "label": "customers",
+         "schema": "public",
+         "columns": [
+           {"name": "id", "type": "uuid", "is_pk": true},
+           {"name": "email", "type": "varchar", "is_fk": false},
+           {"name": "company_id", "type": "uuid", "is_fk": true}
+         ],
+         "row_count": 12453,
+         "object_type": "Customer"
+       }
+     ],
+     "edges": [
+       {
+         "from": "public.customers",
+         "to": "public.companies",
+         "from_column": "company_id",
+         "to_column": "id",
+         "cardinality": "many_to_one",
+         "constraint_name": "customers_company_id_fkey"
+       }
+     ]
+   }
+   ```
+
+3. **Client-side rendering** — `cytoscape.js` (preferred — better large-graph performance and built-in layout algorithms than `vis.js`) renders the graph in the browser. Use the `dagre` layout for hierarchical schemas (typical OLTP shape) with a fallback to `cose` (force-directed) for highly connected graphs. No server-side graph library required.
+
+4. **Layout persistence (optional, Phase 2)** — if the user manually drags nodes, persist the positions per-user-per-source in a small `ERDLayout` model so the diagram opens in the same arrangement next time. Keyed by `(account, source, user)`.
+
+---
+
+### LLM-Inferred Relationships (Phase 3)
+
+Many real-world databases have implicit relationships that aren't declared as FK constraints — common in legacy systems, data warehouses, or denormalized analytics tables. After explicit FKs are rendered, optionally run an **inferred-relationship pass**:
+
+1. For each pair of tables in the source, check column-name and type compatibility (e.g., `orders.customer_id` matches `customers.id`)
+2. For pairs with high name/type compatibility but no declared FK, ask the LLM to confirm whether this looks like a real relationship given the table descriptions and a sample of column names
+3. Store accepted inferences in an `InferredRelationship` model with `confidence` and `reviewed_by_user` fields
+4. Render inferred edges as **dashed lines** (vs. solid for declared FKs); user can accept/reject inline to confirm or hide
+
+This reuses the LLM abstraction from `apps/insights/` — same provider layer, same prompt management. Cap LLM calls per source (e.g., max 20 candidate pairs per run) and rate-limit re-runs.
+
+---
+
+### Key Libraries
+
+| Library | Purpose |
+|---|---|
+| `cytoscape.js` | Frontend graph rendering and layout (`dagre` extension for hierarchical layout) |
+| existing LLM abstraction | Shared with `apps/insights/` — only used in Phase 3 for inferred relationships |
+| existing catalog models | `Schema`, `Table`, `Column`, FK relationship records — no new sync work required for Phase 1 |
+
+---
+
+### Data Model
+
+**Phase 1** — no new models. The view is fully derived from existing catalog data.
+
+**Phase 2** — add `ERDLayout` for per-user layout persistence:
+
+```
+ERDLayout
+  account     FK → accounts.Account
+  source      FK → sources.Source
+  user        FK → users.User
+  positions   JSONField   {"schema.table": {"x": 120, "y": 340}, ...}
+  updated_at  DateTimeField
+```
+
+**Phase 3** — add `InferredRelationship` for LLM-inferred edges:
+
+```
+InferredRelationship
+  account             FK → accounts.Account
+  source              FK → sources.Source
+  from_table          FK → catalog.Table
+  from_column         FK → catalog.Column
+  to_table            FK → catalog.Table
+  to_column           FK → catalog.Column
+  confidence          CharField   high / medium / low
+  reasoning           TextField   LLM reasoning
+  status              CharField   suggested / accepted / rejected
+  reviewed_by         FK → users.User (nullable)
+  reviewed_at         DateTimeField (nullable)
+  first_inferred_at   DateTimeField
+```
+
+---
+
+### Phased Build
+
+1. **Phase 1** — basic ERD per source from declared FK relationships only; cytoscape.js with dagre layout; schema filter and table search; physical labels only
+2. **Phase 2** — focus mode (1-hop neighbourhood); ontology-aware business labels (when `ObjectType` exists for a table); per-user layout persistence via `ERDLayout`
+3. **Phase 3** — LLM-inferred relationships rendered as dashed edges with accept/reject UI; PNG/SVG export
+
+---
+
+### Relationship to Existing Features
+
+- **Builds on FK relationship capture during sync** — already a prerequisite for the queries app (correct JOIN generation). If queries ships first, this dependency is already satisfied.
+- **Reuses ontology object/property names for cleaner labels** — when an `ObjectType` is defined for a table (Phase 1 of `ontology`), the ERD can show the business label instead of the physical table name. The ontology graph view (`/ontology/graph/`) and the ERD use the same rendering library and node/edge JSON shape — share the frontend code.
+- **Reuses the LLM abstraction from `apps/insights/`** for the Phase 3 inferred-relationship pass — same provider layer, same prompt management pattern.
+- **Lives in `apps/catalog/`** — a new view and template, plus optional models added in later phases. No new app needed.
 
 ---
 

@@ -51,23 +51,23 @@ This document tracks potential future features and capabilities beyond the MVP. 
 - Oracle
 - MongoDB
 - DynamoDB
-- Redshift
+- ~~Redshift~~ (tracked in `post_mvp.md` Phase 4 #18)
 - Databricks
 
 ### SaaS/APIs
-- Salesforce
-- Stripe
-- Shopify
-- Zendesk
-- Intercom
-- Mixpanel
-- Amplitude
-- Segment
+- ~~Salesforce~~ (tracked in `post_mvp.md` Phase 4 #13)
+- ~~Stripe~~ (tracked in `post_mvp.md` Phase 4 #13)
+- ~~Shopify~~ (tracked in `post_mvp.md` Phase 4 #17)
+- ~~Zendesk~~ (tracked in `post_mvp.md` Phase 4 #17)
+- ~~Intercom~~ (tracked in `post_mvp.md` Phase 4 #17)
+- ~~Mixpanel~~ (tracked in `post_mvp.md` Phase 4 #17)
+- ~~Amplitude~~ (tracked in `post_mvp.md` Phase 4 #17)
+- ~~Segment~~ (tracked in `post_mvp.md` Phase 4 #17)
 - Airtable
 - Notion databases
 
 ### File/Storage
-- S3/GCS (CSV, Parquet, JSON files)
+- ~~S3/GCS (CSV, Parquet, JSON files)~~ (tracked in `post_mvp.md` Phase 4 #18)
 - Google Sheets
 - Excel files
 
