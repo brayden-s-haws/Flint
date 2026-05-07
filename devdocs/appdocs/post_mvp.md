@@ -38,8 +38,10 @@ For speculative or longer-horizon ideas, see `devdocs/potential_features.md`.
 
 ---
 ## general
-- Add docstrings to all files
--  > **After all features in this doc are complete:** Address `devdocs/testing.md` and `devdocs/logging.md` in full, and run a broad bug bash (see "bug bash" section below). Do not work on testing, logging, or the bug bash until all features here are done.
+- Add docstrings to all files (task claude to find all of these)
+-  > **After all features in this doc are complete:** Address `devdocs/testing.md` and `devdocs/logging.md` in full, and run a broad bug bash (see "bug bash" section below). Do not work on testing,
+   > logging, or the bug bash until all features here are done. (task claude to find all of these)
+> Add AI evals
 
 
 ---

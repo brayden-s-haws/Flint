@@ -104,7 +104,8 @@ This validates the polling pattern before downstream features rely on it. Sync i
 
 #### The shape of the change
 
-- [ ] Move the body of `sync_source` (`apps/sources/views.py:155-220`) into a new task `apps/sources/tasks.py::sync_source_task(source_id: int, sync_log_id: int) -> None`. The task does exactly what the view does today — discover catalog, write schemas/tables/columns, generate source overview — but inside the worker process. Pass IDs not model instances (Celery tasks should never serialize Django ORM objects).
+- [x] Move the body of `sync_source` (`apps/sources/views.py:155-220`) into a new task `apps/sources/tasks.py::sync_source_task(source_id: int, sync_log_id: int) -> None`. The task does exactly 
+  what the view does today — discover catalog, write schemas/tables/columns, generate source overview — but inside the worker process. Pass IDs not model instances (Celery tasks should never serialize Django ORM objects).
 - [ ] The view becomes a thin wrapper: create the `SourceSyncLog` row with `status='running'` (so the polling indicator has something to watch), enqueue the task with `sync_source_task.delay(source.pk, sync_log.pk)`, and return immediately.
 - [ ] The task updates the same `SourceSyncLog` row to `status='success'` or `status='failed'` when done. No new model needed.
 
