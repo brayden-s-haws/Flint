@@ -166,6 +166,18 @@ def sync_source(request: HttpRequest, pk:int) -> HttpResponse:
     return redirect('sources:detail', pk=pk)
 
 @login_required
+def sync_status(request: HttpRequest, pk:int) -> HttpResponse:
+    source = get_object_or_404(Source, pk=pk, account=request.account)
+    sync_log = source.sourcesynclog_set.order_by('-started_at').first()
+    if sync_log is None:
+        return HttpResponse('')
+    if sync_log.status == 'success':
+        response = HttpResponse('')
+        response['HX-Refresh'] = 'true'
+        return response
+    return render(request, 'sources/_sync_status.html', {'sync_log': sync_log, 'source': source})
+
+@login_required
 def load_demo_data(request: HttpRequest) -> HttpResponse:
     if request.method != 'POST':
         return HttpResponse('Method not allowed', status=405)

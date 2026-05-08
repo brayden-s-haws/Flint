@@ -111,7 +111,7 @@ This validates the polling pattern before downstream features rely on it. Sync i
 
 #### Polling indicator template change
 
-- [ ] Add a new `apps/sources/views.py::sync_status` view at `GET /sources/<pk>/sync-status/` that returns the latest `SourceSyncLog` for the source rendered as a small partial (running spinner / success message / error message).
+- [x] Added `sync_status` view at `apps/sources/views.py:168` and URL at `apps/sources/urls.py:12` (`GET /sources/<pk>/sync-status/`, name `sources:sync_status`). Reads latest `SourceSyncLog`; on `success` returns empty body + `HX-Refresh: true` header; on other states renders `sources/_sync_status.html`.
 - [ ] Update the Sync Now form in `templates/sources/source_detail.html` to:
   - Continue posting to `sources:sync` on click
   - On response (which now returns immediately because the task is queued, not run inline), HTMX swaps in a polling element via `hx-get="{% url 'sources:sync_status' source.pk %}"` with `hx-trigger="every 2s"` and `hx-swap="outerHTML"` targeting itself.
