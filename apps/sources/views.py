@@ -10,7 +10,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Max, QuerySet, Q
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views.generic import ListView, CreateView, DetailView, UpdateView, DeleteView
 from django.urls import reverse_lazy, reverse
 from django.http import HttpResponse, HttpRequest
@@ -160,9 +160,7 @@ def sync_source(request: HttpRequest, pk:int) -> HttpResponse:
     sync_source_task.delay(source.pk, sync_log.pk)
 
     if request.headers.get('HX-Request') == 'true':
-        response = HttpResponse('')
-        response['HX-Refresh'] = 'true'
-        return response
+        return render(request, 'sources/_sync_status.html', {'sync_log': sync_log, 'source': source})
     return redirect('sources:detail', pk=pk)
 
 @login_required

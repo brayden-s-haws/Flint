@@ -10,10 +10,11 @@
             <h1 class="text-2xl font-bold text-flint-text">{{ source.name }}</h1>
         </div>
         <div class="flex gap-2">
-            <form hx-post="{% url 'sources:sync' source.pk %}" hx-target="#sync-result" hx-swap="innerHTML" hx-disabled-elt="find button" hx-indicator="find .spinner">
+            <form hx-post="{% url 'sources:sync' source.pk %}"
+                hx-target="this"
+                hx-swap="outerHTML">
                 {% csrf_token %}
                 <button type="submit" class="bg-flint-orange text-white px-4 py-2 rounded-md hover:bg-flint-orange-hover">Sync Now</button>
-                {% include 'components/_spinner.html' with label="Syncing…" %}
             </form>
             <form method="post" action="{% url 'sources:test_connection' source.pk %}">
                 {% csrf_token %}
@@ -23,7 +24,6 @@
             <a class="border border-red-500 text-red-400 hover:bg-red-900/20 px-4 py-2 rounded-md" href="{% url 'sources:delete' source.pk %}">Delete</a>
         </div>
     </div>
-    <div id="sync-result"></div>
     {% if source.source_type.is_demo %}
         <div class="bg-yellow-900/20 border border-yellow-700/40 rounded-md px-4 py-3 mb-6 flex items-center justify-between">
             <p class="text-sm text-yellow-300">This is a demo source.</p>
