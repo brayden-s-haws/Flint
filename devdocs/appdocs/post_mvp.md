@@ -17,7 +17,7 @@ For speculative or longer-horizon ideas, see `devdocs/potential_features.md`.
 6. ~~Tailwind CDN → production build — `infrastructure`~~ COMPLETE
 
 **Phase 3 — Requires Celery + Redis first**
-7. Celery + Redis setup — `core/infrastructure`
+7. ~~Celery + Redis setup — `core/infrastructure`~~ COMPLETE
 8. Batch table description generation — `insights`
 9. Scheduled syncs — `sources`
 10. Agentic cross-source discovery — `insights` (depends on 2+ sources connected) Note: we should add this to the dashboard as one of the main cards next to the Insights card
@@ -606,9 +606,9 @@ A banner on demo sources makes clear this is demo data. A "Clear Demo Data" butt
 
 ## core / infrastructure
 
-- **Celery + Redis** — background task queue for scheduled syncs and batch insight generation
+- ~~**Celery + Redis** — background task queue for scheduled syncs and batch insight generation~~ COMPLETE — see `devdocs/featuredocs/celery-and-redis-setup.md`. Source sync converted as proof-of-concept; other long-running operations still synchronous and migrate per-feature.
 - **REST API** — `apps/api/` layer for programmatic access (post-MVP app, skip for now)
-- **Scheduled syncs** — run source syncs on a cron schedule rather than manual trigger only
+- **Scheduled syncs** — run source syncs on a cron schedule rather than manual trigger only (build order item #9 — Celery beat configured but no schedules wired yet)
 
 ---
 

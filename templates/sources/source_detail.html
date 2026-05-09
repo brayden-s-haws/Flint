@@ -46,31 +46,9 @@
     <div>
         <div class="bg-flint-card rounded-lg border border-flint-border p-6 mb-6 card">
             <h2 class="text-lg font-semibold text-flint-text mb-4">Sync History</h2>
-            {% if sync_logs %}
-                <table class="w-full">
-                    <thead>
-                        <tr>
-                            <th class="text-flint-muted text-left text-sm font-medium pb-3">Started At</th>
-                            <th class="text-flint-muted text-left text-sm font-medium pb-3">Status</th>
-                            <th class="text-flint-muted text-left text-sm font-medium pb-3">Completed At</th>
-                            <th class="text-flint-muted text-left text-sm font-medium pb-3">Records Synced</th>
-                            <th class="text-flint-muted text-left text-sm font-medium pb-3">Error Message</th>
-                        </tr>
-                    </thead>
-                <tbody>
-                    {% for log in sync_logs %}
-                        <tr class="border-t border-flint-border text-sm text-flint-text">
-                            <td class="py-3 pr-4">{{ log.started_at|date:"N j, Y, g:i a" }}</td>
-                            <td class="py-3 pr-4"><span class="px-2 py-0.5 rounded text-xs font-medium {% if log.status == 'success' %}bg-green-900/20 text-flint-success{% elif log.status == 'failed' %}bg-red-900/20 text-red-400{% else %}bg-yellow-900/20 text-yellow-300{% endif %}">{{ log.status }}</span></td>
-                            <td class="py-3 pr-4">{% if log.completed_at %} {{ log.completed_at|date:"N j, Y, g:i a"}} {% else %}-{% endif %}</td>
-                            <td class="py-3 pr-4">{{ log.records_synced }}</td>
-                            <td class="py-3">{% if log.status == 'failed' %}{{ log.error_message }}{% endif %}</td>
-                        </tr>
-                    {%  endfor %}
-                </tbody></table>
-        {% else %}
-                <p class="text-sm text-flint-muted">No syncs yet.</p>
-            {% endif %}
+            <div id="sync-history">
+                {% include 'sources/_sync_history.html' %}
+            </div>
         </div>
     </div>
     <div>

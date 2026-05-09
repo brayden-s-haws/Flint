@@ -1,7 +1,7 @@
 # Feature: Celery + Redis Setup
 
 **Source:** `devdocs/appdocs/post_mvp.md` — "core / infrastructure" (build order item #7)
-**Status:** In progress (Phases 1–2 complete)
+**Status:** Complete
 **Target phase:** Post-MVP Phase 3 (gating infrastructure)
 **Branch:** `feature/celery-and-redis-setup`
 
@@ -98,7 +98,7 @@ These are also documented in `CLAUDE.md` "Common Commands".
 - [x] `Dev Workflow` compound updated: now starts Django + Tailwind watcher + Celery worker in three console tabs. One click brings up everything.
 - [x] Worker commands + Redis check documented in `CLAUDE.md` "Common Commands"; Celery configuration notes added to `CLAUDE.md` "Configuration Notes" section.
 
-### Phase 3 — Convert source sync to async (proof of concept)
+### Phase 3 — Convert source sync to async (proof of concept) ✅
 
 This validates the polling pattern before downstream features rely on it. Sync is the right candidate because it's the slowest existing operation and the loading-indicators feature already anticipated this conversion.
 
@@ -113,18 +113,20 @@ This validates the polling pattern before downstream features rely on it. Sync i
 
 - [x] Added `sync_status` view at `apps/sources/views.py:168` and URL at `apps/sources/urls.py:12` (`GET /sources/<pk>/sync-status/`, name `sources:sync_status`). Reads latest `SourceSyncLog`; on `success` returns empty body + `HX-Refresh: true` header; on other states renders `sources/_sync_status.html`.
 - [x] Created `templates/sources/_sync_status.html` polling partial. Single root `<div id="sync-status">`. When `running`, the div carries `hx-get`/`hx-trigger="every 2s"`/`hx-swap="outerHTML"` so it self-polls; renders inline SVG spinner + "Syncing…" text. When `failed`, drops the HTMX attrs (polling stops) and shows red error message with `sync_log.error_message`. The `success` case never renders this template — view sends `HX-Refresh: true` and the page reloads instead.
-- [ ] Update the Sync Now form in `templates/sources/source_detail.html` to swap in the polling partial on click instead of using `HX-Refresh: true`.
-- [ ] Drop the `HX-Refresh` response from the `sync_source` view itself — the refresh now happens from the polling partial when it sees `success`.
+- [x] Sync Now form rewritten as `hx-target="this" hx-swap="outerHTML"` with `hx-post` to `sources:sync`. Swaps the form with the polling partial on click. Spinner-inside-button and `hx-disabled-elt`/`hx-indicator` removed; the polling partial now provides the visual feedback.
+- [x] `sync_source` view's HTMX branch returns the rendered polling partial (`_sync_status.html`) instead of `HX-Refresh: true`. The success-triggered page refresh now fires from the `sync_status` polling endpoint when it sees `status='success'`.
+- [x] **OOB swap added** to keep the Sync History card in sync during async runs. The polling partial includes a sibling `<div id="sync-history" hx-swap-oob="true">` that re-renders `_sync_history.html` with the latest `sync_logs`. The Sync History card body in `source_detail.html` was extracted to a partial and given a matching `id="sync-history"` so HTMX can target it. Without this, clicking Sync Now showed the polling spinner but the new `running` row didn't appear in Sync History until the page reloaded — and worse, manually refreshing killed the polling element so the page never auto-reloaded on success.
+- [x] End-to-end verified: click Sync Now → form swaps to spinner + new "running" row appears in history → polling fires every 2s → worker completes → next poll returns `HX-Refresh` → page auto-reloads showing success row.
 
 #### Update the loading-indicators featuredoc
 
-- [ ] In `devdocs/featuredocs/loading-indicators.md`, mark the deferred "Celery migration" notes as resolved and link to this featuredoc. The polling pattern is now documented here.
+- [x] `devdocs/featuredocs/loading-indicators.md` updated: the deferred "Celery migration" notes are marked resolved and link back to this featuredoc.
 
-### Phase 4 — Documentation
+### Phase 4 — Documentation ✅
 
-- [ ] Update `CLAUDE.md` "Common Commands" with the worker command.
-- [ ] Add a "Background Tasks" section to `CLAUDE.md` Configuration Notes that names: where the Celery app lives (`Flint/celery.py`), where tasks live (`apps/<app>/tasks.py` per Django convention), and that `redis-cli ping` is the first thing to check when tasks aren't running.
-- [ ] Update `devdocs/architecture.md` lines 269–272 to remove the "deferred" framing and replace with a brief note pointing at this featuredoc.
+- [x] `CLAUDE.md` "Common Commands" updated with `celery -A Flint worker -l info`, `celery -A Flint beat -l info`, and `redis-cli ping` (added during Phase 2 dev-workflow setup).
+- [x] `CLAUDE.md` "Configuration Notes" has the Background Tasks bullet covering where the Celery app lives, where tasks live, and the IDs-not-ORM-objects rule.
+- [x] `devdocs/architecture.md` "Background Tasks: Celery + Redis" section rewritten — removed "deferred" framing, points at this featuredoc, names the file locations and the proof-of-concept-only conversion scope.
 
 ---
 

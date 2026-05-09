@@ -34,7 +34,7 @@ The sync, test connection, and load demo views currently return `redirect(...)`.
 
 ## Out of Scope
 
-- **No async/Celery work in this feature.** Sync stays synchronous in the request cycle. Once Celery lands (post_mvp item #7) the sync spinner will evolve into a polling indicator that watches `SourceSyncLog.status`. Design the markup so that swap is mechanical: the button posts to the same URL, but the response becomes "started" + a poller. Don't pre-build the polling now.
+- **No async/Celery work in this feature.** Sync stays synchronous in the request cycle. Once Celery lands (post_mvp item #7) the sync spinner will evolve into a polling indicator that watches `SourceSyncLog.status`. Design the markup so that swap is mechanical: the button posts to the same URL, but the response becomes "started" + a poller. Don't pre-build the polling now. **Update (resolved):** the Celery migration shipped in `devdocs/featuredocs/celery-and-redis-setup.md`; sync now uses the polling pattern described there, which replaces the request-blocking spinner from this feature for the sync action specifically. Other actions (use case generation) still use this feature's spinner pattern.
 - **No global "page is loading" overlay.** All indicators are local to the action that triggered them.
 - **No skeleton placeholders.** Spinner + "Working…" text is sufficient for current load times.
 - **No HTMX boost / full-page progress bar.** Per-action indicators only.
@@ -70,7 +70,7 @@ The sync, test connection, and load demo views currently return `redirect(...)`.
 - [x] Update `sync_source` view to detect HTMX via `request.headers.get('HX-Request') == 'true'`. On both success and failure: return `HttpResponse('')` with `HX-Refresh: true` header so HTMX triggers a full reload — sync touches too many sections of the page to make partial updates worth it. Django messages survive the reload and surface success/error banners on the next GET.
 - [x] Non-HTMX `redirect(...)` fallback preserved for direct (non-browser) callers.
 - [x] **CSS gotcha resolved:** `.htmx-indicator` rules in `base.html` need `!important` to beat Tailwind CDN's `inline-flex` utility (Tailwind injects styles after our `<style>` block, so it wins on equal specificity). Use of `!important` is intentional and noted for cleanup when the Tailwind production build replaces the CDN (post_mvp item #6).
-- [x] **Known UX gap (deferred):** sync request blocks the request cycle for 20–60s on first sync because LLM source-overview generation runs synchronously (`apps/sources/views.py:204-211`). The spinner reflects this correctly but a "Generating insights…" mid-request status update would be nicer. Left for the Celery migration (post_mvp item #7) — at that point, sync becomes a polling indicator anyway and intermediate status comes for free.
+- [x] ~~**Known UX gap (deferred):** sync request blocks the request cycle for 20–60s on first sync because LLM source-overview generation runs synchronously.~~ **Resolved:** the Celery migration (`devdocs/featuredocs/celery-and-redis-setup.md`) moved sync into a background task with a 2-second polling indicator; the request itself now returns in <100ms. Intermediate "Generating insights…" status would still be a nice-to-have but is no longer a UX blocker since the page is responsive throughout.
 
 ### Phase D — Test Connection indicator (skipped)
 
