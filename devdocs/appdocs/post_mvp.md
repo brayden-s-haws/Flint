@@ -4,8 +4,6 @@ Concrete features that are out of scope for the MVP but will need to be built. O
 
 For speculative or longer-horizon ideas, see `devdocs/potential_features.md`.
 
-> **After all features in this doc are complete:** Address `devdocs/testing.md` and `devdocs/logging.md` in full, and run a broad bug bash (see "bug bash" section below). Do not work on testing, logging, or the bug bash until all features here are done.
-
 ---
 
 ## Suggested Build Order (as of 2026-04-15)
@@ -19,24 +17,31 @@ For speculative or longer-horizon ideas, see `devdocs/potential_features.md`.
 6. ~~Tailwind CDN → production build — `infrastructure`~~ COMPLETE
 
 **Phase 3 — Requires Celery + Redis first**
-7. Celery + Redis setup — `core/infrastructure`
+7. ~~Celery + Redis setup — `core/infrastructure`~~ COMPLETE
 8. Batch table description generation — `insights`
 9. Scheduled syncs — `sources`
 10. Agentic cross-source discovery — `insights` (depends on 2+ sources connected) Note: we should add this to the dashboard as one of the main cards next to the Insights card
 11. Demo Mode Phase 2 (product scenario + auto-trigger insights after load)
 
-**Phase 4 — New apps, depend on Phase 2 & 3**
-12. Queries app (natural language to SQL) — `queries`
-13. Ontology app Phase 1 (manual object type definitions) — `ontology`
+**Phase 4 — New apps and connector expansion, depend on Phase 2 & 3**
+12. PyAirbyte integration — `sources` — adapter that lets us register PyAirbyte sources (300+) via the same `BaseConnector` interface used today, so catalog/insights/agentic discovery work uniformly across native and Airbyte-backed sources
+13. First SaaS connector batch via PyAirbyte — HubSpot, Salesforce, Stripe — `sources` — chosen to match the existing Sales demo scenario (HubSpot) and the most common enterprise CRM/payments use cases. Native connectors only where deep metadata extraction is needed; everything else routes through the PyAirbyte adapter from #12.
+14. Queries app (natural language to SQL) — `queries`
+15. ERD generator/viewer — `catalog` — visual entity-relationship diagrams generated from catalog FK metadata, with optional LLM-inferred relationships and ontology-aware labelling
+16. Ontology app Phase 1 (manual object type definitions) — `ontology`
+17. SaaS connector batch 2 via PyAirbyte — Google Analytics, Intercom, Shopify, Zendesk, Mixpanel, Amplitude, Segment — `sources` — broadens go-to-market coverage; aligns with the Product demo scenario (Intercom) and common e-commerce/support stacks
+18. Data warehouse + storage connectors — Snowflake, BigQuery, Redshift, S3/GCS — `sources` — opens the warehouse path; PyAirbyte adapter for most, with native connectors only where deep metadata extraction (FK constraints, column statistics) justifies the work
 
 **Phase 5 — Advanced / long-horizon**
-14. Multi-account switching, role-based permissions — `accounts`
-15. Ontology Phases 2–6 (LLM suggestions, graph view, agent integration)
-16. Amundsen integration
+19. Multi-account switching, role-based permissions — `accounts`
+20. Ontology Phases 2–6 (LLM suggestions, graph view, agent integration)
 
 ---
 ## general
-- Add docstrings to all files
+- Add docstrings to all files (task claude to find all of these)
+-  > **After all features in this doc are complete:** Address `devdocs/testing.md` and `devdocs/logging.md` in full, and run a broad bug bash (see "bug bash" section below). Do not work on testing,
+   > logging, or the bug bash until all features here are done. (task claude to find all of these)
+> Add AI evals
 
 
 ---
@@ -601,9 +606,9 @@ A banner on demo sources makes clear this is demo data. A "Clear Demo Data" butt
 
 ## core / infrastructure
 
-- **Celery + Redis** — background task queue for scheduled syncs and batch insight generation
+- ~~**Celery + Redis** — background task queue for scheduled syncs and batch insight generation~~ COMPLETE — see `devdocs/featuredocs/celery-and-redis-setup.md`. Source sync converted as proof-of-concept; other long-running operations still synchronous and migrate per-feature.
 - **REST API** — `apps/api/` layer for programmatic access (post-MVP app, skip for now)
-- **Scheduled syncs** — run source syncs on a cron schedule rather than manual trigger only
+- **Scheduled syncs** — run source syncs on a cron schedule rather than manual trigger only (build order item #9 — Celery beat configured but no schedules wired yet)
 
 ---
 
@@ -718,59 +723,156 @@ The virtuous cycle: richer catalog metadata → better SQL generation. Specifica
 
 ---
 
-## Amundsen Integration
+## catalog — ERD Generator / Viewer
 
 ### Overview
 
-[Amundsen](https://www.amundsen.io) is an open source data discovery and metadata engine (Linux Foundation AI & Data). It is widely deployed at data-mature organizations. Flint's opportunity is to be the **AI intelligence layer on top of Amundsen** — enriching it with LLM-generated descriptions that Amundsen itself has no mechanism to produce.
+A visual entity-relationship diagram view generated from catalog metadata. Tables become nodes, foreign-key relationships become edges. Users can browse the structure of a source visually instead of clicking through the table list, which is especially useful for unfamiliar databases or for sharing schema context with stakeholders.
 
-Amundsen has no LLM layer, no auto-generated descriptions, and no data profiling. That gap is exactly Flint's value proposition.
+The ERD is a **derived view of the catalog** — it stores no extra data. Every node and edge is computed at view time from `Schema`, `Table`, `Column`, and the FK relationship records captured during sync. When the source schema changes and a re-sync runs, the diagram updates automatically.
 
-### Integration Patterns
+This pairs naturally with the queries app: a user exploring "what's in this database?" can flip between the ERD (structural view) and the natural-language query box (analytical view) on the same source.
 
-**Pattern A — Push LLM insights to Amundsen (primary value)**
+---
 
-For accounts that self-host Amundsen, add an optional "export to Amundsen" toggle in source settings. After generating LLM table/column descriptions, push them to Amundsen's Metadata Service REST API:
+### Where It Lives in the UI
+
+A new **"Diagram"** tab on `sources/source_detail.html`, alongside the existing Overview, Schemas, and Insights tabs. The diagram occupies the full width of the content area below the tab nav.
+
+Controls along the top of the diagram:
+
+1. **Schema filter** — multi-select dropdown of all schemas in the source; default is "all"
+2. **Search** — text input that highlights matching tables and dims the rest (does not remove edges, so neighbourhoods stay visible)
+3. **Focus mode** — click a table to enter focus mode: show only that table and its direct neighbours (1-hop); click again or press Esc to exit
+4. **Label mode** — toggle between **Physical** (raw `tbl_cust_master`) and **Business** (ontology-mapped "Customer") labels; Business mode is only available for tables that have an `ObjectType` defined (Phase 2 of `ontology`)
+5. **Export** — download as PNG or SVG (Phase 3)
+
+Each node displays:
+- Table name (or business label, depending on mode)
+- Schema badge (if multiple schemas are visible)
+- Column list — primary keys marked with a key icon, FK columns with a link icon; collapsible if the table has more than ~10 columns
+- Row count badge if `TableStatistics` exists for the table
+
+Each edge displays:
+- A line from the FK column on the source table to the PK column on the target table
+- Cardinality indicator at the endpoints (`1`, `N`) — derived from whether the FK column has a unique constraint
+- Hover tooltip with the FK constraint name and column pair
+
+---
+
+### How Generation Works
+
+1. **Build graph data** — view queries `Schema`, `Table`, `Column`, and the FK relationship records (captured during sync — already required by the queries app for correct JOIN generation, so this dependency is shared) for the requested source, scoped to `request.account`. Apply the schema filter if provided.
+
+2. **Serialize to JSON** — the view returns a JSON payload shaped for the rendering library:
+
+   ```json
+   {
+     "nodes": [
+       {
+         "id": "schema.table",
+         "label": "customers",
+         "schema": "public",
+         "columns": [
+           {"name": "id", "type": "uuid", "is_pk": true},
+           {"name": "email", "type": "varchar", "is_fk": false},
+           {"name": "company_id", "type": "uuid", "is_fk": true}
+         ],
+         "row_count": 12453,
+         "object_type": "Customer"
+       }
+     ],
+     "edges": [
+       {
+         "from": "public.customers",
+         "to": "public.companies",
+         "from_column": "company_id",
+         "to_column": "id",
+         "cardinality": "many_to_one",
+         "constraint_name": "customers_company_id_fkey"
+       }
+     ]
+   }
+   ```
+
+3. **Client-side rendering** — `cytoscape.js` (preferred — better large-graph performance and built-in layout algorithms than `vis.js`) renders the graph in the browser. Use the `dagre` layout for hierarchical schemas (typical OLTP shape) with a fallback to `cose` (force-directed) for highly connected graphs. No server-side graph library required.
+
+4. **Layout persistence (optional, Phase 2)** — if the user manually drags nodes, persist the positions per-user-per-source in a small `ERDLayout` model so the diagram opens in the same arrangement next time. Keyed by `(account, source, user)`.
+
+---
+
+### LLM-Inferred Relationships (Phase 3)
+
+Many real-world databases have implicit relationships that aren't declared as FK constraints — common in legacy systems, data warehouses, or denormalized analytics tables. After explicit FKs are rendered, optionally run an **inferred-relationship pass**:
+
+1. For each pair of tables in the source, check column-name and type compatibility (e.g., `orders.customer_id` matches `customers.id`)
+2. For pairs with high name/type compatibility but no declared FK, ask the LLM to confirm whether this looks like a real relationship given the table descriptions and a sample of column names
+3. Store accepted inferences in an `InferredRelationship` model with `confidence` and `reviewed_by_user` fields
+4. Render inferred edges as **dashed lines** (vs. solid for declared FKs); user can accept/reject inline to confirm or hide
+
+This reuses the LLM abstraction from `apps/insights/` — same provider layer, same prompt management. Cap LLM calls per source (e.g., max 20 candidate pairs per run) and rate-limit re-runs.
+
+---
+
+### Key Libraries
+
+| Library | Purpose |
+|---|---|
+| `cytoscape.js` | Frontend graph rendering and layout (`dagre` extension for hierarchical layout) |
+| existing LLM abstraction | Shared with `apps/insights/` — only used in Phase 3 for inferred relationships |
+| existing catalog models | `Schema`, `Table`, `Column`, FK relationship records — no new sync work required for Phase 1 |
+
+---
+
+### Data Model
+
+**Phase 1** — no new models. The view is fully derived from existing catalog data.
+
+**Phase 2** — add `ERDLayout` for per-user layout persistence:
 
 ```
-PUT /table/{table_uri}/description       # push table description
-PUT /column/{column_uri}/description     # push column description
-PUT /table/{table_uri}/owner             # push ownership
-POST /table/{table_uri}/badges           # push LLM-generated tags
+ERDLayout
+  account     FK → accounts.Account
+  source      FK → sources.Source
+  user        FK → users.User
+  positions   JSONField   {"schema.table": {"x": 120, "y": 340}, ...}
+  updated_at  DateTimeField
 ```
 
-Amundsen's table URI format: `{database}://{cluster}.{schema}/{table_name}` — e.g., `postgresql://prod.public/orders`.
+**Phase 3** — add `InferredRelationship` for LLM-inferred edges:
 
-This positions Flint as a value-add service for organizations already invested in Amundsen. The pitch: "Flint generates the descriptions; your Amundsen instance surfaces them."
-
-**Pattern B — Use Databuilder extractors for Phase 3+ connectors**
-
-`amundsen-databuilder` is a pip-installable Python library that contains battle-tested metadata extractors for BigQuery, Snowflake, Redshift, Hive, dbt, Tableau, and more. Rather than writing native connectors from scratch for every Phase 3+ data warehouse, evaluate whether Databuilder's extractor classes can be used inside Flint's sync pipeline to populate `catalog.Table` and `catalog.Column` records.
-
-The extractor model: each extractor implements a `next_record()` method returning `TableMetadata` objects. These can be adapted to populate our own Django models without loading anything into Amundsen's Neo4j backend.
-
-```python
-# Pseudocode — use a Databuilder extractor in a Django management command or Celery task
-from databuilder.extractor.bigquery_metadata_extractor import BigQueryMetadataExtractor
-
-extractor = BigQueryMetadataExtractor()
-extractor.init(conf)
-while record := extractor.extract():
-    # map record fields to our catalog.Table / catalog.Column models
-    ...
+```
+InferredRelationship
+  account             FK → accounts.Account
+  source              FK → sources.Source
+  from_table          FK → catalog.Table
+  from_column         FK → catalog.Column
+  to_table            FK → catalog.Table
+  to_column           FK → catalog.Column
+  confidence          CharField   high / medium / low
+  reasoning           TextField   LLM reasoning
+  status              CharField   suggested / accepted / rejected
+  reviewed_by         FK → users.User (nullable)
+  reviewed_at         DateTimeField (nullable)
+  first_inferred_at   DateTimeField
 ```
 
-**What not to do:** Do not deploy Amundsen's services (Neo4j + Elasticsearch + three Flask microservices) as part of Flint. The infrastructure overhead is significant and unnecessary when you can call the REST API against a user-hosted instance or use just the Databuilder library.
+---
 
-### Where This Fits
+### Phased Build
 
-- **Near-term:** Databuilder extractors are relevant when building Phase 3 data warehouse connectors (Snowflake, BigQuery, Redshift). Evaluate extractor quality against what a native connector would produce before committing.
-- **Medium-term:** Amundsen API push is a differentiated enterprise feature. Target organizations that already have Amundsen deployed and want it enriched.
-- **No urgency:** There is no reason to integrate with Amundsen before Phase 2 is complete. Catalog metadata must be rich and LLM descriptions must be working before an Amundsen export is useful.
+1. **Phase 1** — basic ERD per source from declared FK relationships only; cytoscape.js with dagre layout; schema filter and table search; physical labels only
+2. **Phase 2** — focus mode (1-hop neighbourhood); ontology-aware business labels (when `ObjectType` exists for a table); per-user layout persistence via `ERDLayout`
+3. **Phase 3** — LLM-inferred relationships rendered as dashed edges with accept/reject UI; PNG/SVG export
 
-### Note on Alternatives
+---
 
-Amundsen's community velocity has slowed (2023–2025). DataHub (LinkedIn open source) and OpenMetadata are more actively maintained alternatives with similar REST API patterns. The same push-descriptions-via-REST-API integration approach applies to either. Design the export abstraction as a pluggable "catalog export target" rather than hardcoding Amundsen specifically.
+### Relationship to Existing Features
+
+- **Builds on FK relationship capture during sync** — already a prerequisite for the queries app (correct JOIN generation). If queries ships first, this dependency is already satisfied.
+- **Reuses ontology object/property names for cleaner labels** — when an `ObjectType` is defined for a table (Phase 1 of `ontology`), the ERD can show the business label instead of the physical table name. The ontology graph view (`/ontology/graph/`) and the ERD use the same rendering library and node/edge JSON shape — share the frontend code.
+- **Reuses the LLM abstraction from `apps/insights/`** for the Phase 3 inferred-relationship pass — same provider layer, same prompt management pattern.
+- **Lives in `apps/catalog/`** — a new view and template, plus optional models added in later phases. No new app needed.
 
 ---
 

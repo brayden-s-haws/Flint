@@ -11,8 +11,16 @@ cryptography==46.0.5
 cffi==2.0.0       # cryptography dependency
 pycparser==3.0    # cffi dependency
 
-
+# AI Models
 openai==2.29.0            # LLM insights - OpenAI provider
 anthropic==0.86.0         # LLM insights - Anthropic provider
+
+# Postgres connection
 psycopg2-binary==2.9.11   # PostgreSQL connector (native metadata extraction)
+
+# Formatting
 markdown==3.10.2
+
+# Background tasks
+celery[redis]==5.4.0
+django-celery-beat==2.9.0

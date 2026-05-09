@@ -51,23 +51,23 @@ This document tracks potential future features and capabilities beyond the MVP. 
 - Oracle
 - MongoDB
 - DynamoDB
-- Redshift
+- ~~Redshift~~ (tracked in `post_mvp.md` Phase 4 #18)
 - Databricks
 
 ### SaaS/APIs
-- Salesforce
-- Stripe
-- Shopify
-- Zendesk
-- Intercom
-- Mixpanel
-- Amplitude
-- Segment
+- ~~Salesforce~~ (tracked in `post_mvp.md` Phase 4 #13)
+- ~~Stripe~~ (tracked in `post_mvp.md` Phase 4 #13)
+- ~~Shopify~~ (tracked in `post_mvp.md` Phase 4 #17)
+- ~~Zendesk~~ (tracked in `post_mvp.md` Phase 4 #17)
+- ~~Intercom~~ (tracked in `post_mvp.md` Phase 4 #17)
+- ~~Mixpanel~~ (tracked in `post_mvp.md` Phase 4 #17)
+- ~~Amplitude~~ (tracked in `post_mvp.md` Phase 4 #17)
+- ~~Segment~~ (tracked in `post_mvp.md` Phase 4 #17)
 - Airtable
 - Notion databases
 
 ### File/Storage
-- S3/GCS (CSV, Parquet, JSON files)
+- ~~S3/GCS (CSV, Parquet, JSON files)~~ (tracked in `post_mvp.md` Phase 4 #18)
 - Google Sheets
 - Excel files
 
@@ -85,7 +85,6 @@ This document tracks potential future features and capabilities beyond the MVP. 
 - **Fivetran/Airbyte sync status** - Monitor ETL health
 - **BI tool metadata** - Looker, Tableau, Metabase integration
 - **GitHub/GitLab** - Version tracking for schema changes
-- **Amundsen integration** - Open source data catalog (Linux Foundation) used by many data teams. Luminetiq can use the `amundsen-databuilder` Python library to supplement its own connector extraction, and optionally push LLM-generated descriptions back to Amundsen deployments via REST API. Positions Flint as the AI intelligence layer on top of an existing catalog. See `devdocs/appdocs/post_mvp.md` for the detailed approach.
 
 ---
 

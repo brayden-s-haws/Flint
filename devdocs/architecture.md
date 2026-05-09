@@ -267,9 +267,10 @@ class BaseConnector:
 - Can add API endpoints for future SPA/mobile if needed
 
 ### Background Tasks: Celery + Redis
-- Can defer Celery setup initially - use sync operations for MVP
-- Add Celery when: scheduled syncs, batch insight generation
-- Keep it optional for solo dev simplicity
+- Celery + Redis are wired up post-MVP; see `devdocs/featuredocs/celery-and-redis-setup.md` for the full setup
+- Celery app at `Flint/celery.py`, tasks at `apps/<app>/tasks.py` (auto-discovered)
+- Redis runs as a Homebrew service locally (default port 6379); managed Redis when deployed
+- Source sync is the proof-of-concept conversion; other long-running operations (LLM source overview, use case generation) stay synchronous for now and migrate per-feature when revisited
 
 ---
 
