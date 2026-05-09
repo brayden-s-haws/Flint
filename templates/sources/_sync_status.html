@@ -1,3 +1,18 @@
-<div id = "sync_status">
-
+<div id="sync-status"
+    {% if sync_log.status == 'running' %}
+    hx-get="{% url 'sources:sync_status' source.pk %}"
+    hx-trigger="every 2s"
+    hx-swap="outerHTML"
+    {% endif %}
+    class="text-sm text-flint-muted">
+    {% if sync_log.status == 'running' %}
+        <svg class="animate-spin h-4 w-4 inline-block" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="3">
+          <circle class="opacity-25" cx="12" cy="12" r="10" />
+          <path class="opacity-75" d="M4 12a8 8 0 018-8" />
+        </svg>
+        <span>Syncing…</span>
+    {% elif sync_log.status == 'failed' %}
+    <p class="text-sm text-red-300">Sync failed: {{ sync_log.error_message }}</p>
+    {% endif %}
 </div>

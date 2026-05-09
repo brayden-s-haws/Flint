@@ -112,10 +112,8 @@ This validates the polling pattern before downstream features rely on it. Sync i
 #### Polling indicator template change
 
 - [x] Added `sync_status` view at `apps/sources/views.py:168` and URL at `apps/sources/urls.py:12` (`GET /sources/<pk>/sync-status/`, name `sources:sync_status`). Reads latest `SourceSyncLog`; on `success` returns empty body + `HX-Refresh: true` header; on other states renders `sources/_sync_status.html`.
-- [ ] Update the Sync Now form in `templates/sources/source_detail.html` to:
-  - Continue posting to `sources:sync` on click
-  - On response (which now returns immediately because the task is queued, not run inline), HTMX swaps in a polling element via `hx-get="{% url 'sources:sync_status' source.pk %}"` with `hx-trigger="every 2s"` and `hx-swap="outerHTML"` targeting itself.
-  - The polling partial has three rendered states: `running` (shows the spinner from `_spinner.html`), `success` (shows a checkmark and `HX-Refresh: true` header to reload the page so all the updated catalog/sync-history sections refresh), `failed` (shows the error message and stops polling by removing the `hx-trigger`).
+- [x] Created `templates/sources/_sync_status.html` polling partial. Single root `<div id="sync-status">`. When `running`, the div carries `hx-get`/`hx-trigger="every 2s"`/`hx-swap="outerHTML"` so it self-polls; renders inline SVG spinner + "Syncing…" text. When `failed`, drops the HTMX attrs (polling stops) and shows red error message with `sync_log.error_message`. The `success` case never renders this template — view sends `HX-Refresh: true` and the page reloads instead.
+- [ ] Update the Sync Now form in `templates/sources/source_detail.html` to swap in the polling partial on click instead of using `HX-Refresh: true`.
 - [ ] Drop the `HX-Refresh` response from the `sync_source` view itself — the refresh now happens from the polling partial when it sees `success`.
 
 #### Update the loading-indicators featuredoc
