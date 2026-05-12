@@ -1,0 +1,108 @@
+# Feature: Async Table Description Generation
+
+**Source:** `devdocs/appdocs/post_mvp.md` — build order item #8 ("Batch table description generation — `insights`") and the `insights` section bullet: "Batch insight generation — generate descriptions for all tables in a source at once (requires Celery)"
+**Status:** Not started
+**Target phase:** Post-MVP Phase 3 (build order item #8, immediately after Celery + Redis setup)
+
+> **Scope pivot note (2026-05-10):** The original post_mvp bullet framed this as bulk fan-out generation for every table in a source. After thinking it through, that approach generates insights for tables the user may never view (wasteful) and forces a "click to continue" UX for large databases (annoying). This featuredoc replaces the bulk plan with an **async-on-first-view** design: keep the existing lazy-trigger pattern (insight generates the first time a user opens a table without one), but move the LLM call off the request cycle so the page renders immediately and the insight slot polls for completion. Same goal — solve the blocking wait — but only spends LLM tokens on tables a user actually cares about. The previous featuredoc `batch-table-descriptions.md` is superseded by this one.
+
+---
+
+## Overview
+
+Today, opening a table that lacks an insight blocks the page render for 5–10 seconds while `TableDetailView.get_context_data` (`apps/catalog/views.py:47-60`) makes a synchronous Anthropic call. This feature keeps the lazy-on-first-view trigger but moves the LLM call into the Celery worker (added in the previous feature). The page renders immediately with the surrounding content (columns, statistics, source link); the insight slot shows a spinner that polls every 2s and swaps to the rendered description when the worker finishes.
+
+Tables that nobody views still pay zero LLM cost — exactly the same as today. The change is purely a UX upgrade: no more blocking page loads.
+
+---
+
+## Dependencies
+
+- [x] **Celery + Redis setup** — `devdocs/featuredocs/celery-and-redis-setup.md` complete; `@shared_task` pattern + worker auto-discovery already proven via `apps/sources/tasks.py::sync_source_task`.
+- [x] **Existing single-table generation service** — `BaseService.generate_table_description(table)` (`apps/insights/services/base.py:13`) and the Anthropic implementation (`apps/insights/services/anthropic_service.py:19`) are reused unchanged. The prompt file `apps/insights/prompts/table_insights.py` does not need to change.
+- [x] **`Insight` + `InsightTarget` (GenericForeignKey)** — already in place; this feature adds two new `status` choices to `Insight` (`pending`, `failed`) but does not introduce new models.
+- [x] **HTMX polling pattern reference** — `apps/sources/views.py::sync_status` + `templates/sources/_sync_status.html` are the working precedent for `HX-Refresh`-on-success + attrs-dropped-on-terminal-error self-polling. This feature follows the same shape, scoped to the table's insight slot instead of a whole-page refresh.
+
+---
+
+## Implementation Checklist
+
+### Phase 1 — Async lazy generation
+
+#### Models
+
+- [x] In `apps/insights/models.py`, extend `Insight.status` choices to include two new states (full list reordered into lifecycle order: `pending → active → failed → archived → deleted`):
+  - `('pending', 'Pending')` — placeholder row written by the view at enqueue time; task is in flight
+  - `('failed', 'Failed')` — task ran but the LLM call raised; user can retry
+- [x] Migration `apps/insights/migrations/0006_alter_insight_status.py` generated and applied. Single `AlterField` on `Insight.status` — no other fields touched.
+
+#### Tasks
+
+- [x] `apps/insights/tasks.py` created with `@shared_task def generate_table_description_task(insight_id: int) -> None`. Loads Insight by pk, resolves the Table via `InsightTarget.objects.get(insight=..., content_type=ContentType.objects.get_for_model(Table))` and the `.target` GenericForeignKey field, calls `get_service('anthropic').generate_table_description(table)` inside a try/except. On success sets `text` + `status='active'`. On exception flips `status='failed'`, logs via `logger.exception(...)`, does not re-raise. Missing-InsightTarget raises `DoesNotExist` loudly (outside the try) — that's a programmer error path, not an LLM failure.
+- [x] Worker auto-discovery verified — `apps.insights.tasks.generate_table_description_task` appears in the `[tasks]` block on worker startup.
+
+#### Views & URLs
+
+- [ ] **Modify `TableDetailView.get_context_data`** in `apps/catalog/views.py:47-60`. The current synchronous block calls the service inline; replace it with the async-enqueue path:
+  - Same existing query for `InsightTarget` records on the table — if any exist (regardless of their insight's status — `pending`, `active`, or `failed`), reuse them. **Do not enqueue if any insight already exists for this table** (idempotency across page refreshes and multiple tabs).
+  - If none exist: create a placeholder `Insight` with `text=''`, `insight_type='ai'`, `status='pending'`, `insight_prompt=None`; create the matching `InsightTarget`; enqueue `generate_table_description_task.delay(insight.pk)`.
+  - Add the (now `pending` / `failed` / `active`) insight to context as before. The template will branch on `status`.
+  - Remove the existing `try/except` around the synchronous call — the task owns its failure handling now.
+- [ ] **Add `insight_status` view** in `apps/insights/views.py` — `GET /insights/<insight_id>/status/`.
+  - `get_object_or_404(Insight, pk=insight_id, account=request.account)`.
+  - Render the appropriate partial based on status:
+    - `pending` → return `_insight_pending.html` (the partial keeps polling).
+    - `active` → return `_insight_content.html` (final rendered description; polling stops because the partial doesn't carry HTMX attrs).
+    - `failed` → return `_insight_failed.html` (error message + retry button; polling stops).
+- [ ] **Add `retry_insight` view** in `apps/insights/views.py` — `POST /insights/<insight_id>/retry/`.
+  - `get_object_or_404(Insight, pk=insight_id, account=request.account)`.
+  - Reject if `status != 'failed'` (defend against stale clicks — return 400 or just no-op).
+  - Set `insight.status = 'pending'`, save; re-enqueue `generate_table_description_task.delay(insight.pk)`.
+  - HTMX response: return the `_insight_pending.html` partial so the slot swaps back to spinner.
+- [ ] Register URLs in `apps/insights/urls.py` with route names `insights:insight_status` and `insights:insight_retry`.
+
+#### Templates
+
+- [ ] Create `templates/insights/_insight_pending.html` — the polling partial. Single root `<div id="insight-slot-{{ insight.pk }}">` carrying `hx-get="{% url 'insights:insight_status' insight.pk %}"`, `hx-trigger="every 2s"`, `hx-swap="outerHTML"`. Renders an inline SVG spinner + "Generating description…" text styled to match the existing insight card visual (so the slot doesn't visually pop when content arrives).
+- [ ] Create `templates/insights/_insight_content.html` — the final rendered insight. Root `<div id="insight-slot-{{ insight.pk }}">` with no HTMX attrs (polling stops naturally because the new root replaces the polling one). Renders `{{ insight.text|linebreaks }}` inside the same card chrome as the spinner partial.
+- [ ] Create `templates/insights/_insight_failed.html` — error state. Root `<div id="insight-slot-{{ insight.pk }}">` with no HTMX attrs. Renders a red error message ("We couldn't generate a description for this table — try again") and a retry button (`hx-post="{% url 'insights:insight_retry' insight.pk %}"`, `hx-target="this"`, `hx-swap="outerHTML"`). The retry response swaps the failure partial back to the pending partial, and polling resumes.
+- [ ] **Modify `templates/catalog/table_detail.html`** — locate the block that currently renders the insight inline. Replace it with a `{% include %}` that branches on `insight.status`:
+  - On first page load, if `status='pending'` (just enqueued) → include `_insight_pending.html`
+  - If `status='active'` (already complete from a previous visit) → include `_insight_content.html`
+  - If `status='failed'` (previous attempt failed, no auto-retry) → include `_insight_failed.html`
+  - The branching can live in the template via `{% if %}` or be pushed into a single dispatching partial (`_insight_slot.html` that itself does the `if/elif/else`). The dispatcher pattern is slightly cleaner if the insight gets rendered in more than one place later (it does — `insight_detail.html` may reuse it).
+
+#### Wiring
+
+- [ ] Confirm `apps/insights/urls.py` already has `app_name = 'insights'` set (it does — see `insights:list` / `insights:detail` references elsewhere).
+- [ ] No changes needed to `Flint/urls.py` — `apps.insights.urls` is already included.
+
+#### Manual verification
+
+- [ ] On a table with no existing insight, open the detail page. Expect: page renders immediately (columns, stats, source link all visible); insight slot shows the spinner; worker log shows `apps.insights.tasks.generate_table_description_task[<id>]` received; ~5–10s later, slot swaps to the rendered description without a page reload.
+- [ ] Refresh the page mid-generation. Expect: existing pending `Insight` is reused, spinner appears again immediately, **no second task is enqueued** (check worker logs — only one task processed). Spinner swaps to content once the original task completes.
+- [ ] Open the same table in two browser tabs simultaneously (cold cache, no existing insight). Expect: the first request creates the pending row + enqueues one task; the second request finds the pending row and does not enqueue. Both tabs end up showing the same generated description.
+- [ ] Force a failure (temporarily raise inside the Anthropic service before the API call) and reload a description-less table. Expect: spinner appears, ~2s later swaps to the failure partial with the retry button. Click retry: spinner returns, polling resumes, success or failure cycle plays out again.
+- [ ] On a table that *already has* an `active` insight from before this feature, open the detail page. Expect: content renders immediately on first paint, no polling, no spinner flicker. (Regression check — the existing insight cache stays useful.)
+
+---
+
+## Key Design Decisions
+
+- **Lazy-on-first-view stays.** Tables nobody views still cost zero LLM tokens. This is the philosophy of the rest of the product — metadata-only, on-demand intelligence — and changing it for bulk generation would have wasted spend on inert tables.
+- **`Insight.status='pending'` is the in-flight signal.** Creating the placeholder row at enqueue time gives us idempotency across refreshes and tabs (anyone arriving sees `pending` → renders spinner → does not re-enqueue). The alternative (Redis cache lock) avoids the transient empty row but adds a TTL failure mode and a second source of truth. One field on one existing model wins.
+- **`failed` is a visible state with a retry, not silent dropping.** A failed Anthropic call leaves a row the user can see and act on. Today's sync code silently swallows the exception in `TableDetailView` (`apps/catalog/views.py:59-60`); this is strictly better.
+- **Polling per-insight-slot, not per-page.** The polling partial swaps its own `<div>`, leaving the rest of `table_detail.html` alone. No page reload on success means the user keeps their scroll position, expanded sections, etc.
+- **No new model.** `BatchInsightRun` / `BatchInsightsRun` from the earlier draft is not needed — there's nothing to track that isn't already captured by `Insight.status`. The empty `BatchInsightsRun` skeleton has been removed from `models.py`.
+- **Reuse the existing service primitive.** `generate_table_description(table)` is unchanged. The task is a thin wrapper that resolves the table from the insight's `InsightTarget`, calls the service, and persists.
+
+---
+
+## Notes
+
+- **Polling cadence.** 2-second interval matches the sync-status precedent; at 5–10s of expected work, that's 3–5 polls per generation, each a single indexed DB lookup. Cheap. Raise to 3–5s later only if profiling shows it matters.
+- **Stale `pending` rows.** If the worker crashes mid-task, an `Insight` could be stuck at `status='pending'` indefinitely — polling would never stop. Two mitigations to consider (defer unless it bites in practice): (a) a periodic Celery beat task that flips rows older than N minutes from `pending` → `failed`; (b) check `started_at` in the polling endpoint and flip on read. Neither is needed for the first cut; document the risk and move on.
+- **Source overview generation still synchronous.** This feature converts only the table-description path. The source-overview LLM call inside `sync_source_task` (`apps/sources/tasks.py:64-73`) already runs in the worker, so it's not blocking the user anyway. The use-case suggestion path (`generate_intra_use_case_suggestions` at `apps/insights/views.py:78`) is still synchronous; converting it is a separate consideration when that feature gets revisited.
+- **Tests.** Set `CELERY_TASK_ALWAYS_EAGER = True` in test settings so the task runs synchronously in-process. Mock `get_service('anthropic')` so no real LLM calls fire. Tenancy boundary: account A user cannot trigger or poll an account B insight (verify ownership checks on both `insight_status` and `insight_retry`).
+- **Migration is a `choices=` change only.** Django requires a migration file for `choices` changes even though the DB schema doesn't change. The generated migration is safe and trivially reversible.
+- **Open question: failed-insight cleanup.** Should a `failed` row be deletable from the UI (not just retryable)? Punt until a user complains.

@@ -13,7 +13,9 @@ class Insight(TenantAwareModel):
         ('use_case_suggestion', 'Use Case Suggestion'),
     ])
     status = models.CharField(max_length=255, choices=[
+        ('pending', 'Pending'),
         ('active', 'Active'),
+        ('failed', 'Failed'),
         ('archived', 'Archived'),
         ('deleted', 'Deleted'),
     ])
