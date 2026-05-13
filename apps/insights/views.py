@@ -18,6 +18,7 @@ from apps.catalog.models import Table
 from apps.core.mixins import TenantQuerysetMixin
 from apps.insights.models import Insight, InsightTarget
 from apps.insights.services.provider import get_service
+from apps.insights.tasks import generate_table_description_task
 from apps.sources.models import Source
 
 class InsightListView(TenantQuerysetMixin, LoginRequiredMixin, ListView):
@@ -152,3 +153,28 @@ def rate_insight(request, insight_id: int) -> HttpResponse:
 
     insight.save()
     return render(request, 'insights/_rating_buttons.html', {'insight': insight})
+
+@login_required
+def insight_status(request, insight_id: int) -> HttpResponse:
+    insight = get_object_or_404(Insight, pk=insight_id, account=request.account)
+    status = insight.status
+
+    if status == 'active':
+        return render(request, 'insights/_insight_content.html', {'insight': insight})
+    elif status == 'pending':
+        return render(request, 'insights/_insight_pending.html', {'insight': insight})
+    elif status == 'failed':
+        return render(request, 'insights/_insight_failed.html', {'insight': insight})
+    else:
+        return HttpResponse("Invalid insight status", status=400)
+
+@login_required
+@require_POST
+def insight_retry(request, insight_id: int) -> HttpResponse:
+    insight = get_object_or_404(Insight, pk=insight_id, account=request.account)
+    if insight.status != 'failed':
+        return HttpResponse("Cannot retry an insight that has not failed", status=400)
+    insight.status = 'pending'
+    insight.save()
+    generate_table_description_task.delay(insight.id)
+    return render(request, 'insights/_insight_pending.html', {'insight': insight})

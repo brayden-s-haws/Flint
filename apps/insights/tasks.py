@@ -30,3 +30,4 @@ def generate_table_description_task(insight_id: int) -> None:
         logger.exception("Failed to generate description for insight %s", insight_id)
         insight.status = 'failed'
         insight.save()
+

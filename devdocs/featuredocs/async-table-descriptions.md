@@ -59,20 +59,10 @@ In-flight cleanup added while building this feature. The current `'ai'` `insight
 
 #### Views & URLs
 
-- [ ] **`TableDetailView.get_context_data` updated** in `apps/catalog/views.py:48-59`. Synchronous service call replaced with async-enqueue: existing `InsightTarget` query still runs first; if no 
-  insight exists, a placeholder `Insight` (`text=''`, `status='pending'`, `insight_type='ai'` — pending rename to `'table_description'` per the section above) is created with its matching `InsightTarget`, the task is enqueued via `generate_table_description_task.delay(insight.pk)`, and the placeholder is added to context. Idempotency guard (`if not context['insights']`) prevents duplicate enqueues across refreshes/tabs. `try/except` removed — the task owns failure handling. Unused `get_service` import removed.
-- [ ] **Add `insight_status` view** in `apps/insights/views.py` — `GET /insights/<insight_id>/status/`.
-  - `get_object_or_404(Insight, pk=insight_id, account=request.account)`.
-  - Render the appropriate partial based on status:
-    - `pending` → return `_insight_pending.html` (the partial keeps polling).
-    - `active` → return `_insight_content.html` (final rendered description; polling stops because the partial doesn't carry HTMX attrs).
-    - `failed` → return `_insight_failed.html` (error message + retry button; polling stops).
-- [ ] **Add `retry_insight` view** in `apps/insights/views.py` — `POST /insights/<insight_id>/retry/`.
-  - `get_object_or_404(Insight, pk=insight_id, account=request.account)`.
-  - Reject if `status != 'failed'` (defend against stale clicks — return 400 or just no-op).
-  - Set `insight.status = 'pending'`, save; re-enqueue `generate_table_description_task.delay(insight.pk)`.
-  - HTMX response: return the `_insight_pending.html` partial so the slot swaps back to spinner.
-- [ ] Register URLs in `apps/insights/urls.py` with route names `insights:insight_status` and `insights:insight_retry`.
+- [x] **`TableDetailView.get_context_data` updated** in `apps/catalog/views.py:48-59`. Synchronous service call replaced with async-enqueue: existing `InsightTarget` query still runs first; if no insight exists, a placeholder `Insight` (`text=''`, `status='pending'`, `insight_type='table_description'`) is created with its matching `InsightTarget`, the task is enqueued via `generate_table_description_task.delay(insight.pk)`, and the placeholder is added to context. Idempotency guard (`if not context['insights']`) prevents duplicate enqueues across refreshes/tabs. `try/except` removed — the task owns failure handling. Unused `get_service` import removed.
+- [x] **`insight_status` view added** in `apps/insights/views.py` — `GET /insights/<insight_id>/status/`. `@login_required`, tenant-scoped `get_object_or_404`. Branches on `insight.status`: `pending` → `_insight_pending.html`, `active` → `_insight_content.html`, `failed` → `_insight_failed.html`. Unexpected states return `HttpResponse(status=400)` so they fail loudly rather than masquerading as a failure.
+- [x] **`insight_retry` view added** in `apps/insights/views.py` — `POST /insights/<insight_id>/retry/`. `@login_required` + `@require_POST`, tenant-scoped `get_object_or_404`. Guard returns 400 if `status != 'failed'`. Flips `status='pending'`, saves, re-enqueues `generate_table_description_task.delay(insight.id)`, returns the `_insight_pending.html` partial so HTMX swaps the failure slot back to the spinner.
+- [x] URLs registered in `apps/insights/urls.py`: `insights:insight_status` and `insights:insight_retry`. Smoke-tested — pending insight at `/insights/<id>/status/` produces the expected `TemplateDoesNotExist` 500 (view + URL + ownership all working); bogus ID returns clean 404.
 
 #### Templates
 
