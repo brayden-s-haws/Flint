@@ -120,7 +120,8 @@ class SourceDetailView(LoginRequiredMixin, TenantQuerysetMixin, DetailView):
         context['last_synced_at'] = self.object.sourcesynclog_set.filter(status='success').order_by('-completed_at').values_list('completed_at', flat=True).first()
         context['schemas'] = self.object.schema_set.prefetch_related('table_set')
         content_type = ContentType.objects.get_for_model(self.object)
-        target = InsightTarget.objects.filter(content_type=content_type, object_id=self.object.pk, account=self.request.account, insight__insight_type='ai').select_related('insight').first()
+        target = InsightTarget.objects.filter(content_type=content_type, object_id=self.object.pk, account=self.request.account, insight__insight_type='source_overview').select_related(
+            'insight').first()
         context['source_overview'] = target.insight.text if target else None
         use_case_targets = InsightTarget.objects.filter(content_type=content_type, object_id=self.object.pk, account=self.request.account, insight__insight_type='use_case_suggestion').select_related('insight').order_by('-insight__created_at')
         context['use_cases'] = [uct.insight for uct in use_case_targets]

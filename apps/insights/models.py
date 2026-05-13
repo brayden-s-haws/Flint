@@ -9,8 +9,10 @@ class Insight(TenantAwareModel):
     text = models.TextField()
     insight_type = models.CharField(max_length=255, choices=[
         ('ai', 'AI Generated'),
-        ('manual', 'Manual'),
+        ('table_description', 'Table Description'),
+        ('source_overview', 'Source Overview'),
         ('use_case_suggestion', 'Use Case Suggestion'),
+        ('manual', 'Manual'),
     ])
     status = models.CharField(max_length=255, choices=[
         ('pending', 'Pending'),

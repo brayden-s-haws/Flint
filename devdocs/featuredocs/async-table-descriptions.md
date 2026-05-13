@@ -41,13 +41,26 @@ Tables that nobody views still pay zero LLM cost — exactly the same as today. 
 - [x] `apps/insights/tasks.py` created with `@shared_task def generate_table_description_task(insight_id: int) -> None`. Loads Insight by pk, resolves the Table via `InsightTarget.objects.get(insight=..., content_type=ContentType.objects.get_for_model(Table))` and the `.target` GenericForeignKey field, calls `get_service('anthropic').generate_table_description(table)` inside a try/except. On success sets `text` + `status='active'`. On exception flips `status='failed'`, logs via `logger.exception(...)`, does not re-raise. Missing-InsightTarget raises `DoesNotExist` loudly (outside the try) — that's a programmer error path, not an LLM failure.
 - [x] Worker auto-discovery verified — `apps.insights.tasks.generate_table_description_task` appears in the `[tasks]` block on worker startup.
 
+#### Insight type rename: `'ai'` → `'table_description'` / `'source_overview'`
+
+In-flight cleanup added while building this feature. The current `'ai'` `insight_type` value is too broad — it conflates table descriptions and source overviews into one category, which (a) breaks the insight-list type filter (one bucket holds two genuinely different kinds of insight), (b) forces existing code to disambiguate by looking at the linked `InsightTarget.content_type`, and (c) breaks the precedent set by `'use_case_suggestion'` (specific, descriptive). Doing it now means the new view code added in this feature writes the right type from the start instead of writing `'ai'` rows that have to be migrated later.
+
+- [x] **Model:** added `('table_description', 'Table Description')` and `('source_overview', 'Source Overview')` to `Insight.insight_type` choices in `apps/insights/models.py`. `'ai'` retained in the list for transitional safety.
+- [x] **Schema migration:** `0007_alter_insight_insight_type.py` generated and applied — single `AlterField` on `Insight.insight_type`.
+- [x] **Data migration:** `0008_retype_ai_insights.py` — `RunPython` that walks `Insight.objects.filter(insight_type='ai')`, looks up the linked `InsightTarget.content_type_id`, and re-types based on the target model (Table → `'table_description'`, Source → `'source_overview'`). Reverse direction flips both new types back to `'ai'` via bulk `.update()`. Applied cleanly — post-migration count of `insight_type='ai'` rows is 0.
+- [x] **Code updates** — four sites updated (originally inventoried as three; `sources/views.py` was missed in the initial sweep and discovered when source overview stopped rendering in the UI):
+  - `apps/catalog/views.py:53` → writes `insight_type='table_description'` for new pending placeholders
+  - `apps/sources/tasks.py:70` → writes `insight_type='source_overview'` for source-overview generation inside `sync_source_task`
+  - `apps/insights/views.py:84` and `:118` → both checks now query `insight__insight_type='source_overview'`
+  - `apps/sources/views.py:123` → source-detail view's overview lookup now queries `insight__insight_type='source_overview'`
+- [x] **Verified** in the running app — worker restarted, new source-overview write produces `insight_type='source_overview'`, source-detail view renders the overview after the `sources/views.py` fix landed, insight list type filter shows the new buckets correctly.
+- [x] **Optional follow-up migration:** once everything verifies, remove `'ai'` from the choices list. Deferred — no harm in leaving the legacy choice available, and it gives the data migration a 
+  stable target if a row ever needs to be retried.
+
 #### Views & URLs
 
-- [ ] **Modify `TableDetailView.get_context_data`** in `apps/catalog/views.py:47-60`. The current synchronous block calls the service inline; replace it with the async-enqueue path:
-  - Same existing query for `InsightTarget` records on the table — if any exist (regardless of their insight's status — `pending`, `active`, or `failed`), reuse them. **Do not enqueue if any insight already exists for this table** (idempotency across page refreshes and multiple tabs).
-  - If none exist: create a placeholder `Insight` with `text=''`, `insight_type='ai'`, `status='pending'`, `insight_prompt=None`; create the matching `InsightTarget`; enqueue `generate_table_description_task.delay(insight.pk)`.
-  - Add the (now `pending` / `failed` / `active`) insight to context as before. The template will branch on `status`.
-  - Remove the existing `try/except` around the synchronous call — the task owns its failure handling now.
+- [ ] **`TableDetailView.get_context_data` updated** in `apps/catalog/views.py:48-59`. Synchronous service call replaced with async-enqueue: existing `InsightTarget` query still runs first; if no 
+  insight exists, a placeholder `Insight` (`text=''`, `status='pending'`, `insight_type='ai'` — pending rename to `'table_description'` per the section above) is created with its matching `InsightTarget`, the task is enqueued via `generate_table_description_task.delay(insight.pk)`, and the placeholder is added to context. Idempotency guard (`if not context['insights']`) prevents duplicate enqueues across refreshes/tabs. `try/except` removed — the task owns failure handling. Unused `get_service` import removed.
 - [ ] **Add `insight_status` view** in `apps/insights/views.py` — `GET /insights/<insight_id>/status/`.
   - `get_object_or_404(Insight, pk=insight_id, account=request.account)`.
   - Render the appropriate partial based on status:

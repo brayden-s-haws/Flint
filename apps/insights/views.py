@@ -81,7 +81,7 @@ def generate_intra_use_case_suggestions(request, source_id: int) -> HttpResponse
 
     has_overview = InsightTarget.objects.filter(
         content_type=source_ct, object_id=source.pk, account=source.account,
-        insight__insight_type='ai'
+        insight__insight_type='source_overview'
         ).exists()
     if not has_overview:
         return HttpResponse("Generate a Source Overview before generating use case suggestions.", status=400)
@@ -115,7 +115,7 @@ def generate_intra_use_case_suggestions(request, source_id: int) -> HttpResponse
 
     overview_target = InsightTarget.objects.filter(
         content_type=source_ct, object_id=source.pk,
-        account=source.account, insight__insight_type='ai'
+        account=source.account, insight__insight_type='source_overview'
     ).select_related('insight').first()
     source_overview = overview_target.insight.text if overview_target else None
 

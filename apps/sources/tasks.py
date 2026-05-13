@@ -67,7 +67,7 @@ def sync_source_task(source_id: int, sync_log_id: int) -> None:
             try:
                 service = get_service('anthropic')
                 text = service.generate_source_overview(source)
-                insight = Insight.objects.create(account=source.account, text=text, insight_type='ai', status='active', insight_prompt=None)
+                insight = Insight.objects.create(account=source.account, text=text, insight_type='source_overview', status='active', insight_prompt=None)
                 InsightTarget.objects.create(account=source.account, insight=insight, content_type=content_type, object_id=source.pk)
             except Exception:
                 logger.exception("Failed to generate source overview for source %s", source.pk)

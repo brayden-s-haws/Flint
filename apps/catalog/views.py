@@ -12,7 +12,7 @@ from django.views.generic import ListView, DetailView
 
 from apps.core.mixins import TenantQuerysetMixin
 from apps.insights.models import InsightTarget, Insight
-from apps.insights.services.provider import get_service
+from apps.insights.tasks import generate_table_description_task
 from apps.sources.models import Source
 
 from .models import Table, TableStatistics
@@ -50,13 +50,9 @@ class TableDetailView(TenantQuerysetMixin, LoginRequiredMixin, DetailView):
         insight_targets = InsightTarget.objects.filter(account=self.request.account, content_type=ContentType.objects.get_for_model(self.object), object_id=self.object.pk) # type: ignore[attr-defined]
         context['insights'] = [it.insight for it in insight_targets]
         if not context['insights']:
-            try:
-                service = get_service('anthropic')
-                text = service.generate_table_description(self.object)
-                insight = Insight.objects.create(account=self.request.account, text=text, insight_type='ai', status='active', insight_prompt=None) # type: ignore[attr-defined]
-                InsightTarget.objects.create(account=self.request.account, insight=insight, content_type=ContentType.objects.get_for_model(self.object), object_id=self.object.pk) # type: ignore[ attr-defined]
-                context['insights'] = [insight]
-            except Exception:
-                logger.exception("Error generating table description for table %s", self.object.pk)
+            insight = Insight.objects.create(account=self.request.account, text='', insight_type='table_description', status='pending', insight_prompt=None) # type: ignore[attr-defined]
+            InsightTarget.objects.create(account=self.request.account, insight=insight, content_type=ContentType.objects.get_for_model(self.object), object_id=self.object.pk)  # type: ignore[attr-defined]
+            generate_table_description_task.delay(insight.pk)
+            context['insights'] = [insight]
         context['statistics'] = TableStatistics.objects.filter(table=self.object).order_by('-created_at').first()
         return context
