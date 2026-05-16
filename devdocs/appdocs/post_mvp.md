@@ -19,29 +19,38 @@ For speculative or longer-horizon ideas, see `devdocs/potential_features.md`.
 **Phase 3 — Requires Celery + Redis first**
 7. ~~Celery + Redis setup — `core/infrastructure`~~ COMPLETE
 8. Batch table description generation — `insights`
-9. Scheduled syncs — `sources`
-10. Agentic cross-source discovery — `insights` (depends on 2+ sources connected) Note: we should add this to the dashboard as one of the main cards next to the Insights card
-11. Demo Mode Phase 2 (product scenario + auto-trigger insights after load)
+9. Draft a README based on what exists so far — `general`
+10. Scheduled syncs — `sources`
+11. Agentic cross-source discovery — `insights` (depends on 2+ sources connected) Note: we should add this to the dashboard as one of the main cards next to the Insights card
+12. Demo Mode Phase 2 (product scenario + auto-trigger insights after load)
 
 **Phase 4 — New apps and connector expansion, depend on Phase 2 & 3**
-12. PyAirbyte integration — `sources` — adapter that lets us register PyAirbyte sources (300+) via the same `BaseConnector` interface used today, so catalog/insights/agentic discovery work uniformly across native and Airbyte-backed sources
-13. First SaaS connector batch via PyAirbyte — HubSpot, Salesforce, Stripe — `sources` — chosen to match the existing Sales demo scenario (HubSpot) and the most common enterprise CRM/payments use cases. Native connectors only where deep metadata extraction is needed; everything else routes through the PyAirbyte adapter from #12.
-14. Queries app (natural language to SQL) — `queries`
-15. ERD generator/viewer — `catalog` — visual entity-relationship diagrams generated from catalog FK metadata, with optional LLM-inferred relationships and ontology-aware labelling
-16. Ontology app Phase 1 (manual object type definitions) — `ontology`
-17. SaaS connector batch 2 via PyAirbyte — Google Analytics, Intercom, Shopify, Zendesk, Mixpanel, Amplitude, Segment — `sources` — broadens go-to-market coverage; aligns with the Product demo scenario (Intercom) and common e-commerce/support stacks
-18. Data warehouse + storage connectors — Snowflake, BigQuery, Redshift, S3/GCS — `sources` — opens the warehouse path; PyAirbyte adapter for most, with native connectors only where deep metadata extraction (FK constraints, column statistics) justifies the work
+13. PyAirbyte integration — `sources` — adapter that lets us register PyAirbyte sources (300+) via the same `BaseConnector` interface used today, so catalog/insights/agentic discovery work uniformly across native and Airbyte-backed sources
+14. First SaaS connector batch via PyAirbyte — HubSpot, Salesforce, Stripe — `sources` — chosen to match the existing Sales demo scenario (HubSpot) and the most common enterprise CRM/payments use cases. Native connectors only where deep metadata extraction is needed; everything else routes through the PyAirbyte adapter from #13.
+15. Queries app (natural language to SQL) — `queries`
+16. Query client — `queries` — a UI to run queries against a source and view results: the LLM-generated SQL from the queries app, the starter SQL on generated use case suggestions, and ad-hoc queries the user writes themselves. Results are displayed only, never persisted (Flint does not store source data)
+17. ERD generator/viewer — `catalog` — visual entity-relationship diagrams generated from catalog FK metadata, with optional LLM-inferred relationships and ontology-aware labelling
+18. Ontology app Phase 1 (manual object type definitions) — `ontology`
+19. SaaS connector batch 2 via PyAirbyte — Google Analytics, Intercom, Shopify, Zendesk, Mixpanel, Amplitude, Segment — `sources` — broadens go-to-market coverage; aligns with the Product demo scenario (Intercom) and common e-commerce/support stacks
+20. Data warehouse + storage connectors — Snowflake, BigQuery, Redshift, S3/GCS — `sources` — opens the warehouse path; PyAirbyte adapter for most, with native connectors only where deep metadata extraction (FK constraints, column statistics) justifies the work
 
 **Phase 5 — Advanced / long-horizon**
-19. Multi-account switching, role-based permissions — `accounts`
-20. Ontology Phases 2–6 (LLM suggestions, graph view, agent integration)
+21. Multi-account switching, role-based permissions — `accounts`
+22. Ontology Phases 2–6 (LLM suggestions, graph view, agent integration)
 
 ---
-## general
-- Add docstrings to all files (task claude to find all of these)
--  > **After all features in this doc are complete:** Address `devdocs/testing.md` and `devdocs/logging.md` in full, and run a broad bug bash (see "bug bash" section below). Do not work on testing,
-   > logging, or the bug bash until all features here are done. (task claude to find all of these)
-> Add AI evals
+## Phase 6 — General
+
+Cross-cutting cleanup items addressed after all feature work in this doc is complete. Numbers match the build order above.
+
+23. **Add docstrings to all files** — sweep every module and add module- and function-level docstrings. Task Claude to find all files currently missing them.
+24. **Address `devdocs/testing.md` in full** — fill in the stubbed test sections for each app (`apps.sources`, `apps.catalog`, `apps.insights`), write the tests, and run the full suite (`python manage.py test`) until it passes. Multi-tenancy boundary tests (account A cannot see account B's data) are required for every tenant-scoped app.
+25. **Address `devdocs/logging.md` in full** — add the `LOGGING` config to `settings.py` and instrument every app per the logging plan (tenant middleware, auth events, sync lifecycle, LLM calls). Never log credentials, tokens, or LLM prompt/response content.
+26. **Run the bug bash** — broad sweep for bugs, dead code, and rough edges across the codebase; produce a single triaged punch list (see the "bug bash" section below). Find, don't fix — fixes happen in follow-up sessions.
+27. **Add AI evals** — build an evaluation harness for the LLM-generated outputs (table descriptions, source overviews, use case suggestions, cross-source insights) so quality regressions are caught as prompts and models change.
+28. **Update the README** — revise the README drafted in build order item #9 so it reflects the final feature set.
+
+> **Ordering note:** Do not start testing, logging, or the bug bash until all feature work in this doc is complete.
 
 
 ---
@@ -608,7 +617,7 @@ A banner on demo sources makes clear this is demo data. A "Clear Demo Data" butt
 
 - ~~**Celery + Redis** — background task queue for scheduled syncs and batch insight generation~~ COMPLETE — see `devdocs/featuredocs/celery-and-redis-setup.md`. Source sync converted as proof-of-concept; other long-running operations still synchronous and migrate per-feature.
 - **REST API** — `apps/api/` layer for programmatic access (post-MVP app, skip for now)
-- **Scheduled syncs** — run source syncs on a cron schedule rather than manual trigger only (build order item #9 — Celery beat configured but no schedules wired yet)
+- **Scheduled syncs** — run source syncs on a cron schedule rather than manual trigger only (build order item #10 — Celery beat configured but no schedules wired yet)
 
 ---
 
@@ -720,6 +729,28 @@ The virtuous cycle: richer catalog metadata → better SQL generation. Specifica
 - FK constraints captured during sync enable correct JOIN generation
 - Column statistics (null fraction, distinct count, common values) captured during sync give the LLM filter context
 - Successful Q/SQL pairs are stored per-source and become few-shot examples for that source
+
+---
+
+## queries — Query Client
+
+### Overview
+
+The queries app generates SQL; the query client is where users actually **run** it. It is a read-only execution surface for any query against a connected source:
+
+- The natural-language-generated SQL produced by the queries app
+- The starter SQL attached to generated use case suggestions (today these are display-only — see the `sources — Intra-Source Suggested Use Cases` section) and to cross-source agent insights
+- Ad-hoc SQL a user writes or pastes themselves for that source
+
+### Key Principle — Results Are Not Stored
+
+Query results are **displayed only, never persisted**. Flint stores metadata and insights about data, not the data itself — that invariant holds here too. Results are rendered in a paginated table for the request and then discarded; no result rows are written to the Flint database. CSV export, if offered, is generated on the fly from the in-memory result set.
+
+### Relationship to the Queries App
+
+The query client shares the execution path defined in the queries app — `sqlglot` SELECT-only validation, the read-only database role, `statement_timeout`, and AST-enforced `LIMIT` (see the queries `Execution Safety Checklist`). It can ship as part of the queries app or as a thin follow-on: the queries app builds the generate-and-execute pipeline, and the query client generalizes the "execute" half so it works for any query source, not just LLM-generated ones.
+
+Each execution is still logged (user, query, duration, row count) per the safety checklist — only the result rows are excluded from storage.
 
 ---
 
