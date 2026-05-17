@@ -18,7 +18,7 @@ For speculative or longer-horizon ideas, see `devdocs/potential_features.md`.
 
 **Phase 3 — Requires Celery + Redis first**
 7. ~~Celery + Redis setup — `core/infrastructure`~~ COMPLETE
-8. Batch table description generation — `insights`
+8. ~~Batch table description generation — `insights`~~ COMPLETE — scope pivoted from bulk fan-out to async-on-first-view; see `devdocs/featuredocs/async-table-descriptions.md` for the rationale
 9. Draft a README based on what exists so far — `general`
 10. Scheduled syncs — `sources`
 11. Agentic cross-source discovery — `insights` (depends on 2+ sources connected) Note: we should add this to the dashboard as one of the main cards next to the Insights card
@@ -164,7 +164,7 @@ On initial page load, if no suggestions have been generated yet, show an empty s
 - ~~**Insight list filtering and search** — filter by insight type (table description, source overview, etc.) or by source/table target, and add text search across insight content. Same URL query param approach as sources.~~ COMPLETE (also added source dropdown filtering via InsightTarget)
 - **InsightBuilder** — cross-source exploration sessions; model planned (`InsightBuilder`) but deferred
 - **Cross-source insights** — insights that span multiple sources or tables
-- **Batch insight generation** — generate descriptions for all tables in a source at once (requires Celery)
+- ~~**Batch insight generation** — generate descriptions for all tables in a source at once (requires Celery)~~ COMPLETE as async-on-first-view instead of bulk fan-out — see `devdocs/featuredocs/async-table-descriptions.md`. The scope pivot is documented there: bulk generation would have wasted LLM spend on tables nobody views, and forced a "click to continue" UX on large databases. The async path keeps the existing lazy-trigger behavior, just unblocks the page render.
 - **Insight approval/rating** — thumbs up/down workflow so users can accept or reject generated insights
 
 ---
@@ -617,7 +617,9 @@ A banner on demo sources makes clear this is demo data. A "Clear Demo Data" butt
 
 - ~~**Celery + Redis** — background task queue for scheduled syncs and batch insight generation~~ COMPLETE — see `devdocs/featuredocs/celery-and-redis-setup.md`. Source sync converted as proof-of-concept; other long-running operations still synchronous and migrate per-feature.
 - **REST API** — `apps/api/` layer for programmatic access (post-MVP app, skip for now)
-- **Scheduled syncs** — run source syncs on a cron schedule rather than manual trigger only (build order item #10 — Celery beat configured but no schedules wired yet)
+- **Scheduled syncs** — run source syncs on a cron schedule rather than manual trigger only (build order item #10 — Celery beat configured but no schedules wired yet) This should be defined at the 
+  source level. Off by default. The user should specify a schedule (hourly, daily, weekly, monthly, etc.) In the UI above the sync histroy display information on how often teh syn runs (if one is 
+  setup). On the source detail page have a button/form to setup a schedule.
 
 ---
 

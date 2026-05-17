@@ -1,0 +1,11 @@
+<div id="insight-slot-{{ insight.pk }}">
+    <p class="text-sm text-red-300">Insight generation for this table failed.</p>
+    <button
+    hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+    hx-post="{% url 'insights:insight_retry' insight.pk %}"
+    hx-target="#insight-slot-{{ insight.pk }}"
+    hx-swap="outerHTML"
+    class="text-sm text-flint-orange hover:underline mt-1">
+        Retry
+    </button>
+</div>

@@ -1,5 +1,4 @@
 {% extends 'base.html' %}
-{% load markdown_extras %}
 {% load humanize %}
 
 {% block title %} {{ object.name }} | Flint {% endblock %}
@@ -86,9 +85,8 @@
             <h2 class="text-lg font-semibold text-flint-text mb-4">Insights</h2>
             <ul class="mt-4">
                 {% for insight in insights %}
-                    <li class="text-flint-text markdown-content mb-2">
-                        {{ insight.text|render_markdown }}
-                        <a href="{% url 'insights:detail' insight.pk %}" class="text-flint-orange hover:underline">View</a>
+                    <li class="mb-2">
+                        {% include 'insights/_insight_slot.html' %}
                     </li>
                 {% empty %}
                     <li class="text-flint-muted">No insights available.</li>

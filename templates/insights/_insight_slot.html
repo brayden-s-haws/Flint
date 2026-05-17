@@ -1,0 +1,7 @@
+{% if insight.status == 'pending' %}
+  {% include 'insights/_insight_pending.html' %}
+{% elif insight.status == 'active' %}
+  {% include 'insights/_insight_content.html' %}
+{% elif insight.status == 'failed' %}
+  {% include 'insights/_insight_failed.html' %}
+{% endif %}

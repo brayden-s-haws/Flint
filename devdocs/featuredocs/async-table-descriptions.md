@@ -1,7 +1,7 @@
 # Feature: Async Table Description Generation
 
 **Source:** `devdocs/appdocs/post_mvp.md` — build order item #8 ("Batch table description generation — `insights`") and the `insights` section bullet: "Batch insight generation — generate descriptions for all tables in a source at once (requires Celery)"
-**Status:** Not started
+**Status:** Complete
 **Target phase:** Post-MVP Phase 3 (build order item #8, immediately after Celery + Redis setup)
 
 > **Scope pivot note (2026-05-10):** The original post_mvp bullet framed this as bulk fan-out generation for every table in a source. After thinking it through, that approach generates insights for tables the user may never view (wasteful) and forces a "click to continue" UX for large databases (annoying). This featuredoc replaces the bulk plan with an **async-on-first-view** design: keep the existing lazy-trigger pattern (insight generates the first time a user opens a table without one), but move the LLM call off the request cycle so the page renders immediately and the insight slot polls for completion. Same goal — solve the blocking wait — but only spends LLM tokens on tables a user actually cares about. The previous featuredoc `batch-table-descriptions.md` is superseded by this one.
@@ -66,27 +66,23 @@ In-flight cleanup added while building this feature. The current `'ai'` `insight
 
 #### Templates
 
-- [ ] Create `templates/insights/_insight_pending.html` — the polling partial. Single root `<div id="insight-slot-{{ insight.pk }}">` carrying `hx-get="{% url 'insights:insight_status' insight.pk %}"`, `hx-trigger="every 2s"`, `hx-swap="outerHTML"`. Renders an inline SVG spinner + "Generating description…" text styled to match the existing insight card visual (so the slot doesn't visually pop when content arrives).
-- [ ] Create `templates/insights/_insight_content.html` — the final rendered insight. Root `<div id="insight-slot-{{ insight.pk }}">` with no HTMX attrs (polling stops naturally because the new root replaces the polling one). Renders `{{ insight.text|linebreaks }}` inside the same card chrome as the spinner partial.
-- [ ] Create `templates/insights/_insight_failed.html` — error state. Root `<div id="insight-slot-{{ insight.pk }}">` with no HTMX attrs. Renders a red error message ("We couldn't generate a description for this table — try again") and a retry button (`hx-post="{% url 'insights:insight_retry' insight.pk %}"`, `hx-target="this"`, `hx-swap="outerHTML"`). The retry response swaps the failure partial back to the pending partial, and polling resumes.
-- [ ] **Modify `templates/catalog/table_detail.html`** — locate the block that currently renders the insight inline. Replace it with a `{% include %}` that branches on `insight.status`:
-  - On first page load, if `status='pending'` (just enqueued) → include `_insight_pending.html`
-  - If `status='active'` (already complete from a previous visit) → include `_insight_content.html`
-  - If `status='failed'` (previous attempt failed, no auto-retry) → include `_insight_failed.html`
-  - The branching can live in the template via `{% if %}` or be pushed into a single dispatching partial (`_insight_slot.html` that itself does the `if/elif/else`). The dispatcher pattern is slightly cleaner if the insight gets rendered in more than one place later (it does — `insight_detail.html` may reuse it).
+- [x] `templates/insights/_insight_pending.html` — polling partial. Single root `<div id="insight-slot-{{ insight.pk }}">` carrying `hx-get="{% url 'insights:insight_status' insight.pk %}"`, `hx-trigger="every 2s"`, `hx-swap="outerHTML"`. SVG spinner copied verbatim from `_sync_status.html` + "Generating description…" text, styled with `inline-flex items-center gap-2 text-sm text-flint-muted`.
+- [x] `templates/insights/_insight_content.html` — final rendered insight. Root `<div id="insight-slot-{{ insight.pk }}">` with no HTMX attrs (polling stops naturally because the new root replaces the polling one). `{% load markdown_extras %}` + `{{ insight.text|render_markdown }}` inside a `text-flint-text markdown-content` div, plus the existing "View" link.
+- [x] `templates/insights/_insight_failed.html` — error state. Root `<div id="insight-slot-{{ insight.pk }}">` with no HTMX attrs. Red error paragraph (`text-sm text-red-300`) plus a Retry `<button>` with `hx-post="{% url 'insights:insight_retry' insight.pk %}"`, `hx-target="#insight-slot-{{ insight.pk }}"`, `hx-swap="outerHTML"`, and `hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'` (required — `django-htmx` middleware does NOT auto-inject CSRF; the project's pattern is explicit `hx-headers` per element making a POST, as seen in `_rating_buttons.html`).
+- [x] `templates/insights/_insight_slot.html` — dispatcher partial. No wrapper; just an `{% if/elif %}` block routing `insight.status` (`pending` / `active` / `failed`) to the corresponding sub-partial.
+- [x] `templates/catalog/table_detail.html` — Insights card body updated. Inside the `{% for insight in insights %}` loop, the old inline `<li>` content (`{{ insight.text|render_markdown }}` + View link) replaced with `<li class="mb-2">{% include 'insights/_insight_slot.html' %}</li>`. Surrounding card chrome, `<ul>`, and `{% empty %}` branch unchanged.
 
 #### Wiring
 
-- [ ] Confirm `apps/insights/urls.py` already has `app_name = 'insights'` set (it does — see `insights:list` / `insights:detail` references elsewhere).
-- [ ] No changes needed to `Flint/urls.py` — `apps.insights.urls` is already included.
+- [x] `apps/insights/urls.py` already had `app_name = 'insights'`; the new `insight_status` and `insight_retry` routes plug in cleanly.
+- [x] No changes needed to `Flint/urls.py` — `apps.insights.urls` is already included.
 
 #### Manual verification
 
-- [ ] On a table with no existing insight, open the detail page. Expect: page renders immediately (columns, stats, source link all visible); insight slot shows the spinner; worker log shows `apps.insights.tasks.generate_table_description_task[<id>]` received; ~5–10s later, slot swaps to the rendered description without a page reload.
-- [ ] Refresh the page mid-generation. Expect: existing pending `Insight` is reused, spinner appears again immediately, **no second task is enqueued** (check worker logs — only one task processed). Spinner swaps to content once the original task completes.
-- [ ] Open the same table in two browser tabs simultaneously (cold cache, no existing insight). Expect: the first request creates the pending row + enqueues one task; the second request finds the pending row and does not enqueue. Both tabs end up showing the same generated description.
-- [ ] Force a failure (temporarily raise inside the Anthropic service before the API call) and reload a description-less table. Expect: spinner appears, ~2s later swaps to the failure partial with the retry button. Click retry: spinner returns, polling resumes, success or failure cycle plays out again.
-- [ ] On a table that *already has* an `active` insight from before this feature, open the detail page. Expect: content renders immediately on first paint, no polling, no spinner flicker. (Regression check — the existing insight cache stays useful.)
+- [x] Fresh table with no insight → page renders immediately; spinner appears in the Insights card; polling fires every 2s (visible in dev-tools Network tab); worker log shows the task received; ~5–10s later the description swaps in and polling stops.
+- [x] Already-active table → content renders immediately on first paint, no polling, no spinner flicker.
+- [x] Failed insight (status flipped via admin) → red error + Retry button render correctly. Clicking Retry initially returned 403 (CSRF missing); fixed by adding `hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'` to the retry button. After the fix: click swaps button to spinner, polling resumes, success/failure cycle plays out.
+- [x] Multi-tab idempotency check passed — single task fires in the worker log when the same description-less table is opened in two tabs simultaneously, and both tabs converge on the same generated description. Confirms the `if not context['insights']:` guard in `TableDetailView` holds under concurrent GETs.
 
 ---
 

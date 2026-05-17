@@ -1,0 +1,5 @@
+{% load markdown_extras %}
+<div id="insight-slot-{{ insight.pk }}">
+    <div class="text-flint-text markdown-content">{{ insight.text|render_markdown }}</div>
+    <a href="{% url 'insights:detail' insight.pk %}" class="text-flint-orange hover:underline">View</a>
+</div>

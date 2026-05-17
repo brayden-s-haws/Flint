@@ -1,0 +1,12 @@
+<div id="insight-slot-{{ insight.pk }}"
+     hx-get="{% url 'insights:insight_status' insight.pk %}"
+     hx-trigger="every 2s"
+     hx-swap="outerHTML"
+    class="inline-flex items-center gap-2 text-sm text-flint-muted">
+    <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="3">
+            <circle class="opacity-25" cx="12" cy="12" r="10" />
+            <path class="opacity-75" d="M4 12a8 8 0 018-8" />
+    </svg>
+    <span>Generating description…</span>
+</div>
