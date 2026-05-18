@@ -24,3 +24,4 @@ markdown==3.10.2
 # Background tasks
 celery[redis]==5.4.0
 django-celery-beat==2.9.0
+croniter==6.2.2

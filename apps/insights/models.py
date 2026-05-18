@@ -21,7 +21,7 @@ class Insight(TenantAwareModel):
         ('archived', 'Archived'),
         ('deleted', 'Deleted'),
     ])
-    insight_prompt = models.ForeignKey('InsightPrompt', on_delete=models.SET_NULL, null=True)
+    insight_prompt = models.ForeignKey('InsightPrompt', on_delete=models.SET_NULL, null=True, blank=True)
     structured_data = models.JSONField(null=True, blank=True)
     rating = models.CharField(max_length=20, choices=[
         ('none', 'None'),
