@@ -12,3 +12,46 @@ FREQUENCY_TO_CRONTAB: dict[str, dict[str, str]] = {
     'weekly': {'minute': '0', 'hour': '6', 'day_of_month': '*', 'month_of_year': '*', 'day_of_week': '1'},
     'monthly': {'minute': '0', 'hour': '6', 'day_of_month': '1', 'month_of_year': '*', 'day_of_week': '*'},
 }
+
+def create_or_update_source_schedule(source: Source, frequency: str) -> tuple[SourceSchedule, bool]:
+    fields = FREQUENCY_TO_CRONTAB.get(frequency)
+    if fields is None:
+        raise ValueError(f"Invalid frequency: {frequency}")
+    crontab, _ = CrontabSchedule.objects.get_or_create(**fields, timezone=settings.TIME_ZONE)
+    existing = SourceSchedule.objects.filter(source=source).first()
+    if existing:
+        existing.frequency = frequency
+        existing.is_enabled = True
+        if existing.periodic_task:
+            existing.periodic_task.crontab = crontab
+            existing.periodic_task.enabled = True
+            existing.periodic_task.save()
+        else:
+            pt = PeriodicTask.objects.create(name=f'sync-source-{source.pk}', task='apps.sources.tasks.run_scheduled_sync', crontab=crontab, args=json.dumps([source.pk]), enabled=True)
+            existing.periodic_task = pt
+        existing.save()
+        return existing, False
+    else:
+        pt = PeriodicTask.objects.create(name=f'sync-source-{source.pk}', task='apps.sources.tasks.run_scheduled_sync', crontab=crontab, args=json.dumps([source.pk]), enabled=True)
+        schedule = SourceSchedule.objects.create(source=source, account=source.account, frequency=frequency, is_enabled=True, periodic_task=pt)
+        return schedule, True
+
+def disable_source_schedule(source: Source) -> None:
+    try:
+        schedule = source.schedule
+    except SourceSchedule.DoesNotExist:
+        return
+    schedule.is_enabled = False
+    if schedule.periodic_task:
+        schedule.periodic_task.enabled = False
+        schedule.periodic_task.save()
+    schedule.save()
+
+def delete_source_schedule(source: Source) -> None:
+    try:
+        schedule = source.schedule
+    except SourceSchedule.DoesNotExist:
+        return
+    if schedule.periodic_task:
+        schedule.periodic_task.delete()
+    schedule.delete()

@@ -56,11 +56,12 @@ This is the first feature to make real use of Celery Beat, which was wired up as
 
 #### Schedule helpers
 
-- [ ] Add `apps/sources/scheduling.py` (or similar — separate from `tasks.py`) with:
-  - `FREQUENCY_TO_CRONTAB: dict[str, dict]` mapping `'hourly' → {'minute': '0', 'hour': '*', ...}`, `'daily' → {'minute': '0', 'hour': '6', ...}`, etc. Lock the hour/day-of-week choices to sensible defaults (e.g. daily at 06:00, weekly Mondays 06:00, monthly on the 1st at 06:00 in the account's timezone — `TIME_ZONE` from settings is fine for MVP).
-  - `create_or_update_schedule(source: Source, frequency: str) -> tuple[SourceSchedule, bool]` — handles the `get_or_create` of the `CrontabSchedule`, the `PeriodicTask` row (`enabled=True`, correct `task`, `args`, `crontab`), and the `SourceSchedule` model wiring. Returns `(schedule, created)` so the caller knows whether this was a first-time enable (used to trigger the immediate sync — see next bullet).
-  - `disable_schedule(source: Source) -> None` — sets `SourceSchedule.is_enabled=False` and `PeriodicTask.enabled=False`. Keeps the row so re-enabling preserves the frequency choice.
-  - `delete_schedule(source: Source) -> None` — deletes the `SourceSchedule` and its `PeriodicTask` (the orphaned `CrontabSchedule` can be left; django-celery-beat reuses identical crontabs).
+- [x] Added `apps/sources/scheduling.py` with:
+  - `FREQUENCY_TO_CRONTAB: dict[str, dict[str, str]]` mapping each frequency to the five `CrontabSchedule` fields. Defaults: hourly at minute 0 of every hour, daily 06:00, weekly Mondays 06:00, monthly 1st 06:00. Times in `settings.TIME_ZONE`.
+  - `create_or_update_source_schedule(source: Source, frequency: str) -> tuple[SourceSchedule, bool]` — handles the `get_or_create` of the `CrontabSchedule`, the `PeriodicTask` row (`enabled=True`, correct `task`, `args`, `crontab`), and the `SourceSchedule` model wiring. Returns `(schedule, created)` so the caller knows whether this was a first-time enable (used to trigger the immediate sync — see next bullet). Also handles the rare `SET_NULL` recovery path where a `SourceSchedule` exists but its `periodic_task` was nulled out of band.
+  - `disable_source_schedule(source: Source) -> None` — sets `SourceSchedule.is_enabled=False` and `PeriodicTask.enabled=False`. Idempotent no-op when no schedule exists. Keeps the row so re-enabling preserves the frequency choice.
+  - `delete_source_schedule(source: Source) -> None` — deletes the `SourceSchedule` and its `PeriodicTask` (the orphaned `CrontabSchedule` can be left; django-celery-beat reuses identical crontabs). Idempotent no-op when no schedule exists.
+  - Helpers use `try/except SourceSchedule.DoesNotExist` on the reverse one-to-one accessor — idiomatic Django and avoids the `getattr(..., None)` type-narrowing issue with `Any | None`.
 
 #### Immediate sync on first enable
 
