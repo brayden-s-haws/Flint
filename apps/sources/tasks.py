@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from .connectors.registry import get_connector
 from .encryption import decrypt_credentials
-from .models import Source, SourceSyncLog
+from .models import Source, SourceSyncLog, SourceSchedule
 from apps.catalog.models import Schema, Table, Column, TableStatistics
 from apps.insights.models import Insight, InsightTarget
 from apps.insights.services.provider import get_service
@@ -77,3 +77,21 @@ def sync_source_task(source_id: int, sync_log_id: int) -> None:
         sync_log.completed_at = timezone.now()
         sync_log.save()
         logger.exception("Source sync failed for source %s", source_id)
+
+@shared_task
+def run_scheduled_sync(source_id: int) -> None:
+    try:
+        source = Source.objects.get(pk=source_id)
+    except Source.DoesNotExist:
+        logger.warning("Source %s does not exist", source_id)
+        return
+    try:
+        schedule = source.schedule
+    except SourceSchedule.DoesNotExist:
+        logger.warning("Schedule sync fired but source %s has no schedule", source_id)
+        return
+    if not schedule.is_enabled:
+        logger.warning("Source schedule is disabled for source %s ", source_id)
+        return
+    sync_log = SourceSyncLog.objects.create(account=source.account, status='running', started_at=timezone.now())
+    sync_source_task.delay(source.pk, sync_log.pk)
