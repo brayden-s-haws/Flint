@@ -47,12 +47,13 @@ This is the first feature to make real use of Celery Beat, which was wired up as
 
 #### Periodic task wrapper
 
-- [ ] Add `run_scheduled_sync(source_id: int) -> None` to `apps/sources/tasks.py`. The task:
-  - Loads `Source` by id and bails (logs) if the source no longer exists or its schedule is disabled (defensive — should be removed from beat already, but covers race).
-  - Creates a new `SourceSyncLog(account=source.account, status='running', started_at=timezone.now())`.
-  - Calls `sync_source_task.delay(source.pk, sync_log.pk)` — reuses the existing task body. **Do not** call `sync_source_task` synchronously inside `run_scheduled_sync`; keep the queue boundary so a long sync doesn't block beat from emitting the next tick.
-  - Pass IDs only (per the Celery rule documented in `CLAUDE.md`).
-- [ ] Register the task name in beat by giving the `PeriodicTask` row `task='apps.sources.tasks.run_scheduled_sync'` and `args=json.dumps([source.pk])` (django-celery-beat takes args as JSON strings).
+- [x] Added `run_scheduled_sync(source_id: int) -> None` to `apps/sources/tasks.py`. The task:
+  - Loads `Source` by id; logs + bails on `Source.DoesNotExist` (covers the race where beat fires for a deleted source before it picks up the schedule change).
+  - Looks up the schedule via the reverse one-to-one accessor (`source.schedule`); logs + bails on `SourceSchedule.DoesNotExist`.
+  - Bails (logs) if `schedule.is_enabled` is False — covers the pause-mid-tick race.
+  - Creates a `SourceSyncLog(account=source.account, status='running', started_at=timezone.now())` via `objects.create`.
+  - Calls `sync_source_task.delay(source.pk, sync_log.pk)` — reuses the existing task body. Kept the queue boundary so a long sync doesn't block beat from emitting the next tick. IDs only (per the Celery rule in `CLAUDE.md`).
+- [x] Task name registered in beat by `create_or_update_source_schedule`, which writes `task='apps.sources.tasks.run_scheduled_sync'` and `args=json.dumps([source.pk])` onto the `PeriodicTask` row.
 
 #### Schedule helpers
 
@@ -63,14 +64,9 @@ This is the first feature to make real use of Celery Beat, which was wired up as
   - `delete_source_schedule(source: Source) -> None` — deletes the `SourceSchedule` and its `PeriodicTask` (the orphaned `CrontabSchedule` can be left; django-celery-beat reuses identical crontabs). Idempotent no-op when no schedule exists.
   - Helpers use `try/except SourceSchedule.DoesNotExist` on the reverse one-to-one accessor — idiomatic Django and avoids the `getattr(..., None)` type-narrowing issue with `Any | None`.
 
-#### Immediate sync on first enable
-
-- [ ] In the `schedule_create` view (Phase 2), when `create_or_update_schedule` returns `created=True` **or** when re-enabling a previously paused schedule (`is_enabled` flipped from `False` to `True`), immediately enqueue `run_scheduled_sync.delay(source.pk)` so the user gets feedback now rather than waiting for the next cron boundary. Changing the frequency on an already-enabled schedule does **not** trigger an immediate sync — that would be surprising.
-- [ ] Show a flash message confirming both actions: "Schedule set — first sync started now. Future runs: every day at 6:00 AM." (adapt copy per frequency).
-
 #### Cascade on source delete
 
-- [ ] When a `Source` is deleted, its `PeriodicTask` must go too (otherwise beat keeps firing for a missing source). The `OneToOneField` cascade handles `SourceSchedule`; add a `post_delete` signal on `SourceSchedule` (in `apps/sources/signals.py` — create if not present, wire from `apps.py::ready()`) that deletes the linked `PeriodicTask`. Verify by creating a schedule, deleting the source, confirming the `PeriodicTask` row is gone.
+- [x] When a `Source` is deleted, its `PeriodicTask` must go too (otherwise beat keeps firing for a missing source). The `OneToOneField` cascade handles `SourceSchedule`; added a `post_delete` signal on `SourceSchedule` in `apps/sources/signals.py` that deletes the linked `PeriodicTask`. Wired from `apps/sources/apps.py::ready()` via side-effect import. `print('SIGNALS LOADED')` confirms `ready()` fires on worker, beat, and runserver startup. **End-to-end cascade verification deferred to the end of Phase 2** — needs the `schedule_create` + `schedule_delete` views to exercise it through the actual UI flow.
 
 #### Dev workflow
 
@@ -93,6 +89,11 @@ This is the first feature to make real use of Celery Beat, which was wired up as
   - `path('<int:pk>/schedule/toggle/', views.schedule_toggle, name='schedule_toggle')`
   - `path('<int:pk>/schedule/delete/', views.schedule_delete, name='schedule_delete')`
 
+#### Immediate sync on first enable
+
+- [ ] In the `schedule_create` view, when `create_or_update_source_schedule` returns `created=True` **or** when re-enabling a previously paused schedule (`is_enabled` flipped from `False` to `True`), immediately enqueue `run_scheduled_sync.delay(source.pk)` so the user gets feedback now rather than waiting for the next cron boundary. Changing the frequency on an already-enabled schedule does **not** trigger an immediate sync — that would be surprising.
+- [ ] Show a flash message confirming both actions: "Schedule set — first sync started now. Future runs: every day at 6:00 AM." (adapt copy per frequency).
+
 #### Templates
 
 - [ ] New partial `templates/sources/_schedule_section.html` — renders one of two states:
@@ -112,6 +113,15 @@ This is the first feature to make real use of Celery Beat, which was wired up as
 
 - [x] Verify `'django_celery_beat'` is in `INSTALLED_APPS` (already added by celery-and-redis-setup — no change needed, but confirm).
 - [x] No new middleware. No new env vars.
+
+#### End-of-phase verification
+
+- [ ] **Cascade signal end-to-end.** Now that `schedule_create` and `schedule_delete` views exist, verify the Phase 1 signal fires through the actual UI flow:
+  1. Open a source detail page with no schedule → click "Set up schedule" → pick `daily` → save.
+  2. Confirm `/admin/django_celery_beat/periodictask/` shows a new `sync-source-<N>` row.
+  3. Delete the source via `/admin/sources/source/` or the source delete view.
+  4. Refresh `/admin/django_celery_beat/periodictask/` → the `sync-source-<N>` row must be gone.
+  5. Once verified, **remove the `print('SIGNALS LOADED')` debug line** from `apps/sources/signals.py`.
 
 ### Phase 3 — Tests & verification
 
