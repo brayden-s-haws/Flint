@@ -76,7 +76,8 @@ This is the first feature to make real use of Celery Beat, which was wired up as
 
 #### Forms
 
-- [ ] `ScheduleForm` in `apps/sources/forms.py` — single radio/select field for `frequency` with the four choices. Apply the project Tailwind input classes per `CLAUDE.md` "Forms" standard (`w-full bg-flint-card border border-flint-border-em rounded-md px-3 py-2 text-sm text-flint-text focus:outline-none focus:ring-2 focus:ring-flint-orange`).
+- [x] `ScheduleForm` in `apps/sources/forms.py` — single radio/select field for `frequency` with the four choices. Apply the project Tailwind input classes per `CLAUDE.md` "Forms" standard 
+  (`w-full bg-flint-card border border-flint-border-em rounded-md px-3 py-2 text-sm text-flint-text focus:outline-none focus:ring-2 focus:ring-flint-orange`).
 
 #### Views & URLs
 

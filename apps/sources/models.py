@@ -4,6 +4,12 @@ from django.db import models
 
 from apps.core.models import TenantAwareModel, TimeStampedModel
 
+FREQUENCY_CHOICES = [
+        ('hourly', 'Hourly'),
+        ('daily', 'Daily'),
+        ('weekly', 'Weekly'),
+        ('monthly', 'Monthly'),
+    ]
 
 class SourceType(TimeStampedModel):
     name = models.CharField(max_length=255)
@@ -38,12 +44,7 @@ class SourceSyncLog(TenantAwareModel):
 
 class SourceSchedule(TenantAwareModel):
     source = models.OneToOneField(Source, on_delete=models.CASCADE, related_name='schedule')
-    frequency = models.CharField(max_length=255, choices=[
-        ('hourly', 'Hourly'),
-        ('daily', 'Daily'),
-        ('weekly', 'Weekly'),
-        ('monthly', 'Monthly')
-    ])
+    frequency = models.CharField(max_length=255, choices=FREQUENCY_CHOICES)
     is_enabled = models.BooleanField(default=True)
     periodic_task = models.OneToOneField('django_celery_beat.PeriodicTask', on_delete=models.SET_NULL, null=True, blank=True)
 
