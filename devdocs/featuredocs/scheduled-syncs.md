@@ -81,19 +81,19 @@ This is the first feature to make real use of Celery Beat, which was wired up as
 
 #### Views & URLs
 
-- [ ] `schedule_create` — `POST /sources/<pk>/schedule/` — creates/updates schedule from `ScheduleForm`. Handles both first-time setup and frequency changes via the same endpoint. Redirects back to source detail (or returns HTMX partial — see template note below).
-- [ ] `schedule_toggle` — `POST /sources/<pk>/schedule/toggle/` — flips `is_enabled` (and the underlying `PeriodicTask.enabled`). Pause/resume button.
-- [ ] `schedule_delete` — `POST /sources/<pk>/schedule/delete/` — removes the schedule entirely. Separate from toggle so the user can clear out the frequency choice if they want a fresh setup.
-- [ ] All three views use `@login_required` and scope `Source` lookup by `account=request.account` (mirrors the existing `test_connection` / `sync_source` pattern).
+- [x] `schedule_create` — `POST /sources/<pk>/schedule/` — creates/updates schedule from `ScheduleForm`. Handles both first-time setup and frequency changes via the same endpoint. Redirects back to source detail. Captures `was_paused` from `source.schedule.is_enabled` **before** calling the helper (helper sets `is_enabled=True`), so the resume-from-paused branch reads the correct prior state. Uses `try/except SourceSchedule.DoesNotExist` for the "no prior schedule" case.
+- [x] `schedule_toggle` — `POST /sources/<pk>/schedule/toggle/` — flips `is_enabled` (and the underlying `PeriodicTask.enabled`). Pause/resume button. Delegates to `toggle_source_schedule(source) -> (schedule, was_paused)` in `scheduling.py` — helper captures prior state before mutating and returns it so the view knows whether this toggle was a resume-from-paused (fires `run_scheduled_sync.delay`) or a pause (silent). Helper raises `SourceSchedule.DoesNotExist` when there's no schedule; view catches and returns 404 (toggle has no idempotent no-op interpretation, unlike `disable_source_schedule` / `delete_source_schedule`).
+- [x] `schedule_delete` — `POST /sources/<pk>/schedule/delete/` — removes the schedule entirely. Separate from toggle so the user can clear out the frequency choice if they want a fresh setup. Delegates to the existing `delete_source_schedule(source)` helper, which is intentionally idempotent (silent no-op on missing schedule). View has no try/except — the idempotent contract makes "delete on already-deleted" a safe success, which is friendlier for refresh/double-click flows.
+- [x] All three views use `@login_required` and scope `Source` lookup by `account=request.account` (mirrors the existing `test_connection` / `sync_source` pattern).
 - [ ] Add URL patterns to `apps/sources/urls.py`:
-  - `path('<int:pk>/schedule/', views.schedule_create, name='schedule_create')`
-  - `path('<int:pk>/schedule/toggle/', views.schedule_toggle, name='schedule_toggle')`
-  - `path('<int:pk>/schedule/delete/', views.schedule_delete, name='schedule_delete')`
+  - [x] `path('<int:pk>/schedule/', views.schedule_create, name='schedule_create')`
+  - [x] `path('<int:pk>/schedule/toggle/', views.schedule_toggle, name='schedule_toggle')`
+  - [x] `path('<int:pk>/schedule/delete/', views.schedule_delete, name='schedule_delete')`
 
 #### Immediate sync on first enable
 
-- [ ] In the `schedule_create` view, when `create_or_update_source_schedule` returns `created=True` **or** when re-enabling a previously paused schedule (`is_enabled` flipped from `False` to `True`), immediately enqueue `run_scheduled_sync.delay(source.pk)` so the user gets feedback now rather than waiting for the next cron boundary. Changing the frequency on an already-enabled schedule does **not** trigger an immediate sync — that would be surprising.
-- [ ] Show a flash message confirming both actions: "Schedule set — first sync started now. Future runs: every day at 6:00 AM." (adapt copy per frequency).
+- [x] In the `schedule_create` view, when `create_or_update_source_schedule` returns `created=True` **or** when re-enabling a previously paused schedule (`is_enabled` flipped from `False` to `True`), immediately enqueue `run_scheduled_sync.delay(source.pk)` so the user gets feedback now rather than waiting for the next cron boundary. Changing the frequency on an already-enabled schedule does **not** trigger an immediate sync — that would be surprising. (`schedule_create` done; resume-from-paused branch will be exercised by `schedule_toggle`.)
+- [x] Show a flash message confirming both actions: "Schedule set to daily - first sync starting now." for first-enable/resume, "Schedule set to daily." for plain updates. Uses `schedule.get_frequency_display().lower()` for the cadence word; richer cron-descriptor copy ("every day at 6:00 AM") can come later if we want it.
 
 #### Templates
 
@@ -122,7 +122,7 @@ This is the first feature to make real use of Celery Beat, which was wired up as
   2. Confirm `/admin/django_celery_beat/periodictask/` shows a new `sync-source-<N>` row.
   3. Delete the source via `/admin/sources/source/` or the source delete view.
   4. Refresh `/admin/django_celery_beat/periodictask/` → the `sync-source-<N>` row must be gone.
-  5. Once verified, **remove the `print('SIGNALS LOADED')` debug line** from `apps/sources/signals.py`.
+  5. ~~Once verified, **remove the `print('SIGNALS LOADED')` debug line** from `apps/sources/signals.py`.~~ Already removed.
 
 ### Phase 3 — Tests & verification
 

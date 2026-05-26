@@ -55,3 +55,13 @@ def delete_source_schedule(source: Source) -> None:
     if schedule.periodic_task:
         schedule.periodic_task.delete()
     schedule.delete()
+
+def toggle_source_schedule(source: Source) -> tuple[SourceSchedule, bool]:
+    schedule = source.schedule
+    was_paused = not schedule.is_enabled
+    schedule.is_enabled = not schedule.is_enabled
+    schedule.save()
+    if schedule.periodic_task:
+        schedule.periodic_task.enabled = schedule.is_enabled
+        schedule.periodic_task.save()
+    return schedule, was_paused

@@ -4,7 +4,6 @@ import logging
 from typing import Any
 from datetime import timedelta
 
-
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib import messages
@@ -16,13 +15,15 @@ from django.urls import reverse_lazy, reverse
 from django.http import HttpResponse, HttpRequest
 from django.forms import BaseModelForm
 from django.utils import timezone
+
 from apps.core.mixins import TenantQuerysetMixin
 from .connectors.registry import get_connector
 from apps.insights.models import InsightTarget
-from .models import Source, SourceType
-from .forms import SourceForm
-from .tasks import sync_source_task
+from .models import Source, SourceType, SourceSchedule
+from .forms import SourceForm, ScheduleForm
+from .tasks import sync_source_task, run_scheduled_sync
 from .encryption import encrypt_credentials, decrypt_credentials
+from .scheduling import create_or_update_source_schedule, toggle_source_schedule, delete_source_schedule
 
 logger = logging.getLogger(__name__)
 
@@ -167,7 +168,7 @@ def sync_source(request: HttpRequest, pk:int) -> HttpResponse:
 
 @login_required
 def sync_status(request: HttpRequest, pk:int) -> HttpResponse:
-    source = get_object_or_404(Source, pk=pk, account=request.account)
+    source = get_object_or_404(Source, pk=pk, account=request.account) # type: ignore[attr-defined]
     sync_log = source.sourcesynclog_set.order_by('-started_at').first()
     if sync_log is None:
         return HttpResponse('')
@@ -177,6 +178,52 @@ def sync_status(request: HttpRequest, pk:int) -> HttpResponse:
         return response
     sync_logs = source.sourcesynclog_set.order_by('-started_at')
     return render(request, 'sources/_sync_status.html', {'sync_log': sync_log, 'source': source, 'sync_logs': sync_logs})
+
+@login_required
+def schedule_create(request: HttpRequest, pk:int) -> HttpResponse:
+    if request.method != 'POST':
+        return HttpResponse('Method not allowed', status=405)
+    source = get_object_or_404(Source, pk=pk, account=request.account) # type: ignore[attr-defined]
+    try:
+        was_paused = not source.schedule.is_enabled
+    except SourceSchedule.DoesNotExist:
+        was_paused = False
+    form = ScheduleForm(request.POST)
+    if not form.is_valid():
+        messages.error(request, 'Invalid schedule frequency.')
+        return redirect('sources:detail', pk=pk)
+    schedule, created = create_or_update_source_schedule(source, form.cleaned_data['frequency'])
+    if created or was_paused:
+        run_scheduled_sync.delay(source.pk)
+        messages.success(request, f'Schedule set to {schedule.get_frequency_display().lower()} - first sync starting now.')
+    else:
+        messages.success(request, f'Schedule set to {schedule.get_frequency_display().lower()}.')
+    return redirect('sources:detail', pk=pk)
+
+@login_required
+def schedule_toggle(request: HttpRequest, pk: int) -> HttpResponse:
+    if request.method != 'POST':
+        return HttpResponse('Method not allowed', status=405)
+    source = get_object_or_404(Source, pk=pk, account=request.account) # type: ignore[attr-defined]
+    try:
+        schedule, was_paused = toggle_source_schedule(source)
+    except SourceSchedule.DoesNotExist:
+        return HttpResponse('No schedule to toggle', status=404)
+    if was_paused:
+        run_scheduled_sync.delay(source.pk)
+        messages.success(request, 'Schedule resumed. Next sync starting now.')
+    else:
+        messages.success(request, 'Schedule paused.')
+    return redirect('sources:detail', pk=pk)
+
+@login_required
+def schedule_delete(request: HttpRequest, pk: int) -> HttpResponse:
+    if request.method != 'POST':
+        return HttpResponse('Method not allowed', status=405)
+    source = get_object_or_404(Source, pk=pk, account=request.account) # type: ignore[attr-defined]
+    delete_source_schedule(source)
+    messages.success(request, 'Schedule deleted.')
+    return redirect('sources:detail', pk=pk)
 
 @login_required
 def load_demo_data(request: HttpRequest) -> HttpResponse:
