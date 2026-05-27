@@ -1,0 +1,11 @@
+<form method="post" action="{% url 'sources:schedule_create' source.pk %}">
+    {% csrf_token %}
+    <p class="block text-sm font-medium text-flint-muted mb-2">Frequency</p>
+    {% for radio in schedule_form.frequency %}
+        <label class="flex items-center gap-2 cursor-pointer text-sm text-flint-text">
+            {{ radio.tag }}
+            <span>{{ radio.choice_label }}</span>
+        </label>
+    {% endfor %}
+    <button type="submit" class="bg-flint-orange hover:bg-flint-orange-hover text-white font-semibold py-2 px-4 rounded-md transition-colors mt-4">Set Schedule</button>
+</form>

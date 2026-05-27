@@ -1,0 +1,31 @@
+<div id="schedule-section">
+    <div class="bg-flint-card rounded-lg border border-flint-border p-6 mb-6 card">
+        <h2 class="text-lg font-semibold text-flint-text mb-4">Sync Schedule</h2>
+        {% if schedule %}
+            <p class="text-sm text-flint-text"><span class="text-flint-muted">Schedule:</span> {{ frequency_display }}{% if not schedule.is_enabled %}<span class="inline-block bg-flint-border
+            text-flint-muted text-xs px-2 py-0.5 rounded ml-2">Paused</span>{% endif %}</p>
+            {% if schedule.is_enabled %}
+                <p class="text-sm text-flint-muted">Next run: {{ next_run|date:"N j, Y, P" }}.</p>
+            {% endif %}
+            <div class="flex items-center mt-4 gap-2">
+                <details>
+                    <summary class="border border-flint-border text-flint-muted hover:bg-flint-card px-4 py-2 rounded-md">Change Frequency</summary>
+                    {% include 'sources/_schedule_form.html' %}
+                </details>
+                <form method="post" action="{% url 'sources:schedule_toggle' source.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="border border-flint-border text-flint-muted hover:bg-flint-card px-4 py-2 rounded-md">
+                        {% if schedule.is_enabled %}Pause{% else %}Resume{% endif %}
+                    </button>
+                </form>
+                <form method="post" action="{% url 'sources:schedule_delete' source.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" onclick="return confirm('Remove this schedule? You can recreate it any time.');" class="border border-red-500 text-red-400 hover:bg-red-900/20 px-4 py-2 rounded-md">Delete Schedule</button>
+                </form>
+            </div>
+        {% else %}
+            <p class="text-sm text-flint-muted mb-4">This source has no sync schedule. Syncs run only when you click Sync Now.</p>
+            {% include 'sources/_schedule_form.html' %}
+        {% endif %}
+    </div>
+</div>

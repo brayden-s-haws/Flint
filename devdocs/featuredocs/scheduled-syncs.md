@@ -97,10 +97,11 @@ This is the first feature to make real use of Celery Beat, which was wired up as
 
 #### Templates
 
-- [ ] New partial `templates/sources/_schedule_section.html` — renders one of two states:
-  - **No schedule set** — short copy ("This source has no schedule. Syncs run only when you click Sync Now.") + a "Set up schedule" button that reveals/links to the form.
-  - **Schedule set** — shows the configured frequency in plain English ("Runs daily at 6:00 AM"), the next scheduled run time (derived from `periodic_task.crontab` via `croniter` or django-celery-beat's `schedule` helper), a "Change frequency" button, a "Pause / Resume" toggle button, and a "Remove schedule" button. If `is_enabled=False`, show a muted "Paused" badge next to the frequency.
-- [ ] New partial `templates/sources/_schedule_form.html` — the `ScheduleForm` markup. Used both as initial form render and as the HTMX swap target when "Change frequency" is clicked.
+- [x] New partial `templates/sources/_schedule_section.html` — renders one of two states:
+  - **No schedule set** — short copy ("This source has no sync schedule. Syncs run only when you click Sync Now.") + the form partial included inline so the user can set up a schedule in place.
+  - **Schedule set** — shows the configured frequency in plain English (driven by `frequency_display` from context, ultimately `cron_descriptor`), the next scheduled run time (`next_run` from context, via `croniter`), a "Change Frequency" toggle (a `<details>/<summary>` revealing the form partial), a "Pause / Resume" toggle button, and a "Delete Schedule" button. If `schedule.is_enabled=False`, shows a muted "Paused" badge inline with the frequency and hides the next-run line.
+  - "Delete Schedule" button uses inline `onclick="return confirm(...)"` for accidental-click protection rather than a separate confirmation page (schedules are cheap to recreate; one click vs. a full delete flow).
+- [x] New partial `templates/sources/_schedule_form.html` — the `ScheduleForm` markup. Used both as the empty-state form render and inside the change-frequency `<details>` reveal. Renders the full `<form method="post" action="{% url 'sources:schedule_create' source.pk %}">` element including `{% csrf_token %}`, the radio group (manual iteration via `{% for radio in schedule_form.frequency %}` so each option gets a clickable `<label>` wrapper instead of the default `RadioSelect` `<ul>`), and the submit button. Context variable name is `schedule_form` (more specific than `form` — avoids collisions with whatever else may be in scope).
 - [ ] Edit `templates/sources/source_detail.html` — include `{% include 'sources/_schedule_section.html' %}` **directly above** the Sync History card (per the spec: "above the sync history display information on how often the sync runs"). Match the existing card styling (Tailwind `bg-flint-card`, border, rounded, etc. — copy from the use-cases section card).
 
 #### Context
