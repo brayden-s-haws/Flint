@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import logging
 from typing import Any
-from datetime import timedelta
+from datetime import timedelta, datetime
+from croniter import croniter
+from cron_descriptor import ExpressionDescriptor
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -136,6 +138,24 @@ class SourceDetailView(LoginRequiredMixin, TenantQuerysetMixin, DetailView):
                 context['use_case_rate_limited'] = False
         else:
             context['use_case_rate_limited'] = False
+        # Schedule context
+        try:
+            schedule = self.object.schedule
+        except SourceSchedule.DoesNotExist:
+            schedule = None
+        context['schedule'] = schedule
+        context['schedule_form'] = ScheduleForm(initial={'frequency': schedule.frequency if schedule else None})
+        if schedule and schedule.cron_expression:
+            cron = schedule.cron_expression
+            context['next_run'] = croniter(cron, timezone.now()).get_next(datetime)
+            try:
+                context['frequency_display'] = ExpressionDescriptor(cron).get_description()
+            except Exception as e:
+                logger.warning("cron_descriptor failed for %s: %s", cron, e)
+                context['frequency_display'] = schedule.get_frequency_display()
+        else:
+            context['next_run'] = None
+            context['frequency_display'] = None
         return context
 
 @login_required

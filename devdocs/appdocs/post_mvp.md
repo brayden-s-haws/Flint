@@ -21,8 +21,11 @@ For speculative or longer-horizon ideas, see `devdocs/potential_features.md`.
 8. ~~Batch table description generation — `insights`~~ COMPLETE — scope pivoted from bulk fan-out to async-on-first-view; see `devdocs/featuredocs/async-table-descriptions.md` for the rationale
 9. Draft a README based on what exists so far — `general` COMPLETE
 10. Scheduled syncs — `sources`
-10b. Potential bug/feature gap: When a source is synced, the Source Overview is generated but no spinner is displayed and the content only shows if you refresh the page. It should follow the 
-    pattern of other async-on-first-view pages, it should show a spinner and display the content immediately when available
+10b. Source Detail Updates:
+    10c. Potential bug/feature gap: When a source is synced, the Source Overview is generated but no spinner is displayed in the card and the content only shows if you refresh the page. It should 
+    follow the pattern of other async-on-first-view pages, it should show a spinner and display the content immediately when available. Note: the sync spinner is working as expected
+    10d. move Sync schedule card and sync history into columns on the right of the schemas/table and source overview
+    10e. Swap source overview and schemas and tables cards
 11. Agentic cross-source discovery — `insights` (depends on 2+ sources connected) Note: we should add this to the dashboard as one of the main cards next to the Insights card
 12. Demo Mode Phase 2 (product scenario + auto-trigger insights after load)
 
