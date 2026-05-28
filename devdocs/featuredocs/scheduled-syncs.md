@@ -1,7 +1,7 @@
 # Feature: Scheduled Syncs
 
 **Source:** `devdocs/appdocs/post_mvp.md` — "core / infrastructure" (build order item #10)
-**Status:** Not started
+**Status:** Complete (Phase 1 + Phase 2). Phase 3 (automated tests) moved to `devdocs/testing.md` under `apps.sources`.
 **Target phase:** Post-MVP Phase 3
 **Suggested branch:** `feature/scheduled-syncs` (already checked out)
 
@@ -118,27 +118,12 @@ This is the first feature to make real use of Celery Beat, which was wired up as
 
 #### End-of-phase verification
 
-- [ ] **Cascade signal end-to-end.** Now that `schedule_create` and `schedule_delete` views exist, verify the Phase 1 signal fires through the actual UI flow:
-  1. Open a source detail page with no schedule → click "Set up schedule" → pick `daily` → save.
-  2. Confirm `/admin/django_celery_beat/periodictask/` shows a new `sync-source-<N>` row.
-  3. Delete the source via `/admin/sources/source/` or the source delete view.
-  4. Refresh `/admin/django_celery_beat/periodictask/` → the `sync-source-<N>` row must be gone.
-  5. ~~Once verified, **remove the `print('SIGNALS LOADED')` debug line** from `apps/sources/signals.py`.~~ Already removed.
+- [x] **Cascade signal end-to-end.** Verified through the UI flow: created a schedule on a source, confirmed the `sync-source-<N>` `PeriodicTask` row appeared in admin, deleted the source, confirmed the `PeriodicTask` row was removed. The Phase 1 `post_delete` signal on `SourceSchedule` fires correctly through the cascade.
+- [x] Manual end-to-end smoke test through the UI: empty state → set daily schedule → immediate sync fires → change frequency (no immediate sync) → pause (badge appears, next-run hidden) → resume (immediate sync fires) → delete schedule (empty state returns).
 
 ### Phase 3 — Tests & verification
 
-- [ ] **Unit:** `create_or_update_schedule` creates exactly one `PeriodicTask`, one `CrontabSchedule` (or reuses an existing matching one), and one `SourceSchedule`. Calling it again with a new frequency updates the same rows rather than creating duplicates.
-- [ ] **Unit:** `disable_schedule` sets both `SourceSchedule.is_enabled=False` and `PeriodicTask.enabled=False`. Re-running `create_or_update_schedule` re-enables both.
-- [ ] **Unit:** Deleting a `Source` deletes the linked `PeriodicTask` (signal test). No orphan rows.
-- [ ] **Unit:** `run_scheduled_sync(source_id)` creates a `SourceSyncLog` with `status='running'` and enqueues `sync_source_task`. Use `CELERY_TASK_ALWAYS_EAGER=True` in test settings (per the celery-and-redis-setup notes).
-- [ ] **Integration:** Account A cannot create/toggle/delete a schedule on account B's source. Hit `schedule_create` with another account's `pk` and expect 404.
-- [ ] **Manual end-to-end:**
-  1. Set a schedule with frequency=`hourly` on a source. Confirm `PeriodicTask` row appears in admin.
-  2. Restart beat (it picks up DB changes within 5s by default, but restart is faster).
-  3. Wait for the next hour boundary (or temporarily set a 1-minute interval for testing — use a `CrontabSchedule` with `minute='*'`).
-  4. Confirm a new `SourceSyncLog` appears in source detail with the same data as a manual sync, and beat logs show the task firing.
-  5. Pause the schedule. Confirm no further runs after the next tick.
-  6. Resume, then delete. Confirm the `PeriodicTask` row is gone from admin.
+Phase 3 work (automated unit + integration tests) has been moved to `devdocs/testing.md` under the `apps.sources` section. See the "Scheduled syncs" subsection there for the full test list. These tests will be written as part of the broader Phase 6 testing pass (post_mvp.md item #24), not as part of this feature's branch.
 
 ---
 

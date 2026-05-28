@@ -5,18 +5,16 @@
             <p class="text-sm text-flint-text"><span class="text-flint-muted">Schedule:</span> {{ frequency_display }}{% if not schedule.is_enabled %}<span class="inline-block bg-flint-border
             text-flint-muted text-xs px-2 py-0.5 rounded ml-2">Paused</span>{% endif %}</p>
             {% if schedule.is_enabled %}
-                <p class="text-sm text-flint-muted">Next run: {{ next_run|date:"N j, Y, P" }}.</p>
+                <p class="text-sm text-flint-muted">Next run: {{ next_run|date:"N j, Y, P" }}</p>
             {% endif %}
             <div class="flex items-center mt-4 gap-2">
                 <details>
-                    <summary class="border border-flint-border text-flint-muted hover:bg-flint-card px-4 py-2 rounded-md">Change Frequency</summary>
+                    <summary class="border border-flint-border-em text-flint-muted hover:bg-flint-card px-4 py-2 rounded-md block [&::-webkit-details-marker]:hidden cursor-pointer ">Change Frequency</summary>
                     {% include 'sources/_schedule_form.html' %}
                 </details>
                 <form method="post" action="{% url 'sources:schedule_toggle' source.pk %}">
                     {% csrf_token %}
-                    <button type="submit" class="border border-flint-border text-flint-muted hover:bg-flint-card px-4 py-2 rounded-md">
-                        {% if schedule.is_enabled %}Pause{% else %}Resume{% endif %}
-                    </button>
+                    <button type="submit" class="border border-flint-border-em text-flint-muted hover:bg-flint-card px-4 py-2 rounded-md">{% if schedule.is_enabled %}Pause{% else %}Resume{% endif %}</button>
                 </form>
                 <form method="post" action="{% url 'sources:schedule_delete' source.pk %}">
                     {% csrf_token %}

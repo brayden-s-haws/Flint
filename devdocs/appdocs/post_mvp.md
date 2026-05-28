@@ -19,8 +19,8 @@ For speculative or longer-horizon ideas, see `devdocs/potential_features.md`.
 **Phase 3 — Requires Celery + Redis first**
 7. ~~Celery + Redis setup — `core/infrastructure`~~ COMPLETE
 8. ~~Batch table description generation — `insights`~~ COMPLETE — scope pivoted from bulk fan-out to async-on-first-view; see `devdocs/featuredocs/async-table-descriptions.md` for the rationale
-9. Draft a README based on what exists so far — `general` COMPLETE
-10. Scheduled syncs — `sources`
+9. ~~Draft a README based on what exists so far — `general`~~ COMPLETE
+10. ~~Scheduled syncs — `sources`~~ COMPLETE (Phases 1 & 2) — see `devdocs/featuredocs/scheduled-syncs.md`. Phase 3 automated tests moved to `devdocs/testing.md` under `apps.sources`; will be written in the Phase 6 testing pass (#24).
 10b. Source Detail Updates:
     10c. Potential bug/feature gap: When a source is synced, the Source Overview is generated but no spinner is displayed in the card and the content only shows if you refresh the page. It should 
     follow the pattern of other async-on-first-view pages, it should show a spinner and display the content immediately when available. Note: the sync spinner is working as expected
@@ -622,9 +622,9 @@ A banner on demo sources makes clear this is demo data. A "Clear Demo Data" butt
 
 - ~~**Celery + Redis** — background task queue for scheduled syncs and batch insight generation~~ COMPLETE — see `devdocs/featuredocs/celery-and-redis-setup.md`. Source sync converted as proof-of-concept; other long-running operations still synchronous and migrate per-feature.
 - **REST API** — `apps/api/` layer for programmatic access (post-MVP app, skip for now)
-- **Scheduled syncs** — run source syncs on a cron schedule rather than manual trigger only (build order item #10 — Celery beat configured but no schedules wired yet) This should be defined at the 
+- ~~**Scheduled syncs** — run source syncs on a cron schedule rather than manual trigger only (build order item #10 — Celery beat configured but no schedules wired yet) This should be defined at the 
   source level. Off by default. The user should specify a schedule (hourly, daily, weekly, monthly, etc.) In the UI above the sync histroy display information on how often teh syn runs (if one is 
-  setup). On the source detail page have a button/form to setup a schedule.
+  setup). On the source detail page have a button/form to setup a schedule.~~ COMPLETE — see `devdocs/featuredocs/scheduled-syncs.md`
 
 ---
 
