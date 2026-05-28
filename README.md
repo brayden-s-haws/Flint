@@ -143,17 +143,17 @@ erDiagram
 
     Account {
         string name
-        FK owner_user
+        int owner_user FK
     }
     Source {
-        FK account
-        FK source_type
+        int account FK
+        int source_type FK
         string name
         text credentials "Fernet-encrypted JSON"
         datetime first_synced_at
     }
     SourceSyncLog {
-        FK source
+        int source FK
         string status "running|success|failed"
         datetime started_at
         datetime completed_at
@@ -161,17 +161,17 @@ erDiagram
         text error_message
     }
     Insight {
-        FK account
+        int account FK
         text text
         string insight_type "table_description|source_overview|use_case_suggestion|ai|manual"
         string status "pending|active|failed|archived|deleted"
         string rating "none|approved|rejected"
         json structured_data
-        FK insight_prompt
+        int insight_prompt FK
     }
     InsightTarget {
-        FK insight
-        FK content_type "GenericFK to Source or Table"
+        int insight FK
+        int content_type FK "GenericFK to Source or Table"
         int object_id
     }
 ```
