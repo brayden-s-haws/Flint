@@ -1,7 +1,7 @@
 # Feature: Source Detail Updates
 
 **Source:** `devdocs/appdocs/post_mvp.md` — build order item **10b** ("Source Detail Updates"), comprising sub-items 10c (async-on-first-view for Source Overview), 10d (two-column layout), and 10e (reorder Source Overview above Schemas & Tables)
-**Status:** Not started
+**Status:** In progress — 10c (async Source Overview) complete and verified; 10e (reorder above Schemas & Tables) landed alongside it; 10d (two-column layout) and the table-detail follow-on still to do
 **Target phase:** Post-MVP Phase 3 (sequenced immediately after Scheduled Syncs, before Agentic Cross-Source Discovery)
 
 ---
@@ -34,38 +34,42 @@ All three changes are presentation/wiring only — no new model fields, no new c
 
 #### Tasks
 
-- [ ] Add `apps/sources/tasks.py::generate_source_overview_task(insight_id: int) -> None` as a new `@shared_task`. Mirror `apps/insights/tasks.py::generate_table_description_task`: load the `Insight` by pk, resolve the `Source` via the linked `InsightTarget` (`content_type=ContentType.objects.get_for_model(Source)`, `.target` GenericForeignKey), call `get_service('anthropic').generate_source_overview(source)` inside a `try/except`. On success set `text` + `status='active'`. On exception flip `status='failed'`, `logger.exception(...)`, do not re-raise. Missing-InsightTarget raises `DoesNotExist` outside the try.
-- [ ] Update `sync_source_task` (`apps/sources/tasks.py:64-73`) to stop running the LLM call inline. Instead, after `sync_log.save()`:
-  - Look up the existing overview `InsightTarget` (replace the current `.exists()` check at line 65 with `.select_related('insight').first()` so we get the Insight back too).
-  - If the existing overview's `status='failed'`, delete the Insight (the `InsightTarget` cascades) — this is the "Sync Now is the retry path" behaviour (see Decision below).
+- [x] Add `apps/insights/tasks.py::generate_source_overview_task(insight_id: int) -> None` as a new `@shared_task`, sitting next to its sibling `generate_table_description_task` (both are LLM insight-generation tasks — keeping them in one module beats splitting by enqueue site, mirroring how `generate_table_description_task` lives in `insights` despite being enqueued from `catalog`). Mirror the sibling: load the `Insight` by pk, resolve the `Source` via the linked `InsightTarget` (`content_type=ContentType.objects.get_for_model(Source)`, `.target` GenericForeignKey), call `get_service('anthropic').generate_source_overview(source)` inside a `try/except`. On success set `text` + `status='active'`. On exception flip `status='failed'`, `logger.exception(...)`, do not re-raise. Missing-InsightTarget raises `DoesNotExist` outside the try. Requires `from apps.sources.models import Source` in `insights/tasks.py` — no circular import (`sources.models` imports neither tasks module; verified by importing both under `django.setup()`).
+- [x] Update `sync_source_task` (`apps/sources/tasks.py`) to stop running the LLM call inline. Instead, after `sync_log.save()`:
+  - Look up the existing overview `InsightTarget` with `.select_related('insight').first()`, scoped by `insight__insight_type='source_overview'` (the old `.exists()` check was unscoped and would have collided with use-case insights on the same source).
+  - If the existing overview's `status='failed'`, delete the Insight (the `InsightTarget` cascades) and reset the local to `None` — this is the "Sync Now is the retry path" behaviour (see Decision below).
   - If no overview now exists, create the placeholder `Insight` (`text=''`, `status='pending'`, `insight_type='source_overview'`) and its matching `InsightTarget`, then enqueue `generate_source_overview_task.delay(insight.pk)`.
-  - The existing `try/except` guarding the inline LLM call is removed — the new task owns failure handling.
-- [ ] Verify worker auto-discovery: `apps.sources.tasks.generate_source_overview_task` appears in the `[tasks]` block on worker startup.
+  - The existing `try/except` guarding the inline LLM call is removed — the new task owns failure handling. `sources/tasks.py` now imports the task via `from apps.insights.tasks import generate_source_overview_task` and no longer imports `get_service`.
+- [x] Verify worker auto-discovery: `apps.insights.tasks.generate_source_overview_task` appears in the `[tasks]` block on worker startup.
 
 #### Views & URLs
 
-- [ ] Reuse the existing `apps.insights.views.insight_status` view (`GET /insights/<insight_id>/status/`) — no new URL route required. The view already branches on `Insight.status` and returns the matching partial regardless of `insight_type`.
-- [ ] **Do not modify `insight_retry`.** Source Overview does not get a Retry button (see Decision below). The hard-coded `generate_table_description_task` dispatch in `insight_retry` stays as-is; it remains scoped to table descriptions only.
-- [ ] **Update `SourceDetailView.get_context_data`** (`apps/sources/views.py:120-159`). Rename the context key from `source_overview` to `source_overview_insight` and assign the full `Insight` object (or `None`) instead of `target.insight.text`. This lets the template read both `.status` and `.text` from one variable. See the "Context key shape change" note below for the two template sites that need to update with this.
+- [x] Reuse the existing `apps.insights.views.insight_status` view (`GET /insights/<insight_id>/status/`) — no new URL route required. The view already branches on `Insight.status` and returns the matching partial regardless of `insight_type`.
+- [x] **Do not modify `insight_retry`.** Source Overview does not get a Retry button (see Decision below). The hard-coded `generate_table_description_task` dispatch in `insight_retry` stays as-is; it remains scoped to table descriptions only. Left untouched.
+- [x] **Update `SourceDetailView.get_context_data`** (`apps/sources/views.py`). Added `context['source_overview_insight']` = the full `Insight` object (or `None`) for the new section's status branching. **Also kept `context['source_overview']`** = `target.insight.text` only when `status == 'active'` — this preserves the existing `_use_cases_section.html` gate contract (it only needs "is there usable overview text?"), so that template did not need to change. Both producers of `source_overview` (this view on page load, `generate_intra_use_case_suggestions` on regenerate) stay in agreement on the key.
 
 #### Templates
 
-- [ ] **Create `templates/sources/_source_overview_section.html`** — the card wrapper for the Source Overview. Replaces the inline block currently at `templates/sources/source_detail.html:84-93`. Inside the card body, branch on the overview insight:
-  - No insight at all (sync hasn't run) → existing "No overview yet." muted paragraph.
-  - Insight exists with `status='pending'` → include `_insight_pending.html` with a `label="Generating overview…"` override (see partial-parameterisation item below).
-  - Insight exists with `status='active'` → include `_insight_content.html` (renders `insight.text` via `render_markdown`).
-  - Insight exists with `status='failed'` → render a small muted-red paragraph: "Overview generation failed. Click Sync Now to try again." **No Retry button** — Sync Now is the retry path (see Decision below). This is a new inline block in the wrapper, not a reuse of `_insight_failed.html` (which carries the Retry button).
-- [ ] **Do not use `_insight_slot.html` as the dispatcher here.** The slot partial includes `_insight_failed.html` for failed rows, which carries the Retry button and CSRF wiring that we explicitly don't want for Source Overview. Branch the three states inline in `_source_overview_section.html` instead.
-- [ ] **Parameterise the spinner label** in `templates/insights/_insight_pending.html`. Change the hard-coded "Generating description…" string to `{{ label|default:"Generating description…" }}` so source-overview callers can pass `label="Generating overview…"`. Verify the existing call site in `templates/catalog/table_detail.html` still reads correctly (no `label` passed → fallback wins).
-- [ ] Confirm `_insight_pending.html` and `_insight_content.html` render acceptably inside the Source Overview card chrome. Their root `<div id="insight-slot-{{ insight.pk }}">` is the polling target; layout-wise they should drop in unchanged.
-- [ ] **Update `templates/sources/_use_cases_section.html`** condition (currently `{% if not source_overview %}` at line 4) to check the new context shape. The "Source must be synced before use cases are generated." muted paragraph should render when `source_overview_insight` is missing OR its `status` is not `active`. (Generating use cases requires the overview text as prompt input — pending/failed overviews can't seed it.)
+- [x] **Create `templates/sources/_source_overview_section.html`** — the card wrapper for the Source Overview. Replaced the inline block at `templates/sources/source_detail.html:84-93`. Card body branches on `source_overview_insight`:
+  - No insight (`{% if not source_overview_insight %}`) → "No overview yet." muted paragraph.
+  - `status == 'pending'` → include `_insight_pending.html` (spinner).
+  - `status == 'active'` → include `_insight_content.html` (`render_markdown` + View link).
+  - `status == 'failed'` → inline muted-red "Overview generation failed. Click Sync Now to try again." **No Retry button.**
+- [x] **Did not use `_insight_slot.html` as the dispatcher.** Branched the four states inline so the failed state stays button-less (the slot dispatcher routes failed → `_insight_failed.html`, which carries the Retry button + CSRF wiring we don't want here).
+- [x] **Spinner label derived from `insight_type`** in `templates/insights/_insight_pending.html` — `{% if insight.insight_type == 'source_overview' %}Generating overview…{% else %}Generating description…{% endif %}`. **Changed from the original `label`-arg plan:** `insight_status` re-renders this partial on every 2s poll with only `{'insight': insight}` and no `label`, so a `label` default would have flipped back to "Generating description…" after the first poll. Deriving from `insight_type` is self-contained and stays correct across polls. Table-description call site unaffected (falls through to the else branch).
+- [x] Confirmed `_insight_pending.html` and `_insight_content.html` render correctly inside the Source Overview card chrome; the `insight-slot-{{ insight.pk }}` polling root swaps cleanly pending → content.
+- [x] **`_use_cases_section.html` left unchanged** — the dual-context-key approach above means its `{% if not source_overview %}` gate works as-is (`source_overview` is now text-only-when-active, exactly the truthiness the gate wants). The original plan to rewrite the gate is moot.
+
+#### Wiring
+
+- [x] **`source_detail.html` updated** — inline overview block removed; `{% include 'sources/_source_overview_section.html' %}` inserted **above** the Schemas & Tables card (this also lands sub-task 10e — Source Overview now precedes Schemas & Tables).
 
 #### Manual verification
 
-- [ ] Fresh source (never synced) → click Sync Now → sync spinner runs as today → on success the page refreshes → Source Overview card shows the polling spinner → ~5–10s later the overview text swaps in without a page reload.
-- [ ] Already-overviewed source → opens with overview rendered immediately, no spinner flicker, no extra polling.
-- [ ] Source overview LLM call fails (raise inside the task for testing) → muted-red "Overview generation failed. Click Sync Now to try again." message renders in the overview card (no Retry button). Click Sync Now → the failed Insight is deleted, a fresh pending one is created, spinner renders, generation succeeds.
-- [ ] Multi-tab idempotency — opening the source detail twice during sync does not enqueue duplicate `generate_source_overview_task` calls (the lookup-and-create guard inside `sync_source_task` is the single point of creation; the detail view never creates an overview insight).
+- [x] Happy path — synced a source with no overview → page refreshed on success → "Generating overview…" spinner appeared → overview markdown swapped in ~5–10s later with no manual refresh; polling stopped on swap.
+- [x] Failed path — forced an exception in the task → "Overview generation failed. Click Sync Now to try again." rendered with no Retry button → Sync Now deleted the failed insight and regenerated successfully.
+- [x] Multi-tab idempotency — opening the source detail twice during sync does not enqueue duplicate `generate_source_overview_task` calls (not yet explicitly tested; the lookup-and-create guard 
+  lives in `sync_source_task`, the detail view never creates an overview insight).
 
 ---
 
@@ -113,3 +117,18 @@ All three changes are presentation/wiring only — no new model fields, no new c
 - **Use case generation rate-limiting is unaffected.** The `use_case_rate_limited` / `use_case_hours_remaining` logic in `SourceDetailView.get_context_data` keys off `Insight.created_at` on use-case insights, not on the source overview. No changes needed there.
 - **Stale `pending` overview rows.** Same risk as table descriptions: if the worker crashes mid-task, the Insight is stuck at `pending` and the page polls forever. The async-table-descriptions featuredoc punts on a beat-task janitor; this feature inherits the same punt — defer until it bites in practice. (Note: for Source Overview specifically, the user can also clear a stuck `pending` row by clicking Sync Now, since the delete-and-recreate guard treats any non-`active` overview as eligible for replacement — though only `failed` is explicitly handled in the checklist above. Decide during the build whether to extend the delete branch to also cover stale `pending` rows older than N minutes, or leave that to the future janitor.)
 - **Tests.** The async-table-descriptions test guidance applies: `CELERY_TASK_ALWAYS_EAGER = True`, mock `get_service('anthropic')`, verify tenancy boundary on `insight_status` for `insight_type='source_overview'` rows. New behaviour to cover: (a) `sync_source_task` deletes a failed overview Insight and creates a fresh pending one; (b) `sync_source_task` does not touch an `active` overview Insight; (c) the use-cases gate hides the generate form when the overview is `pending` or `failed`.
+
+---
+
+## Follow-on — Table Detail: promote Table Description, strip the metadata heading
+
+A sibling polish item on the *table* detail page (`templates/catalog/table_detail.html`), bundled into this branch since it's the same "reorder cards on a detail page" theme. Independent of the Source Detail sub-tasks above — do it after 10c/10d/10e land.
+
+**Goal:** make the table detail page lead with metadata + description, matching the bare info-card style at the top of `source_detail.html`. Today the card order is Metadata → Columns → Statistics → Insights (`table_detail.html:13-96`). After this change it becomes **Metadata (heading removed) → Insights → Columns → Statistics**.
+
+#### Templates
+
+- [ ] **Remove the "Table Metadata" heading** from the first card (`table_detail.html:15`, the `<h2>…Table Metadata</h2>`). Leave the two `<p>` lines (table type, row count) so the card becomes a bare info block — the same treatment as the source-type/last-synced card at the top of `source_detail.html:34-44`, which has no heading.
+- [ ] **Move the Insights card block** (currently `table_detail.html:83-96`) up so it sits **between** the (now heading-less) Metadata card and the Columns card. Final card sequence below the page header: Metadata → Insights → Columns → Statistics. Pure block move — no context, view, or URL changes.
+- [ ] Confirm the async polling still works after the move — the `_insight_slot.html` include and its `insight-slot-{{ insight.pk }}` polling root live inside the Insights card and travel with it; relocating the parent `<div>` doesn't affect HTMX resolution.
+- [ ] Sanity-check the file is well-formed afterward: exactly one `</main>` and one `{% endblock content %}` (an earlier garbled read of this file suggested corruption; the actual file at `feature/source-detail-updates` HEAD is clean — just verify nothing got duplicated during the block move).

@@ -125,7 +125,8 @@ class SourceDetailView(LoginRequiredMixin, TenantQuerysetMixin, DetailView):
         content_type = ContentType.objects.get_for_model(self.object)
         target = InsightTarget.objects.filter(content_type=content_type, object_id=self.object.pk, account=self.request.account, insight__insight_type='source_overview').select_related(
             'insight').first()
-        context['source_overview'] = target.insight.text if target else None
+        context['source_overview'] = target.insight.text if target and target.insight.status == 'active' else None
+        context['source_overview_insight'] = target.insight if target else None
         use_case_targets = InsightTarget.objects.filter(content_type=content_type, object_id=self.object.pk, account=self.request.account, insight__insight_type='use_case_suggestion').select_related('insight').order_by('-insight__created_at')
         context['use_cases'] = [uct.insight for uct in use_case_targets]
         most_recent = use_case_targets.first()

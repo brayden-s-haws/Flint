@@ -11,7 +11,7 @@ from .encryption import decrypt_credentials
 from .models import Source, SourceSyncLog, SourceSchedule
 from apps.catalog.models import Schema, Table, Column, TableStatistics
 from apps.insights.models import Insight, InsightTarget
-from apps.insights.services.provider import get_service
+from apps.insights.tasks import generate_source_overview_task
 
 logger = logging.getLogger(__name__)
 
@@ -62,15 +62,14 @@ def sync_source_task(source_id: int, sync_log_id: int) -> None:
             source.save()
         sync_log.save()
         content_type = ContentType.objects.get_for_model(Source)
-        already_exists = InsightTarget.objects.filter(content_type=content_type, object_id=source.pk, account=source.account).exists()
-        if not already_exists:
-            try:
-                service = get_service('anthropic')
-                text = service.generate_source_overview(source)
-                insight = Insight.objects.create(account=source.account, text=text, insight_type='source_overview', status='active', insight_prompt=None)
-                InsightTarget.objects.create(account=source.account, insight=insight, content_type=content_type, object_id=source.pk)
-            except Exception:
-                logger.exception("Failed to generate source overview for source %s", source.pk)
+        existing = InsightTarget.objects.filter(content_type=content_type, object_id=source.pk, account=source.account, insight__insight_type='source_overview').select_related('insight').first()
+        if existing and existing.insight.status == 'failed':
+            existing.insight.delete()
+            existing = None
+        if existing is None:
+            insight = Insight.objects.create(account=source.account, text='', insight_type='source_overview', status='pending', insight_prompt=None)
+            InsightTarget.objects.create(account=source.account, insight=insight, content_type=content_type, object_id=source.pk)
+            generate_source_overview_task.delay(insight.pk)
     except Exception as e:
         sync_log.status = 'failed'
         sync_log.error_message = str(e)
@@ -95,3 +94,4 @@ def run_scheduled_sync(source_id: int) -> None:
         return
     sync_log = SourceSyncLog.objects.create(account=source.account, status='running', started_at=timezone.now())
     sync_source_task.delay(source.pk, sync_log.pk)
+

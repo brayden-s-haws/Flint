@@ -52,6 +52,7 @@
             </div>
         </div>
     </div>
+    {% include 'sources/_source_overview_section.html' %}
     <div>
         <div class="bg-flint-card rounded-lg border border-flint-border p-6 mb-6 card">
             <h2 class="text-lg font-semibold text-flint-text mb-4">Schemas & Tables</h2>
@@ -79,16 +80,6 @@
                 {% endfor %}
                 </tbody>
             </table>
-        </div>
-    </div>
-    <div>
-        <div class="bg-flint-card rounded-lg border border-flint-border p-6 mb-6 card">
-            <h2 class="text-lg font-semibold text-flint-text mb-4">Source Overview</h2>
-            {% if source_overview %}
-                <div class="text-sm text-flint-text markdown-content">{{ source_overview|render_markdown }}</div>
-            {% else %}
-                <p class="text-sm text-flint-muted">No overview yet.</p>
-            {% endif %}
         </div>
     </div>
     {% include 'sources/_use_cases_section.html' %}
