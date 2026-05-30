@@ -8,5 +8,5 @@
             <circle class="opacity-25" cx="12" cy="12" r="10" />
             <path class="opacity-75" d="M4 12a8 8 0 018-8" />
     </svg>
-    <span>Generating description…</span>
+    <span>{% if insight.insight_type == 'source_overview' %}Generating overview…{% else %}Generating description…{% endif %}</span>
 </div>

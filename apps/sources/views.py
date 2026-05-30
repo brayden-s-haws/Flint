@@ -120,12 +120,14 @@ class SourceDetailView(LoginRequiredMixin, TenantQuerysetMixin, DetailView):
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
         context['sync_logs'] = self.object.sourcesynclog_set.order_by('-started_at')
+        context['sync_log'] = context['sync_logs'].first()
         context['last_synced_at'] = self.object.sourcesynclog_set.filter(status='success').order_by('-completed_at').values_list('completed_at', flat=True).first()
         context['schemas'] = self.object.schema_set.prefetch_related('table_set')
         content_type = ContentType.objects.get_for_model(self.object)
         target = InsightTarget.objects.filter(content_type=content_type, object_id=self.object.pk, account=self.request.account, insight__insight_type='source_overview').select_related(
             'insight').first()
-        context['source_overview'] = target.insight.text if target else None
+        context['source_overview'] = target.insight.text if target and target.insight.status == 'active' else None
+        context['source_overview_insight'] = target.insight if target else None
         use_case_targets = InsightTarget.objects.filter(content_type=content_type, object_id=self.object.pk, account=self.request.account, insight__insight_type='use_case_suggestion').select_related('insight').order_by('-insight__created_at')
         context['use_cases'] = [uct.insight for uct in use_case_targets]
         most_recent = use_case_targets.first()
@@ -183,7 +185,7 @@ def sync_source(request: HttpRequest, pk:int) -> HttpResponse:
 
     if request.headers.get('HX-Request') == 'true':
         sync_logs = source.sourcesynclog_set.order_by('-started_at')
-        return render(request, 'sources/_sync_status.html', {'sync_log': sync_log, 'source': source, 'sync_logs': sync_logs})
+        return render(request, 'sources/_sync_status_response.html', {'sync_log': sync_log, 'source': source, 'sync_logs': sync_logs})
     return redirect('sources:detail', pk=pk)
 
 @login_required
@@ -197,7 +199,7 @@ def sync_status(request: HttpRequest, pk:int) -> HttpResponse:
         response['HX-Refresh'] = 'true'
         return response
     sync_logs = source.sourcesynclog_set.order_by('-started_at')
-    return render(request, 'sources/_sync_status.html', {'sync_log': sync_log, 'source': source, 'sync_logs': sync_logs})
+    return render(request, 'sources/_sync_status_response.html', {'sync_log': sync_log, 'source': source, 'sync_logs': sync_logs})
 
 @login_required
 def schedule_create(request: HttpRequest, pk:int) -> HttpResponse:

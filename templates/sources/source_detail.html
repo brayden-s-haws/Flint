@@ -10,12 +10,16 @@
             <h1 class="text-2xl font-bold text-flint-text">{{ source.name }}</h1>
         </div>
         <div class="flex gap-2">
+            {% if sync_log.status == 'running' %}
+                {% include 'sources/_sync_status.html' %}
+            {% else %}
             <form hx-post="{% url 'sources:sync' source.pk %}"
                 hx-target="this"
                 hx-swap="outerHTML">
                 {% csrf_token %}
                 <button type="submit" class="bg-flint-orange text-white px-4 py-2 rounded-md hover:bg-flint-orange-hover">Sync Now</button>
             </form>
+            {% endif %}
             <form method="post" action="{% url 'sources:test_connection' source.pk %}">
                 {% csrf_token %}
                 <button type="submit" class="border border-flint-border text-flint-muted hover:bg-flint-card px-4 py-2 rounded-md">Test Connection</button>
@@ -43,54 +47,49 @@
             {% endif %}
         </div>
     </div>
-    {% include 'sources/_schedule_section.html' %}
-    <div>
-        <div class="bg-flint-card rounded-lg border border-flint-border p-6 mb-6 card">
-            <h2 class="text-lg font-semibold text-flint-text mb-4">Sync History</h2>
-            <div id="sync-history">
-                {% include 'sources/_sync_history.html' %}
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        <div class="lg:col-span-3">
+            {% include 'sources/_source_overview_section.html' %}
+            <div class="bg-flint-card rounded-lg border border-flint-border p-6 mb-6 card">
+                <h2 class="text-lg font-semibold text-flint-text mb-4">Schemas & Tables</h2>
+                <table class="w-full">
+                    <thead class="text-flint-muted text-left text-sm font-medium pb-3">
+                        <tr>
+                            <th>Schema Name</th>
+                            <th>Tables</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for schema in schemas %}
+                        <tr class="border-t border-flint-border text-sm text-flint-text">
+                            <td class="align-top py-3 pr-4">{{ schema.name }}</td>
+                            <td>
+                                {% for table in schema.table_set.all %}
+                                    <a href="{% url 'catalog:detail' table.pk %}" class="text-flint-orange hover:underline">{{ table.name }}</a><br>
+                                {% endfor %}
+                            </td>
+                        </tr>
+                    {%  empty %}
+                        <tr>
+                            <td colspan="2" class="text-center text-flint-muted">No schemas found. Sync this source to discover schema</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% include 'sources/_use_cases_section.html' %}
+        </div>
+        <div class="lg:col-span-2">
+            {% include 'sources/_schedule_section.html' %}
+            <div class="bg-flint-card rounded-lg border border-flint-border p-6 mb-6 card">
+                <h2 class="text-lg font-semibold text-flint-text mb-4">Sync History</h2>
+                <div class="max-h-96 overflow-y-auto">
+                    <div id="sync-history">
+                        {% include 'sources/_sync_history.html' %}
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-    <div>
-        <div class="bg-flint-card rounded-lg border border-flint-border p-6 mb-6 card">
-            <h2 class="text-lg font-semibold text-flint-text mb-4">Schemas & Tables</h2>
-            <table class="w-full">
-                <thead class="text-flint-muted text-left text-sm font-medium pb-3">
-                    <tr>
-                        <th>Schema Name</th>
-                        <th>Tables</th>
-                    </tr>
-                </thead>
-                <tbody>
-                {% for schema in schemas %}
-                    <tr class="border-t border-flint-border text-sm text-flint-text">
-                        <td class="align-top py-3 pr-4">{{ schema.name }}</td>
-                        <td>
-                            {% for table in schema.table_set.all %}
-                                <a href="{% url 'catalog:detail' table.pk %}" class="text-flint-orange hover:underline">{{ table.name }}</a><br>
-                            {% endfor %}
-                        </td>
-                    </tr>
-                {%  empty %}
-                    <tr>
-                        <td colspan="2" class="text-center text-flint-muted">No schemas found. Sync this source to discover schema</td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-    <div>
-        <div class="bg-flint-card rounded-lg border border-flint-border p-6 mb-6 card">
-            <h2 class="text-lg font-semibold text-flint-text mb-4">Source Overview</h2>
-            {% if source_overview %}
-                <div class="text-sm text-flint-text markdown-content">{{ source_overview|render_markdown }}</div>
-            {% else %}
-                <p class="text-sm text-flint-muted">No overview yet.</p>
-            {% endif %}
-        </div>
-    </div>
-    {% include 'sources/_use_cases_section.html' %}
 </main>
 {% endblock content %}

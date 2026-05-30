@@ -7,18 +7,18 @@
             {% if schedule.is_enabled %}
                 <p class="text-sm text-flint-muted">Next run: {{ next_run|date:"N j, Y, P" }}</p>
             {% endif %}
-            <div class="flex items-center mt-4 gap-2">
-                <details>
-                    <summary class="border border-flint-border-em text-flint-muted hover:bg-flint-card px-4 py-2 rounded-md block [&::-webkit-details-marker]:hidden cursor-pointer ">Change Frequency</summary>
+            <div class="flex flex-col mt-4 gap-2">
+                <details class="w-full">
+                    <summary class="border border-flint-border-em text-flint-muted hover:bg-flint-card px-4 py-2 rounded-md block [&::-webkit-details-marker]:hidden cursor-pointer text-center whitespace-nowrap">Change Frequency</summary>
                     {% include 'sources/_schedule_form.html' %}
                 </details>
-                <form method="post" action="{% url 'sources:schedule_toggle' source.pk %}">
+                <form method="post" action="{% url 'sources:schedule_toggle' source.pk %}" class="w-full">
                     {% csrf_token %}
-                    <button type="submit" class="border border-flint-border-em text-flint-muted hover:bg-flint-card px-4 py-2 rounded-md">{% if schedule.is_enabled %}Pause{% else %}Resume{% endif %}</button>
+                    <button type="submit" class="border border-flint-border-em text-flint-muted hover:bg-flint-card px-4 py-2 rounded-md w-full text-center">{% if schedule.is_enabled %}Pause{% else %}Resume{% endif %}</button>
                 </form>
-                <form method="post" action="{% url 'sources:schedule_delete' source.pk %}">
+                <form method="post" action="{% url 'sources:schedule_delete' source.pk %}" class="w-full">
                     {% csrf_token %}
-                    <button type="submit" onclick="return confirm('Remove this schedule? You can recreate it any time.');" class="border border-red-500 text-red-400 hover:bg-red-900/20 px-4 py-2 rounded-md">Delete Schedule</button>
+                    <button type="submit" onclick="return confirm('Remove this schedule? You can recreate it any time.');" class="border border-red-500 text-red-400 hover:bg-red-900/20 px-4 py-2 rounded-md w-full text-center">Delete Schedule</button>
                 </form>
             </div>
         {% else %}

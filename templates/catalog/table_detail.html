@@ -12,9 +12,22 @@
     </div>
     <div>
         <div class="bg-flint-card rounded-lg border border-flint-border p-6 mb-6">
-            <h2 class="text-lg font-semibold text-flint-text mb-4">Table Metadata</h2>
             <p class="text-sm text-flint-muted">Table type: {{ object.table_type }}</p>
             <p class="text-sm text-flint-muted">Row count: {{ object.row_count|default:"Unknown"|intcomma }}</p>
+        </div>
+    </div>
+    <div>
+        <div class="bg-flint-card rounded-lg border border-flint-border p-6 mb-6">
+            <h2 class="text-lg font-semibold text-flint-text mb-4">Insights</h2>
+            <ul class="mt-4">
+                {% for insight in insights %}
+                    <li class="mb-2">
+                        {% include 'insights/_insight_slot.html' %}
+                    </li>
+                {% empty %}
+                    <li class="text-flint-muted">No insights available.</li>
+                {% endfor %}
+            </ul>
         </div>
     </div>
     <div>
@@ -78,20 +91,6 @@
             {% else %}
                 <p class="text-sm text-flint-muted">No statistics available. Sync source to generate stats.</p>
             {% endif %}
-        </div>
-    </div>
-    <div>
-        <div class="bg-flint-card rounded-lg border border-flint-border p-6 mb-6">
-            <h2 class="text-lg font-semibold text-flint-text mb-4">Insights</h2>
-            <ul class="mt-4">
-                {% for insight in insights %}
-                    <li class="mb-2">
-                        {% include 'insights/_insight_slot.html' %}
-                    </li>
-                {% empty %}
-                    <li class="text-flint-muted">No insights available.</li>
-                {% endfor %}
-            </ul>
         </div>
     </div>
 </main>

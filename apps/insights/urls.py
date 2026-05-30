@@ -9,6 +9,7 @@ urlpatterns = [
     path('', views.InsightListView.as_view(), name='list'),
     path('<int:pk>/', views.InsightDetailView.as_view(), name='detail'),
     path('use-cases/generate/<int:source_id>/', views.generate_intra_use_case_suggestions, name='generate_use_cases'),
+    path('use-cases/status/<int:source_id>/', views.use_cases_status, name='use_cases_status'),
     path('<int:insight_id>/rate/', views.rate_insight, name='rate_insight'),
     path('<int:insight_id>/status/', views.insight_status, name='insight_status'),
     path('<int:insight_id>/retry/', views.insight_retry, name='insight_retry'),

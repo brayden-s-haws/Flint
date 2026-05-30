@@ -1,9 +1,18 @@
-<div id="use-cases-section">
+<div id="use-cases-section"
+    {% if source_overview_insight.status == 'pending' %}
+    hx-get="{% url 'insights:use_cases_status' source.pk %}"
+    hx-trigger="every 2s"
+    hx-swap="outerHTML"
+    {% endif %}>
     <div class="bg-flint-card rounded-lg border border-flint-border p-6 mb-6 card">
         <h2 class="text-lg font-semibold text-flint-text mb-4">Suggested Use Cases</h2>
-        {% if not source_overview %}
-            <p class="text-sm text-flint-muted">Source must be synced before use cases are generated.</p>
-        {% elif source_overview and not use_cases %}
+        {% if not source_overview_insight %}
+            <p class="text-sm text-flint-muted">Sync this source to generate a Source Overview first.</p>
+        {% elif source_overview_insight.status == 'pending' %}
+            <p class="text-sm text-flint-muted">Use cases will be available once the Source Overview finishes generating…</p>
+        {% elif source_overview_insight.status == 'failed' %}
+            <p class="text-sm text-flint-muted">The Source Overview didn't generate, so use cases can't be created yet. Click Sync Now to try again.</p>
+        {% elif not use_cases %}
             <p class="text-sm text-flint-muted mb-4">No suggestions yet, click to generate.</p>
             <form hx-post="{% url 'insights:generate_use_cases' source.pk %}" hx-target="#use-cases-section" hx-swap="outerHTML" hx-disabled-elt="find button" hx-indicator="find .spinner">
                 {% csrf_token %}
@@ -27,9 +36,9 @@
                     </div>
                 {% endfor %}
             </div>
-            <div>
+            <div class="mt-4">
                 {% if use_case_rate_limited %}
-                    <p>(Regenerating uses cases available in {{ use_case_hours_remaining }} hours)</p>
+                    <p class="text-sm text-flint-muted">(Regenerating use cases available in {{ use_case_hours_remaining }} hours)</p>
                 {% else %}
                 <form hx-post="{% url 'insights:generate_use_cases' source.pk %}" hx-target="#use-cases-section" hx-swap="outerHTML" hx-disabled-elt="find button" hx-indicator="find .spinner">
                     {% csrf_token %}

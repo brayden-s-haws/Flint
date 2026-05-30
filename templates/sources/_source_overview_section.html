@@ -1,0 +1,12 @@
+<div class="bg-flint-card rounded-lg border border-flint-border p-6 mb-6 card">
+    <h2 class="text-lg font-semibold text-flint-text mb-4">Source Overview</h2>
+    {% if not source_overview_insight %}
+        <p class="text-sm text-flint-muted">No overview yet.</p>
+    {% elif source_overview_insight.status == 'pending' %}
+        {% include 'insights/_insight_pending.html' with insight=source_overview_insight %}
+    {% elif source_overview_insight.status == 'active' %}
+        {% include 'insights/_insight_content.html' with insight=source_overview_insight %}
+    {% elif source_overview_insight.status == 'failed' %}
+        <p class="text-sm text-red-300">Overview generation failed. Click Sync Now to try again.</p>
+    {% endif %}
+</div>

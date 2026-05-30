@@ -21,11 +21,11 @@ For speculative or longer-horizon ideas, see `devdocs/potential_features.md`.
 8. ~~Batch table description generation — `insights`~~ COMPLETE — scope pivoted from bulk fan-out to async-on-first-view; see `devdocs/featuredocs/async-table-descriptions.md` for the rationale
 9. ~~Draft a README based on what exists so far — `general`~~ COMPLETE
 10. ~~Scheduled syncs — `sources`~~ COMPLETE (Phases 1 & 2) — see `devdocs/featuredocs/scheduled-syncs.md`. Phase 3 automated tests moved to `devdocs/testing.md` under `apps.sources`; will be written in the Phase 6 testing pass (#24).
-10b. Source Detail Updates:
-    10c. Potential bug/feature gap: When a source is synced, the Source Overview is generated but no spinner is displayed in the card and the content only shows if you refresh the page. It should 
-    follow the pattern of other async-on-first-view pages, it should show a spinner and display the content immediately when available. Note: the sync spinner is working as expected
-    10d. move Sync schedule card and sync history into columns on the right of the schemas/table and source overview
-    10e. Swap source overview and schemas and tables cards
+10b. ~~Source Detail Updates~~ COMPLETE — see `devdocs/featuredocs/source-detail-updates.md`. Delivered 10c/10d/10e plus follow-ons: table-detail card reorder, LLM prompt heading removal, and two bug fixes (use-cases gate vs. async overview; sync-status partial leaking the history table into the header).
+    10c. ~~Source Overview async-on-first-view: show a spinner in the card and swap in the content when ready, matching the other async-on-first-view pages.~~ COMPLETE
+    10d. ~~Move Sync Schedule + Sync History into a right-hand column beside Source Overview / Schemas & Tables (3/5 + 2/5 split).~~ COMPLETE
+    10e. ~~Swap Source Overview and Schemas & Tables cards.~~ COMPLETE
+10f. Delete source → cascade-clean its insights — `sources` — deleting a source orphans its insights. Catalog and sync rows `CASCADE` off `Source`, but insights attach via the generic `InsightTarget` FK (content_type + object_id), which has no DB-level cascade, so Source Overview / use-case insights (target the source) and table-description insights (target the source's tables) are left behind. Add a `pre_delete` signal on `Source` (alongside the existing `SourceSchedule` signal in `apps/sources/signals.py`) that deletes the targeted `Insight` rows — which cascade their `InsightTarget`s — before the source and its tables are removed. Found during the 10b work; split to its own branch to keep that one focused.
 11. Agentic cross-source discovery — `insights` (depends on 2+ sources connected) Note: we should add this to the dashboard as one of the main cards next to the Insights card
 12. Demo Mode Phase 2 (product scenario + auto-trigger insights after load)
 
@@ -33,7 +33,10 @@ For speculative or longer-horizon ideas, see `devdocs/potential_features.md`.
 13. PyAirbyte integration — `sources` — adapter that lets us register PyAirbyte sources (300+) via the same `BaseConnector` interface used today, so catalog/insights/agentic discovery work uniformly across native and Airbyte-backed sources
 14. First SaaS connector batch via PyAirbyte — HubSpot, Salesforce, Stripe — `sources` — chosen to match the existing Sales demo scenario (HubSpot) and the most common enterprise CRM/payments use cases. Native connectors only where deep metadata extraction is needed; everything else routes through the PyAirbyte adapter from #13.
 15. Queries app (natural language to SQL) — `queries`
-16. Query client — `queries` — a UI to run queries against a source and view results: the LLM-generated SQL from the queries app, the starter SQL on generated use case suggestions, and ad-hoc queries the user writes themselves. Results are displayed only, never persisted (Flint does not store source data)
+16. Query client — `queries` — a UI to run queries against a source and view results: the LLM-generated SQL from the queries app, the starter SQL on generated use case suggestions, and ad-hoc 
+    queries the user writes themselves. Results are displayed only, never persisted (Flint does not store source data). Two separate implementations:
+    - A "run query" button on the source detail page,
+    - A dedicated query page with a query editor and results viewer for the new queries app for natural language to sql queries
 17. ERD generator/viewer — `catalog` — visual entity-relationship diagrams generated from catalog FK metadata, with optional LLM-inferred relationships and ontology-aware labelling
 18. Ontology app Phase 1 (manual object type definitions) — `ontology`
 19. SaaS connector batch 2 via PyAirbyte — Google Analytics, Intercom, Shopify, Zendesk, Mixpanel, Amplitude, Segment — `sources` — broadens go-to-market coverage; aligns with the Product demo scenario (Intercom) and common e-commerce/support stacks
