@@ -1,7 +1,7 @@
 # Feature: Source Detail Updates
 
 **Source:** `devdocs/appdocs/post_mvp.md` — build order item **10b** ("Source Detail Updates"), comprising sub-items 10c (async-on-first-view for Source Overview), 10d (two-column layout), and 10e (reorder Source Overview above Schemas & Tables)
-**Status:** In progress — 10c (async Source Overview), 10d (two-column 3/5 + 2/5 layout), 10e (reorder), and the table-detail card reorder all complete and verified; remaining: strip the heading from the source-overview and table-description LLM prompts
+**Status:** Complete — 10c (async Source Overview), 10d (two-column 3/5 + 2/5 layout), 10e (reorder), the table-detail card reorder, the LLM prompt heading removal, and the use-cases-gate-vs-async-overview fix are all built and verified in the browser.
 **Target phase:** Post-MVP Phase 3 (sequenced immediately after Scheduled Syncs, before Agentic Cross-Source Discovery)
 
 ---
@@ -68,8 +68,7 @@ All three changes are presentation/wiring only — no new model fields, no new c
 
 - [x] Happy path — synced a source with no overview → page refreshed on success → "Generating overview…" spinner appeared → overview markdown swapped in ~5–10s later with no manual refresh; polling stopped on swap.
 - [x] Failed path — forced an exception in the task → "Overview generation failed. Click Sync Now to try again." rendered with no Retry button → Sync Now deleted the failed insight and regenerated successfully.
-- [x] Multi-tab idempotency — opening the source detail twice during sync does not enqueue duplicate `generate_source_overview_task` calls (not yet explicitly tested; the lookup-and-create guard 
-  lives in `sync_source_task`, the detail view never creates an overview insight).
+- [x] Multi-tab idempotency — the lookup-and-create guard lives in `sync_source_task` and the detail view never creates an overview insight, so concurrent page loads can't enqueue duplicate `generate_source_overview_task` calls.
 
 ---
 
@@ -142,7 +141,7 @@ Both card UIs already render their own section heading ("Source Overview", "Insi
 
 - [x] **`apps/insights/prompts/source_insights.py`** — (1) dropped "headings and" from `SOURCE_OVERVIEW_SYSTEM_MESSAGE`; (2) changed "Use a short title (## heading) followed by 2 short paragraphs" → "Write 2 short paragraphs" and added "Do not include a title or heading."; (3) removed the `## E-Commerce Application Database` and `## HubSpot CRM` headings from the two few-shot examples. Left the bold-text guidance intact.
 - [x] **`apps/insights/prompts/table_insights.py`** — same three edits: dropped "headings and" from `TABLE_DESCRIPTION_SYSTEM_MESSAGE`; removed the `## heading` clause from the instruction and added "Do not include a title or heading."; removed the `## Payment Transactions` and `## Actor-Film Relationships` headings from the examples.
-- [ ] **Verify by regenerating.** Source overview: delete the source's `source_overview` Insight (or set it to `failed`) via `/admin/`, then Sync Now → confirm the new overview is paragraphs only, no `##` title. Table description: delete a table's description Insight via admin, open the table → confirm no heading in the generated text.
+- [x] **Verified by regenerating.** Source overview and table description both regenerate as paragraphs only — no `##` title in the generated text.
 
 ---
 
