@@ -155,3 +155,16 @@ Fixed with the same poll-and-swap pattern used elsewhere in this feature:
 - [x] **`use_cases_status` view + `insights:use_cases_status` URL** — re-renders `_use_cases_section.html` for a source; tenant-scoped via `get_object_or_404(account=request.account)`. This is the poll target.
 - [x] **`_use_cases_section.html` rewritten** — gate now branches on `source_overview_insight.status` into four states: no overview → "Sync this source…"; `pending` → "Use cases will be available once the Source Overview finishes generating…"; `failed` → "…Click Sync Now to try again."; `active` → the normal Generate / cards UI. The wrapper `#use-cases-section` carries `hx-get` polling **only while `pending`**, so it self-heals when the overview lands and stops polling once the returned section is no longer pending. Also fixed a pre-existing stray `</main>` and div-nesting in this partial.
 - [x] `manage.py check` passes; verified in the browser — fresh sync shows the pending message and auto-swaps to the Generate button when the overview completes, no manual refresh.
+
+---
+
+## Follow-on — Sync-status partial leaked the history table into the header (bug fix)
+
+**Bug found while testing schedules.** After clicking **Set Schedule** (which kicks off a first sync and redirects), the sync-history table briefly rendered in the page header next to the title/buttons, then snapped back to normal once the sync finished. Root cause: the header renders `_sync_status.html` while a sync is running (`source_detail.html:13-14`), but that partial was doing double duty — it carried both the `#sync-status` spinner *and* the `#sync-history` `hx-swap-oob` block (the full history table). The OOB block is only meaningful as part of an HTMX *response* (to swap the existing right-column history); statically `{% include %}`-ing it into the header dumped the whole table there and created a duplicate `id="sync-history"`. When the sync completed, the poller's `HX-Refresh` reloaded the page and the header reverted to the Sync Now button — hence the transient "jump."
+
+Fixed by splitting the spinner (page-includable) from the OOB wrapper (response-only):
+
+- [x] **`_sync_status.html`** trimmed to just the `#sync-status` spinner/error div — safe to `{% include %}` in the header.
+- [x] **`_sync_status_response.html`** (new) = `{% include '_sync_status.html' %}` + the `#sync-history` `hx-swap-oob` block. This is what the endpoints return so the right-column history still updates live during polling.
+- [x] **`sync_source` and `sync_status` views** now render `_sync_status_response.html` instead of `_sync_status.html`. The header include stays on the spinner-only `_sync_status.html`.
+- [x] `manage.py check` passes; verified in the browser — Set Schedule no longer shows the history table in the header, and the running-sync spinner + live history updates still work.

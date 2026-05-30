@@ -185,7 +185,7 @@ def sync_source(request: HttpRequest, pk:int) -> HttpResponse:
 
     if request.headers.get('HX-Request') == 'true':
         sync_logs = source.sourcesynclog_set.order_by('-started_at')
-        return render(request, 'sources/_sync_status.html', {'sync_log': sync_log, 'source': source, 'sync_logs': sync_logs})
+        return render(request, 'sources/_sync_status_response.html', {'sync_log': sync_log, 'source': source, 'sync_logs': sync_logs})
     return redirect('sources:detail', pk=pk)
 
 @login_required
@@ -199,7 +199,7 @@ def sync_status(request: HttpRequest, pk:int) -> HttpResponse:
         response['HX-Refresh'] = 'true'
         return response
     sync_logs = source.sourcesynclog_set.order_by('-started_at')
-    return render(request, 'sources/_sync_status.html', {'sync_log': sync_log, 'source': source, 'sync_logs': sync_logs})
+    return render(request, 'sources/_sync_status_response.html', {'sync_log': sync_log, 'source': source, 'sync_logs': sync_logs})
 
 @login_required
 def schedule_create(request: HttpRequest, pk:int) -> HttpResponse:
