@@ -74,6 +74,46 @@ class InsightDetailView(TenantQuerysetMixin, LoginRequiredMixin, DetailView):
             context['target_url'] = None
         return context
 
+def build_use_cases_context(source: Source) -> dict[str, Any]:
+    source_ct = ContentType.objects.get_for_model(Source)
+    overview_target = InsightTarget.objects.filter(
+        content_type=source_ct, object_id=source.pk, account=source.account,
+        insight__insight_type='source_overview'
+    ).select_related('insight').first()
+    overview_insight = overview_target.insight if overview_target else None
+    source_overview = overview_insight.text if overview_insight and overview_insight.status == 'active' else None
+
+    use_case_targets = InsightTarget.objects.filter(
+        content_type=source_ct, object_id=source.pk, account=source.account,
+        insight__insight_type='use_case_suggestion'
+    ).select_related('insight').order_by('-insight__created_at')
+    use_cases = [uct.insight for uct in use_case_targets]
+
+    rate_limited = False
+    hours_remaining = 0
+    most_recent = use_case_targets.first()
+    if most_recent:
+        age = timezone.now() - most_recent.insight.created_at
+        if age < timedelta(hours=24):
+            rate_limited = True
+            hours_remaining = 24 - int(age.total_seconds() // 3600)
+
+    return {
+        'source': source,
+        'source_overview': source_overview,
+        'source_overview_insight': overview_insight,
+        'use_cases': use_cases,
+        'use_case_rate_limited': rate_limited,
+        'use_case_hours_remaining': hours_remaining,
+    }
+
+
+@login_required
+def use_cases_status(request, source_id: int) -> HttpResponse:
+    source = get_object_or_404(Source, pk=source_id, account=request.account)
+    return render(request, 'sources/_use_cases_section.html', build_use_cases_context(source))
+
+
 @login_required
 @require_POST
 def generate_intra_use_case_suggestions(request, source_id: int) -> HttpResponse:
@@ -114,28 +154,7 @@ def generate_intra_use_case_suggestions(request, source_id: int) -> HttpResponse
         InsightTarget.objects.create(account=source.account, insight=insight,
             content_type=source_ct, object_id=source.pk)
 
-    overview_target = InsightTarget.objects.filter(
-        content_type=source_ct, object_id=source.pk,
-        account=source.account, insight__insight_type='source_overview'
-    ).select_related('insight').first()
-    source_overview = overview_target.insight.text if overview_target else None
-
-    use_case_targets = InsightTarget.objects.filter(
-        content_type=source_ct, object_id=source.pk,
-        account=source.account, insight__insight_type='use_case_suggestion'
-    ).select_related('insight').order_by('-insight__created_at')
-    use_cases = [uct.insight for uct in use_case_targets]
-
-
-    context = {
-        'source': source,
-        'source_overview': source_overview,
-        'use_cases': use_cases,
-        'use_case_rate_limited': True,
-        'use_case_hours_remaining': 24,
-    }
-
-    return render(request, 'sources/_use_cases_section.html', context)
+    return render(request, 'sources/_use_cases_section.html', build_use_cases_context(source))
 
 @login_required
 @require_POST

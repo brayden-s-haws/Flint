@@ -1,7 +1,7 @@
 # Feature: Source Detail Updates
 
 **Source:** `devdocs/appdocs/post_mvp.md` — build order item **10b** ("Source Detail Updates"), comprising sub-items 10c (async-on-first-view for Source Overview), 10d (two-column layout), and 10e (reorder Source Overview above Schemas & Tables)
-**Status:** In progress — 10c (async Source Overview) complete and verified; 10e (reorder above Schemas & Tables) landed alongside it; 10d (two-column layout) and the table-detail follow-on still to do
+**Status:** In progress — 10c (async Source Overview), 10d (two-column 3/5 + 2/5 layout), 10e (reorder), and the table-detail card reorder all complete and verified; remaining: strip the heading from the source-overview and table-description LLM prompts
 **Target phase:** Post-MVP Phase 3 (sequenced immediately after Scheduled Syncs, before Agentic Cross-Source Discovery)
 
 ---
@@ -11,7 +11,7 @@
 Three related polish items on `sources/source_detail.html`:
 
 1. **10c — Async-on-first-view for Source Overview.** Today the Source Overview is generated inline at the tail of `sync_source_task` (`apps/sources/tasks.py:64-73`). The sync-status poller flips to `HX-Refresh` as soon as `sync_log.status='success'` (saved at line 63) — *before* the LLM call at line 69 has finished. The user refreshes to "No overview yet." and must reload the page manually a few seconds later to see the generated text. This sub-task converts source-overview generation to the same async-on-first-view pattern that already works for table descriptions: create a `pending` Insight at enqueue time, render a spinner that polls a status endpoint, swap to content when the worker completes. The sync spinner stays unchanged.
-2. **10d — Two-column layout.** Move the Sync Schedule card and the Sync History card into a right-hand sidebar column, leaving Source Overview, Schemas & Tables, and Suggested Use Cases stacked in the wider left column. The page header and the source-type info banner stay full-width above the columns.
+2. **10d — Two-column layout.** Put four cards in a two-column grid: Source Overview and Schemas & Tables in the wider left column, Sync Schedule and Sync History in the right-hand sidebar. Suggested Use Cases sits full-width *below* the grid (it benefits from the room — the cards are wide). The page header and the source-type info banner stay full-width above the columns.
 3. **10e — Reorder.** Within the left column, Source Overview appears above Schemas & Tables (today the order is reversed).
 
 All three changes are presentation/wiring only — no new model fields, no new connectors, no LLM prompt changes.
@@ -77,26 +77,28 @@ All three changes are presentation/wiring only — no new model fields, no new c
 
 #### Templates
 
-- [ ] **Restructure `templates/sources/source_detail.html`** below the existing header / action buttons / demo banner / source-type info block. Replace the current single-column stack of cards (lines 46–94) with a two-column grid:
-  - Outer wrapper: `<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">` (mobile collapses to single column; desktop splits 2/3 + 1/3).
-  - **Left column** (`<div class="lg:col-span-2 space-y-6">`):
-    1. Source Overview card (`{% include 'sources/_source_overview_section.html' %}`) — order set by 10e
-    2. Schemas & Tables card (existing block from current lines 55–83, extracted unchanged)
+- [x] **Restructured `templates/sources/source_detail.html`** below the header / action buttons / demo banner / source-type info block into a two-column grid. **Final layout differs from the earlier full-width-Use-Cases plan** — see the layout note below.
+  - Outer grid wrapper: `<div class="grid grid-cols-1 lg:grid-cols-5 gap-6">` (mobile collapses to single column; desktop splits **3/5 + 2/5**).
+  - **Left column** (`<div class="lg:col-span-3">`):
+    1. Source Overview (`{% include 'sources/_source_overview_section.html' %}`) — order set by 10e
+    2. Schemas & Tables card (inline, unchanged)
     3. Suggested Use Cases (`{% include 'sources/_use_cases_section.html' %}`)
-  - **Right column** (`<div class="space-y-6">`):
+  - **Right column** (`<div class="lg:col-span-2">`):
     1. Sync Schedule (`{% include 'sources/_schedule_section.html' %}`)
-    2. Sync History card (existing block from current lines 47–54, extracted into its own partial or kept inline — see next item)
-- [ ] **Extract Sync History card to `templates/sources/_sync_history_section.html`** (optional but recommended for parity with how Schedule and Use Cases are organised). The new partial wraps the existing `{% include 'sources/_sync_history.html' %}` in the card chrome (heading + border + padding) that today lives inline at `source_detail.html:47-54`. Note: do not change `templates/sources/_sync_history.html` itself — that partial is targeted by `hx-swap-oob="true"` from `_sync_status.html:19-21` and must keep its `id="sync-history"` root unchanged.
-- [ ] **Extract Schemas & Tables card to `templates/sources/_schemas_section.html`** (also optional, same parity reasoning). Pure template move — no context changes.
-- [ ] Verify the OOB swap in `_sync_status.html:19-21` (`<div id="sync-history" hx-swap-oob="true">`) still finds its target after the layout change — the `id="sync-history"` lives inside `_sync_history.html`, which is included inside whatever sidebar slot holds it. As long as `id="sync-history"` is somewhere on the page when the OOB swap fires, HTMX resolves it regardless of column placement.
-- [ ] Responsive check at `sm`, `md`, `lg` breakpoints — single-column stack on mobile (sidebar drops below main content), two-column on `lg:` and above.
+    2. Sync History card (inline, unchanged — keeps its `id="sync-history"` root)
+  - **No `space-y-6` on the columns** — each card already carries `mb-6`, so adding `space-y-6` doubled the gap. Spacing is left to the cards' own `mb-6`.
+- [x] **Use Cases moved into the left column, not a full-width row.** The original plan put Use Cases full-width below the grid. In practice the Sync History card makes the right column tall, so a full-width row under a tall grid left the page lopsided. Stacking Use Cases in the left column (under Schemas & Tables) balances the two columns' heights. The grid now holds all content; there is no full-width row.
+- [x] **Sync History and Schemas & Tables left inline** — the optional extraction into `_sync_history_section.html` / `_schemas_section.html` was skipped to minimise churn. `_sync_history.html` is unchanged, so the `hx-swap-oob="true"` target `id="sync-history"` (from `_sync_status.html`) still resolves regardless of column placement.
+- [x] **Schedule card buttons fixed for the narrow sidebar.** In `_schedule_section.html` the three actions (Change Frequency / Pause-Resume / Delete Schedule) were `flex items-center gap-2`, which squeezed them in the 2/5 column so the labels wrapped to uneven heights. Changed to `flex flex-col gap-2` with each control `w-full text-center` (+ `whitespace-nowrap` on the summary) → three equal-width stacked buttons.
+- [x] Responsive check — single-column stack on mobile (sidebar drops below the left column), 3/5 + 2/5 grid on `lg:` and above.
+- [x] **Sync History height capped.** Wrapped the `#sync-history` list in a `<div class="max-h-96 overflow-y-auto">` scroll container so a long sync history can't stretch the right column taller than the left. The wrapper sits *outside* `#sync-history`, so the `hx-swap-oob="true"` swap (which replaces `#sync-history` itself) leaves the scroll box intact — no change needed in `_sync_status.html`.
 
 ---
 
 ### Sub-task 10e — Reorder Source Overview above Schemas & Tables
 
-- [ ] Within the left column built in 10d, the Source Overview card is the first child and Schemas & Tables is the second. (This is already specified in the 10d checklist above; calling it out as a discrete sub-task to match the post_mvp numbering.)
-- [ ] No view or context changes required.
+- [x] Source Overview is the first card in the left column, Schemas & Tables second. Landed alongside the 10c wiring (the `_source_overview_section.html` include was placed above the Schemas block).
+- [x] No view or context changes required.
 
 ---
 
@@ -106,7 +108,8 @@ All three changes are presentation/wiring only — no new model fields, no new c
 - **Sync Now becomes the retry path for a failed overview.** Concretely: when `sync_source_task` runs and finds an existing overview Insight in `status='failed'`, it deletes that Insight (the `InsightTarget` cascades) before creating a fresh `pending` one and enqueuing the task. This means a failed overview self-heals on the next user-initiated sync without any retry UI.
 - **Source-overview generation moves out of `sync_source_task`.** Keeping it inline means the sync-status `HX-Refresh` would have to wait for the LLM call before flipping to success, which defeats the point of separating sync from LLM work. A separate task is cheaper, isolates failure modes (sync can succeed even if the LLM is down), and lets the spinner shape match table descriptions.
 - **No new model fields.** `Insight.status='pending'` was added precisely so this kind of slot can render before the LLM call returns. The Source-Overview context never needed a model change; the previous design just hid the gap by running everything inside one task.
-- **Two-column layout uses Tailwind's responsive grid, not custom CSS.** `grid grid-cols-1 lg:grid-cols-3` + `lg:col-span-2` handles desktop / mobile with zero JS and zero stylesheet additions. Consistent with the existing card-grid patterns used elsewhere in the app.
+- **Two-column layout uses Tailwind's responsive grid, not custom CSS.** `grid grid-cols-1 lg:grid-cols-5` + `lg:col-span-3` / `lg:col-span-2` handles desktop / mobile (3/5 + 2/5 split) with zero JS and zero stylesheet additions. Consistent with the existing card-grid patterns used elsewhere in the app.
+- **Use Cases in the left column, not full-width.** Originally planned as a full-width row below the grid; changed because the tall Sync History sidebar made a full-width row look unbalanced. Keeping Use Cases in the left column evens the two columns' heights and keeps all content inside one grid.
 - **Sync History stays in the sidebar despite being OOB-swap-targeted.** HTMX resolves `hx-swap-oob="true"` by `id` regardless of DOM position; the column move is safe as long as the `id="sync-history"` div is on the page when the swap fires.
 
 ---
@@ -128,7 +131,28 @@ A sibling polish item on the *table* detail page (`templates/catalog/table_detai
 
 #### Templates
 
-- [ ] **Remove the "Table Metadata" heading** from the first card (`table_detail.html:15`, the `<h2>…Table Metadata</h2>`). Leave the two `<p>` lines (table type, row count) so the card becomes a bare info block — the same treatment as the source-type/last-synced card at the top of `source_detail.html:34-44`, which has no heading.
-- [ ] **Move the Insights card block** (currently `table_detail.html:83-96`) up so it sits **between** the (now heading-less) Metadata card and the Columns card. Final card sequence below the page header: Metadata → Insights → Columns → Statistics. Pure block move — no context, view, or URL changes.
-- [ ] Confirm the async polling still works after the move — the `_insight_slot.html` include and its `insight-slot-{{ insight.pk }}` polling root live inside the Insights card and travel with it; relocating the parent `<div>` doesn't affect HTMX resolution.
-- [ ] Sanity-check the file is well-formed afterward: exactly one `</main>` and one `{% endblock content %}` (an earlier garbled read of this file suggested corruption; the actual file at `feature/source-detail-updates` HEAD is clean — just verify nothing got duplicated during the block move).
+- [x] **Removed the "Table Metadata" heading** from the first card. The two `<p>` lines (table type, row count) remain — the card is now a bare info block matching the source-type card at the top of `source_detail.html`.
+- [x] **Moved the Insights card block** up to sit between the heading-less Metadata card and the Columns card. Final sequence: Metadata → Insights → Columns → Statistics. Pure block move; no context/view/URL changes.
+- [x] Confirmed async polling still works after the move — the `_insight_slot.html` include and its polling root travelled with the block; verified in the browser.
+- [x] File is well-formed — single `</main>` and `{% endblock content %}`, no duplication.
+
+## Follow-on — Strip the heading from the LLM prompts
+
+Both card UIs already render their own section heading ("Source Overview", "Insights"), so the `## Title` the LLM emitted inside the generated text was redundant. Removed the heading from both prompts. **The few-shot examples mattered most** — deleting only the instruction line leaves the model copying the `##` titles in the examples, so all three heading sources had to go in each file.
+
+- [x] **`apps/insights/prompts/source_insights.py`** — (1) dropped "headings and" from `SOURCE_OVERVIEW_SYSTEM_MESSAGE`; (2) changed "Use a short title (## heading) followed by 2 short paragraphs" → "Write 2 short paragraphs" and added "Do not include a title or heading."; (3) removed the `## E-Commerce Application Database` and `## HubSpot CRM` headings from the two few-shot examples. Left the bold-text guidance intact.
+- [x] **`apps/insights/prompts/table_insights.py`** — same three edits: dropped "headings and" from `TABLE_DESCRIPTION_SYSTEM_MESSAGE`; removed the `## heading` clause from the instruction and added "Do not include a title or heading."; removed the `## Payment Transactions` and `## Actor-Film Relationships` headings from the examples.
+- [ ] **Verify by regenerating.** Source overview: delete the source's `source_overview` Insight (or set it to `failed`) via `/admin/`, then Sync Now → confirm the new overview is paragraphs only, no `##` title. Table description: delete a table's description Insight via admin, open the table → confirm no heading in the generated text.
+
+---
+
+## Follow-on — Use Cases gate vs. async overview (bug fix)
+
+**Bug found after 10c shipped.** On a freshly synced source, the Suggested Use Cases card showed "Source must be synced before use cases are generated." even though the sync had just run. Root cause: use-case generation needs the overview *text* as prompt input, so the gate keyed off `source_overview` (set only when the overview is `active`). With 10c the overview now generates **asynchronously**, so right after sync it's `pending` and `source_overview` is empty → the gate couldn't distinguish "never synced" from "overview still generating," and it never updated once the overview finished (the card was rendered once at page load).
+
+Fixed with the same poll-and-swap pattern used elsewhere in this feature:
+
+- [x] **`build_use_cases_context(source)` helper** added in `apps/insights/views.py` — single source of truth for the card's data (`source_overview`, `source_overview_insight`, `use_cases`, rate-limit fields). Both the new status endpoint and `generate_intra_use_case_suggestions` use it; the latter's bespoke context block (which omitted `source_overview_insight`) was replaced — without that, the post-generate re-render would have shown "sync first" again.
+- [x] **`use_cases_status` view + `insights:use_cases_status` URL** — re-renders `_use_cases_section.html` for a source; tenant-scoped via `get_object_or_404(account=request.account)`. This is the poll target.
+- [x] **`_use_cases_section.html` rewritten** — gate now branches on `source_overview_insight.status` into four states: no overview → "Sync this source…"; `pending` → "Use cases will be available once the Source Overview finishes generating…"; `failed` → "…Click Sync Now to try again."; `active` → the normal Generate / cards UI. The wrapper `#use-cases-section` carries `hx-get` polling **only while `pending`**, so it self-heals when the overview lands and stops polling once the returned section is no longer pending. Also fixed a pre-existing stray `</main>` and div-nesting in this partial.
+- [x] `manage.py check` passes; verified in the browser — fresh sync shows the pending message and auto-swaps to the Generate button when the overview completes, no manual refresh.

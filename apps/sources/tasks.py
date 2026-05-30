@@ -92,6 +92,6 @@ def run_scheduled_sync(source_id: int) -> None:
     if not schedule.is_enabled:
         logger.warning("Source schedule is disabled for source %s ", source_id)
         return
-    sync_log = SourceSyncLog.objects.create(account=source.account, status='running', started_at=timezone.now())
+    sync_log = SourceSyncLog.objects.create(source=source, account=source.account, status='running', started_at=timezone.now())
     sync_source_task.delay(source.pk, sync_log.pk)
 
