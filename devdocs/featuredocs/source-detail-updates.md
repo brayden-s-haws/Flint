@@ -1,7 +1,7 @@
 # Feature: Source Detail Updates
 
 **Source:** `devdocs/appdocs/post_mvp.md` — build order item **10b** ("Source Detail Updates"), comprising sub-items 10c (async-on-first-view for Source Overview), 10d (two-column layout), and 10e (reorder Source Overview above Schemas & Tables)
-**Status:** Complete — 10c (async Source Overview), 10d (two-column 3/5 + 2/5 layout), 10e (reorder), the table-detail card reorder, the LLM prompt heading removal, and the use-cases-gate-vs-async-overview fix are all built and verified in the browser.
+**Status:** Complete — 10c (async Source Overview), 10d (two-column 3/5 + 2/5 layout), and 10e (reorder), plus follow-ons: table-detail card reorder, LLM prompt heading removal, and two bug fixes (use-cases gate vs. async overview; sync-status partial leaking the history table into the header). All built and verified in the browser. The separate "deleting a source orphans its insights" cleanup was split to its own branch — tracked as item 10f in `devdocs/appdocs/post_mvp.md`.
 **Target phase:** Post-MVP Phase 3 (sequenced immediately after Scheduled Syncs, before Agentic Cross-Source Discovery)
 
 ---
