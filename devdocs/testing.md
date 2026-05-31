@@ -54,6 +54,17 @@ _(fill in once sources views are built)_
 - **Integration:** `schedule_create` view enqueues an immediate sync when `created=True` (first-time setup) AND when `was_paused=True` (resume from paused). Pure frequency changes on an already-enabled schedule do NOT trigger an immediate sync.
 - **Integration:** `SourceDetailView.get_context_data` populates `schedule`, `next_run`, `frequency_display`, and `schedule_form` correctly for both empty and configured states. `next_run` is timezone-aware; `frequency_display` falls back to `schedule.get_frequency_display()` when `cron_descriptor` raises.
 
+**Source delete — insight cleanup** (see `devdocs/featuredocs/source-delete-insight-cleanup.md`)
+
+The `cleanup_insights_on_source_delete` `pre_delete` signal on `Source` hard-deletes insights orphaned by the delete (catalog/sync rows cascade at the DB level, but insights attach via the generic `InsightTarget` FK which has no cascade).
+
+- **Unit:** Deleting a source removes its `source_overview` insight (targeted at the source via `content_type=Source, object_id=source.pk`).
+- **Unit:** Deleting a source removes its `use_case_suggestion` insights (targeted at the source).
+- **Unit:** Deleting a source removes the `table_description` insights for every table under that source (targeted at the tables via `content_type=Table`).
+- **Unit:** No orphaned `InsightTarget` rows remain after the source is deleted (cascade off the deleted `Insight` rows).
+- **Integration:** Tenancy boundary — deleting account A's source does not delete account B's insights, even when a stale `object_id` collides. The signal scopes by `account=instance.account`.
+- **Unit:** Insights belonging to a *different* source (same account) are left intact.
+
 ---
 
 ## apps.catalog
