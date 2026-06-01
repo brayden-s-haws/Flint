@@ -38,7 +38,7 @@ class SourceListView(LoginRequiredMixin, TenantQuerysetMixin, ListView):
     def get_queryset(self) -> QuerySet[Source]:
         q = self.request.GET.get('q')
         source_type = self.request.GET.get('type')
-        qs = super().get_queryset().annotate(last_synced_at=Max('sourcesynclog__completed_at'))
+        qs = super().get_queryset().select_related('schedule').annotate(last_synced_at=Max('sourcesynclog__completed_at'))
         if q:
             qs = qs.filter(Q(name__icontains=q) | Q(source_type__name__icontains=q))
         if source_type:

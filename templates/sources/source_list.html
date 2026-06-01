@@ -32,11 +32,19 @@
             {% for source in sources %}
                 <div class="bg-flint-card rounded-lg border border-flint-border p-6 mb-4">
                     <h2 class="text-xl font-semibold text-flint-text"><a href="{% url 'sources:detail' source.pk %}">{{ source.name }}</a></h2>
-                    <p class="text-sm text-flint-muted">{{ source.source_type }}</p>
+                    <p class="text-sm text-flint-muted">Type: {{ source.source_type }}</p>
                     {% if source.last_synced_at %}
-                    <p class="text-sm text-flint-muted">Last synced: {{ source.last_synced_at|date:"N j, Y" }}</p>
+                    <p class="text-sm text-flint-muted">Last Synced: {{ source.last_synced_at|date:"N j, Y" }}</p>
                     {% else %}
-                    <p class="text-sm text-flint-muted">Last synced: Never synced</p>
+                    <p class="text-sm text-flint-muted">Last Synced: Never synced</p>
+                    {% endif %}
+                    {% if source.schedule %}
+                        <p class="text-sm text-flint-muted">
+                            Sync Schedule: {{ source.schedule.get_frequency_display }}
+                            {% if not source.schedule.is_enabled %}
+                                <span class="text-flint-muted">(paused)</span>
+                            {% endif %}
+                        </p>
                     {% endif %}
                 </div>
             {% endfor %}
