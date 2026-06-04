@@ -41,9 +41,9 @@ A multi-step deterministic pipeline that proactively inspects all of an account'
 End-to-end pipeline for one user-selected pair. No Step 2 scoring, no scheduling, no embeddings. Goal: validate prompt quality (Steps 3, 4, 6) and the review workflow (Step 7).
 
 #### Models
-- [ ] Extend `Insight.insight_type` choices in `apps/insights/models.py` with `('cross_source_agent', 'Cross-Source Agent')`. Migration generated + applied.
-- [ ] Extend `Insight.status` choices with `('pending_review', 'Pending Review')` and `('dismissed', 'Dismissed')` — agent insights land in `pending_review` and become `active` on accept, `dismissed` on dismiss. Migration generated + applied.
-- [ ] No new `structured_data` shape change needed — store `{title, description, business_value, join_strategy, starter_sql, ...}` per the spec's Step 6 JSON. Confirm the render template reads from `structured_data`, not `text`.
+- [x] Extend `Insight.insight_type` choices in `apps/insights/models.py` with `('cross_source_use_case', 'Cross Source Use Case')`. Migration generated + applied. *(Named `cross_source_use_case` — the cross-source twin of intra-source `use_case_suggestion` — not the spec's prose `cross_source_agent`. This featuredoc is authoritative for the literal string.)*
+- [x] Extend `Insight.status` choices with `('pending_review', 'Pending Review')` and `('dismissed', 'Dismissed')` — agent insights land in `pending_review` and become `active` on accept, `dismissed` on dismiss. Migration generated + applied.
+- [ ] No new `structured_data` shape change needed — store `{title, description, business_value, join_strategy, starter_sql, ...}` per the spec's Step 6 JSON. Confirm the render template reads from `structured_data`, not `text`. *(Deferred to the storage + template steps — nothing to do at the model layer.)*
 
 #### Pipeline (services)
 - [ ] `apps/insights/prompts/cross_source_discovery.py` — new prompt module mirroring `intra_source_use_cases.py`. Contains:
@@ -55,7 +55,7 @@ End-to-end pipeline for one user-selected pair. No Step 2 scoring, no scheduling
 - [ ] `apps/insights/pipeline.py` (or `apps/insights/agent/pipeline.py`) — orchestration function `run_discovery_for_pair(source_a, source_b, run) -> int` that calls Step 3 → Step 4 → (Phase 1: no Step 5 dedup) → Step 6 → Step 7 and returns insights-created count. Plain Python; LLM calls via `get_service(...)`.
 
 #### Storage (Step 7)
-- [ ] For each surviving hypothesis create one `Insight(insight_type='cross_source_agent', status='pending_review', structured_data=...)` and **two** `InsightTarget` rows (one per source, GenericFK to `Source`), all scoped to `source.account`.
+- [ ] For each surviving hypothesis create one `Insight(insight_type='cross_source_use_case', status='pending_review', structured_data=...)` and **two** `InsightTarget` rows (one per source, GenericFK to `Source`), all scoped to `source.account`.
 
 #### Views & URLs (`apps/insights/`)
 - [ ] `run_cross_source_discovery` — `POST /insights/discovery/run/` — accepts two `source_id`s (the explicitly chosen pair), validates both belong to `request.account` and are synced, enqueues the pipeline Celery task. Rate-limited to once / 24h (mirror the `generate_intra_use_case_suggestions` guard). Returns the review-section partial.
@@ -134,7 +134,7 @@ End-to-end pipeline for one user-selected pair. No Step 2 scoring, no scheduling
 ## Key Design Decisions
 
 - **Deterministic pipeline, not an agent loop.** Control flow is Python; LLM calls happen at named steps (3, 4, 6). This is an explicit spec decision for debuggability and cost control. Don't refactor into a free-form ReAct agent.
-- **Reuse `Insight` + `InsightTarget`, not new insight tables.** Cross-source insights are `insight_type='cross_source_agent'` with two `InsightTarget` rows (GenericFK to both `Source`s) and the structured payload in `structured_data` — exactly the pattern intra-source use cases established. Starter SQL lives in `structured_data`, never parsed out of prose.
+- **Reuse `Insight` + `InsightTarget`, not new insight tables.** Cross-source insights are `insight_type='cross_source_use_case'` with two `InsightTarget` rows (GenericFK to both `Source`s) and the structured payload in `structured_data` — exactly the pattern intra-source use cases established. Starter SQL lives in `structured_data`, never parsed out of prose.
 - **`pending_review` status + review queue.** Agent insights are surfaced for accept/dismiss before becoming `active`, at least initially — the agent is proactive and unprompted, so a human gate protects insight-list quality.
 - **Pre-filter aggressively before spending tokens (Step 2).** Pair scoring is deterministic and LLM-free; only high-scoring pairs reach Step 3. Cap LLM calls per run and use cheaper models for discovery/hypothesis, the better model only for the final insight.
 - **`CrossSourceRelationship` is a cache.** Discovered joins persist and are reused across runs; Step 3 only re-runs for pairs with new catalog rows. This is the main cost lever for scheduled runs.
