@@ -61,10 +61,13 @@ End-to-end pipeline for one user-selected pair. No Step 2 scoring, no scheduling
 
 #### Storage (Step 7)
 - [ ] For each surviving hypothesis create one `Insight(insight_type='cross_source_use_case', status='pending_review', structured_data=...)` and **two** `InsightTarget` rows (one per source, GenericFK to `Source`), all scoped to `source.account`.
+- [ ] **Regeneration is non-destructive (decided).** Re-running discovery for a pair (or account) must **not** delete prior `cross_source_use_case` insights. New insights are simply added; the pipeline has no delete step. Insights are displayed newest-first (`order_by('-created_at')`), so a re-run appends to the top and the history of past suggestions is preserved. This is the opposite of the current intra-source regenerate flow (which deletes first — see the destructive-sequence note) and is the behavior the intra-source rework (post_mvp item 11b) will adopt too.
 
 #### Views & URLs (`apps/insights/`)
-- [ ] `run_cross_source_discovery` — `POST /insights/discovery/run/` — accepts two `source_id`s (the explicitly chosen pair), validates both belong to `request.account` and are synced, enqueues the pipeline Celery task. Rate-limited to once / 24h (mirror the `generate_intra_use_case_suggestions` guard). Returns the review-section partial.
-- [ ] `cross_source_discovery_status` — `GET /insights/discovery/status/` — HTMX poll endpoint that renders the review section (spinner while running, cards when ready), matching the async-on-first-view pattern in `devdocs/featuredocs/async-table-descriptions.md`.
+- [ ] `CrossSourceDiscoveryView` — `GET /insights/discovery/` — **dedicated page** (not just a dashboard card or a section embedded elsewhere). Lists all `cross_source_use_case` insights for the account **newest-first** (`order_by('-created_at')`), with the pair selector + "Run discovery" trigger at the top. Because it's its own page, it's fine to display many insights at once (no scroll cap needed — contrast the intra-source card, item 11b, which is space-constrained and needs a scroll container). `LoginRequiredMixin` + account-scoped queryset.
+  - **Filtering + search (same approach as `catalog` and `insights` list pages).** URL query params processed in `get_queryset`, no JavaScript: `?source=<id>` filters to insights linked to that source (match **either** of the two `InsightTarget` sources, since each cross-source insight links two), and `?q=<text>` searches insight content (title/description in `structured_data`, and/or `text`). Mirror the param handling in `InsightListView.get_queryset` (`apps/insights/views.py`) — including the `ContentType`/`InsightTarget` source-filter pattern already used there. Pass the account's sources + current filter values into context for the filter controls, same as the existing list pages.
+- [ ] `run_cross_source_discovery` — `POST /insights/discovery/run/` — accepts two `source_id`s (the explicitly chosen pair), validates both belong to `request.account` and are synced, enqueues the pipeline Celery task. Rate-limited to once / 24h (mirror the `generate_intra_use_case_suggestions` guard). **Appends** new insights (non-destructive — never deletes prior ones). Returns the results-section partial.
+- [ ] `cross_source_discovery_status` — `GET /insights/discovery/status/` — HTMX poll endpoint that renders the results section (spinner while running, then the newest-first list with new insights at the top), matching the async-on-first-view pattern in `devdocs/featuredocs/async-table-descriptions.md`.
 - [ ] `accept_agent_insight` — `POST /insights/<insight_id>/accept/` — flips `pending_review` → `active`, swaps the card row (HTMX).
 - [ ] `dismiss_agent_insight` — `POST /insights/<insight_id>/dismiss/` — flips → `dismissed`, swaps the card row.
 - [ ] All views `@login_required` and scope every queryset by `account=request.account`.
@@ -74,9 +77,10 @@ End-to-end pipeline for one user-selected pair. No Step 2 scoring, no scheduling
 - [ ] `run_cross_source_discovery_task(account_id, source_a_id, source_b_id)` in `apps/insights/tasks.py` — IDs only (per `CLAUDE.md` Celery rule). Loads objects, calls the pipeline, marks the `AgentInsightRun` (created in Phase 2; Phase 1 may pass `run=None`) complete/failed. Catch + log exceptions like the existing tasks.
 
 #### Templates
-- [ ] `insights/_cross_source_discovery.html` — the discovery section: pair selector (two `<select>` of the account's synced sources), "Run discovery" button, spinner state, and the result cards.
+- [ ] `insights/cross_source_discovery.html` — the **dedicated page** (extends `base.html`). Top: pair selector (two `<select>` of the account's synced sources) + "Run discovery" button, and the filter/search controls (source `<select>` + search `<input>` as a GET form, styled like the catalog/insights list pages). Below: the newest-first list of insight cards. Includes the results-section partial for HTMX swap during a run.
+- [ ] `insights/_cross_source_discovery_results.html` — the results section partial (spinner state during a run, then the newest-first card list with new insights at the top). Swapped in by the status poll endpoint.
 - [ ] `insights/_agent_insight_card.html` — one card: title, description, business value, tables-involved badges, collapsible starter SQL (`<details>`), Accept / Dismiss buttons. Reuse the intra-source use-case card styling.
-- [ ] Dashboard card — add a **"Discovered Insights"** card to `templates/core/dashboard.html` next to the existing Insights card (per the post_mvp note "add this to the dashboard as one of the main cards next to the Insights card"). Extend `apps/core/views.py::DashboardView.get_context_data` with a `pending_review` agent-insight count.
+- [ ] Dashboard card — add a fourth **stat card** to the top card row in `templates/core/dashboard.html`, alongside the existing **Sources**, **Tables**, and **Insights** cards (e.g. "Cross-Source Insights"). The card shows a count and **links to the dedicated page** (`GET /insights/discovery/`). Extend `apps/core/views.py::DashboardView.get_context_data` with the count (e.g. `cross_source_insight_count` — total `cross_source_use_case` insights for the account, or `pending_review` only; pick one and label the card accordingly).
 
 #### Tests
 - [ ] Pipeline produces `Insight` + 2 `InsightTarget` rows for a pair (mock the LLM service).
@@ -129,16 +133,12 @@ End-to-end pipeline for one user-selected pair. No Step 2 scoring, no scheduling
 
 ---
 
-### Phase 4 — Email digest + quality iteration
+### Out of scope (tracked elsewhere)
 
-- [ ] Weekly plain-text email digest ("We found N new opportunities across your connected sources") via Django's email system.
-- [ ] Use accumulated accept/dismiss signals to tune Step 2 pair-scoring weights and model/prompt selection.
+These were originally sketched as later phases but are **not** part of shipping cross-source discovery. They live as backlog items, not build steps:
 
----
-
-### Phase 5 (future, not scoped) — Multi-source combinations (3+ sources)
-
-Generalize Step 3 onward from a *pair* to a *combination* of sources (N labelled DDL blocks; multi-hop join chains A↔B↔C). Deferred until two-source discovery proves its value — the combinatorial blow-up (k-subsets of N sources grow far faster than pairs) makes Step 2 pre-filtering and the per-run LLM-call cap load-bearing. **Keep the `source_a`/`source_b` signatures through Phase 4; only generalize to `list[Source]` when this phase is picked up.** See `post_mvp.md` agentic "Phased Build" item 5 for the full rationale.
+- **Email digest + feedback-driven quality iteration** — moved to `devdocs/potential_features.md` (Advanced Intelligence). Covers a weekly plain-text "We found N new opportunities across your connected sources" email, and using accumulated accept/dismiss signals to tune pair-scoring weights and model/prompt selection. Build later only if there's demand.
+- **Multi-source combinations (3+ sources)** — generalize Step 3 onward from a *pair* to a *combination* of sources (N labelled DDL blocks; multi-hop join chains A↔B↔C). Deferred until two-source discovery proves its value — the combinatorial blow-up (k-subsets of N sources grow far faster than pairs) makes Step 2 pre-filtering and the per-run LLM-call cap load-bearing. **Keep the `source_a`/`source_b` signatures through Phase 3; only generalize to `list[Source]` if/when this is picked up.** Full rationale in `post_mvp.md` agentic "Phased Build" item 5.
 
 ---
 
@@ -147,6 +147,7 @@ Generalize Step 3 onward from a *pair* to a *combination* of sources (N labelled
 - **Deterministic pipeline, not an agent loop.** Control flow is Python; LLM calls happen at named steps (3, 4, 6). This is an explicit spec decision for debuggability and cost control. Don't refactor into a free-form ReAct agent.
 - **Reuse `Insight` + `InsightTarget`, not new insight tables.** Cross-source insights are `insight_type='cross_source_use_case'` with two `InsightTarget` rows (GenericFK to both `Source`s) and the structured payload in `structured_data` — exactly the pattern intra-source use cases established. Starter SQL lives in `structured_data`, never parsed out of prose.
 - **`pending_review` status + review queue.** Agent insights are surfaced for accept/dismiss before becoming `active`, at least initially — the agent is proactive and unprompted, so a human gate protects insight-list quality.
+- **Non-destructive regeneration.** Re-running discovery never deletes prior insights — it appends, and the list renders newest-first so re-runs stack on top with full history preserved. The pipeline has no delete step. This is a deliberate departure from the original intra-source regenerate flow (delete-then-generate, which both risks leaving the user with nothing on a failed LLM call *and* throws away past suggestions) and is the model the intra-source rework (post_mvp item 11b) will follow. Lives on a **dedicated page** (`/insights/discovery/`) with source filter + search, reached from a dashboard stat card alongside Sources/Tables/Insights.
 - **Pre-filter aggressively before spending tokens (Step 2).** Pair scoring is deterministic and LLM-free; only high-scoring pairs reach Step 3. Cap LLM calls per run and use cheaper models for discovery/hypothesis, the better model only for the final insight.
 - **`CrossSourceRelationship` is a cache.** Discovered joins persist and are reused across runs; Step 3 only re-runs for pairs with new catalog rows. This is the main cost lever for scheduled runs.
 - **Cost scales with source *pairs*, not tables.** 3 sources = 3 pairs, 5 sources = 10 pairs. Keep the per-run LLM cap in mind as accounts grow.
