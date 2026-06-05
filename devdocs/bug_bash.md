@@ -49,3 +49,11 @@ Within `apps/insights/prompts/cross_source_discovery.py`, two related cleanups d
 - **Perf:** `_build_ddl_summary` re-queries the catalog on every call, and the three builders each call it. In the real pipeline, Step 4 runs once per relationship and Step 6 once per hypothesis, so each source's DDL is rebuilt many times per pair. Build each source's DDL/schema block **once per pair** in `run_discovery_for_pair` and reuse it (or memoize `_build_ddl_summary` by `source.pk`). Negligible at Phase 1 scale (manual, single pair); revisit when the pipeline fans out across many relationships/pairs (Phase 2+).
 
 **Fix:** both deferred deliberately — keeping the builders self-contained (take a `Source`, build their own DDL) kept them independently shell-testable during the build. Found during the cross-source discovery build (post_mvp item #11).
+
+---
+
+### 4. Step 3 `join_type` can drift outside the enum
+
+`build_relationship_discovery_prompt` asks for `join_type` as one of `direct | fuzzy | temporal`, but during shell validation the model returned `"indirect"` for a multi-hop relationship (`deals.contact_id → feature_usage.customer_id`) — a fourth value it invented. Low severity: it's a descriptive label, and the relationship still produced good hypotheses downstream. But anything that later branches on `join_type` (e.g. Phase 2 pair-scoring, or `CrossSourceRelationship.join_type` storage with `choices`) could choke on an unexpected value.
+
+**Fix options (pick at hardening time):** (a) tighten the Step 3 prompt to forbid values outside the enum, and/or (b) normalize/validate `join_type` in the service or pipeline layer (coerce unknown → `fuzzy`, or drop the relationship). Found during the cross-source discovery build (post_mvp item #11).
