@@ -46,13 +46,18 @@ End-to-end pipeline for one user-selected pair. No Step 2 scoring, no scheduling
 - [ ] No new `structured_data` shape change needed — store `{title, description, business_value, join_strategy, starter_sql, ...}` per the spec's Step 6 JSON. Confirm the render template reads from `structured_data`, not `text`. *(Deferred to the storage + template steps — nothing to do at the model layer.)*
 
 #### Pipeline (services)
-- [ ] `apps/insights/prompts/cross_source_discovery.py` — new prompt module mirroring `intra_source_use_cases.py`. Contains:
-  - `RELATIONSHIP_DISCOVERY_SYSTEM_MESSAGE`, model constant(s), max-tokens constant, `build_relationship_discovery_prompt(source_a, source_b, join_key_candidates=None)` — emits the Step 3 JSON (`join_opportunities`, `semantic_overlaps`). DDL summary per source built the same way as the intra-source prompt.
-  - `HYPOTHESIS_SYSTEM_MESSAGE` + `build_hypothesis_prompt(relationship)` — emits the Step 4 JSON (`hypotheses` with `title`, `description`, `business_value`, `join_strategy`, `required_data`, `specificity_score`).
-  - `CROSS_SOURCE_INSIGHT_SYSTEM_MESSAGE` + `build_cross_source_insight_prompt(hypothesis)` — emits the Step 6 full insight (text + `starter_sql`).
+- [x] `apps/insights/prompts/cross_source_discovery.py` — new prompt module mirroring `intra_source_use_cases.py`. Contains:
+  - `RELATIONSHIP_DISCOVERY_SYSTEM_MESSAGE`, model constant(s), max-tokens constant, `build_relationship_discovery_prompt(source_a, source_b, join_key_candidates=None)` — emits the Step 3 JSON (`join_opportunities`, `semantic_overlaps`). DDL summary per source built via shared `_build_ddl_summary` helper; per-source overview context via `_get_source_overview_text` (correctly filtered, optional). `join_key_candidates` reserved for Phase 2 (unused in Phase 1).
+  - `HYPOTHESIS_SYSTEM_MESSAGE` + `build_hypothesis_prompt(relationship, source_a, source_b)` — emits the Step 4 JSON (`hypotheses` with `title`, `description`, `business_value`, `join_strategy`, `required_data`, `specificity_score`). Renders the relationship via `json.dumps` (shape-agnostic across join-opportunity / semantic-overlap) **plus the full DDL of both sources** so hypotheses are grounded in real columns (anti-hallucination — validated in shell that this drives `required_data` to 100% real columns).
+  - `CROSS_SOURCE_INSIGHT_SYSTEM_MESSAGE` + `build_cross_source_insight_prompt(hypothesis, source_a, source_b)` — emits the Step 6 full insight (`title`, `description`, `business_value`, `starter_sql`). Also receives both sources' DDL so the starter SQL references only real tables/columns. Models: cheaper tier (`gpt-5.4-mini` / `claude-haiku-4-5`) for Steps 3 & 4; better tier (`gpt-5.4` / `claude-sonnet-4-6`) for the Step 6 user-facing write.
+  - **Note for the pipeline:** Steps 4 and 6 both take `source_a, source_b` (not just the relationship/hypothesis) — `run_discovery_for_pair` must thread the two `Source` objects through to every builder, not only Step 3.
 - [ ] Add three abstract methods to `BaseService` (`apps/insights/services/base.py`): `discover_cross_source_relationships(source_a, source_b) -> list[dict]`, `generate_cross_source_hypotheses(relationship) -> list[dict]`, `generate_cross_source_insight(hypothesis) -> dict`.
-- [ ] Implement all three in **both** `anthropic_service.py` and `openai_service.py` (JSON-parsing + code-fence stripping, same as `generate_intra_source_use_case`). Use the cheaper model for discovery/hypothesis, the better model for the final insight write (per "Cost and Quality Controls").
+- [ ] Implement all three in **both** `anthropic_service.py` and `openai_service.py`. Use the cheaper model for discovery/hypothesis, the better model for the final insight write (per "Cost and Quality Controls").
+  - **Code-fence stripping is required, not optional (confirmed in shell).** The models return the JSON wrapped in a ```​json fence despite the "return only valid JSON" system message — `json.loads` on the raw text will raise. Each method must strip the fence before parsing, exactly as `generate_intra_source_use_case` does: if the response starts with ```` ``` ````, drop the first line and the trailing fence, then `json.loads`. Verified against `claude-haiku-4-5` during the prompt-validation pass (HubSpot + Customer Database demo pair).
+  - Each method then pulls the top-level key from the parsed object: Step 3 → `join_opportunities` / `semantic_overlaps`, Step 4 → `hypotheses`, Step 6 → the full insight dict.
+  - This fence-strip + `json.loads` + key-extract dance repeats 3× per provider (6× total). If it gets copy-heavy, factor a small `_parse_json_response(raw)` helper — but let the duplication appear first before abstracting.
 - [ ] `apps/insights/pipeline.py` (or `apps/insights/agent/pipeline.py`) — orchestration function `run_discovery_for_pair(source_a, source_b, run) -> int` that calls Step 3 → Step 4 → (Phase 1: no Step 5 dedup) → Step 6 → Step 7 and returns insights-created count. Plain Python; LLM calls via `get_service(...)`.
+  - **Phase 1 fan-out policy (decided):** Step 3 yields many relationships and Step 4 yields 3–5 hypotheses each, so the pipeline must cap. Take the top ~2–3 relationships by `confidence`, run Step 4 on those, pool all hypotheses, **sort by the `specificity_score` each hypothesis already carries, and take the top 5** — Step 6 writes one insight per survivor (≈5 insights per pair). This is the embedding-free Phase 1 version of Step 5's "surface at most N, ranked" rule; the cap (N=5) matches the spec. Phase 3's Step 5 adds *dedup* (pgvector) on top of this ranking — no rework. Keeps the expensive Sonnet Step-6 calls bounded at 5/pair.
 
 #### Storage (Step 7)
 - [ ] For each surviving hypothesis create one `Insight(insight_type='cross_source_use_case', status='pending_review', structured_data=...)` and **two** `InsightTarget` rows (one per source, GenericFK to `Source`), all scoped to `source.account`.
@@ -128,6 +133,12 @@ End-to-end pipeline for one user-selected pair. No Step 2 scoring, no scheduling
 
 - [ ] Weekly plain-text email digest ("We found N new opportunities across your connected sources") via Django's email system.
 - [ ] Use accumulated accept/dismiss signals to tune Step 2 pair-scoring weights and model/prompt selection.
+
+---
+
+### Phase 5 (future, not scoped) — Multi-source combinations (3+ sources)
+
+Generalize Step 3 onward from a *pair* to a *combination* of sources (N labelled DDL blocks; multi-hop join chains A↔B↔C). Deferred until two-source discovery proves its value — the combinatorial blow-up (k-subsets of N sources grow far faster than pairs) makes Step 2 pre-filtering and the per-run LLM-call cap load-bearing. **Keep the `source_a`/`source_b` signatures through Phase 4; only generalize to `list[Source]` when this phase is picked up.** See `post_mvp.md` agentic "Phased Build" item 5 for the full rationale.
 
 ---
 

@@ -1,128 +1,255 @@
 from __future__ import annotations
 
-# TODO(stub): Imports. You'll likely need:
-#   - from django.contrib.contenttypes.models import ContentType
-#   - from apps.sources.models import Source
-#   - from apps.insights.models import InsightTarget
-#   Model your import list on apps/insights/prompts/intra_source_use_cases.py, but
-#   only import what each builder actually uses.
+import json
+
+from django.contrib.contenttypes.models import ContentType
+
+from apps.sources.models import Source
+from apps.insights.models import InsightTarget
+
+
+def _build_ddl_summary(source: Source) -> str:
+    ddl: list[str] = []
+    for schema in source.schema_set.all():
+        for table in schema.table_set.prefetch_related('column_set').all():
+            col_defs = ",\n  ".join(
+                f"{col.name} {col.data_type}" for col in table.column_set.all()
+            )
+            ddl.append(f"CREATE TABLE {table.name} ({col_defs});")
+    return "\n\n".join(ddl)
+
+def _get_source_overview_text(source: Source) -> str | None:
+    content_type = ContentType.objects.get_for_model(Source)
+    target = InsightTarget.objects.filter(
+        content_type=content_type,
+        object_id=source.pk,
+        account=source.account,
+        insight__insight_type='source_overview',
+    ).select_related('insight').first()
+    overview_insight = target.insight if target else None
+    source_overview = overview_insight.text if overview_insight and overview_insight.status == 'active' else None
+    return source_overview
 
 
 # ---------------------------------------------------------------------------
-# Step 3 — Relationship Discovery
+# Relationship Discovery
 # ---------------------------------------------------------------------------
 
-# TODO(stub): Module-level constants for the relationship-discovery call. Mirror the
-#   naming convention in intra_source_use_cases.py:
-#     RELATIONSHIP_DISCOVERY_SYSTEM_MESSAGE: str
-#         A strict "you are a data analyst; return ONLY valid JSON, no markdown" system
-#         message. The job here is structural: find concrete table.column -> table.column
-#         join opportunities and semantic overlaps between TWO sources.
-#     OPENAI_RELATIONSHIP_MODEL / ANTHROPIC_RELATIONSHIP_MODEL: str
-#         Use the CHEAPER model tier here (this is discovery, not the final user-facing
-#         write). See "Cost and Quality Controls" in the featuredoc.
-#     RELATIONSHIP_MAX_TOKENS: int
+RELATIONSHIP_DISCOVERY_SYSTEM_MESSAGE: str = (
+    "You are a senior data architect. Given the schemas of two separate data sources, "
+    "you identify how they could be combined for analysis. Your job is purely structural: "
+    "find concrete join opportunities — specific source_a table.column to source_b table.column "
+    "pairs that share a real-world key (emails, user/customer/account IDs, foreign keys) — and "
+    "semantic overlaps, where the two sources describe the same business concept through "
+    "different fields. Only propose joins that reference table and column names that actually "
+    "appear in the provided schemas; never invent columns. When a key match is approximate "
+    "(e.g. email vs. user_email, or a date-range overlap) classify it as fuzzy or temporal "
+    "rather than direct. Return only valid JSON — no prose, no markdown, no explanation outside "
+    "the JSON structure."
+)
+OPENAI_RELATIONSHIP_MODEL: str = "gpt-5.4-mini"
+ANTHROPIC_RELATIONSHIP_MODEL: str = "claude-haiku-4-5"
+RELATIONSHIP_MAX_TOKENS: int = 4000
 
 
-def build_relationship_discovery_prompt(
-    source_a: "Source",
-    source_b: "Source",
-    join_key_candidates: list[dict] | None = None,
-) -> str:
-    # TODO(stub): Build a DDL-style schema summary for BOTH sources, clearly labelled so
-    #   the LLM can tell which table belongs to which source. Reuse the schema/table/
-    #   column loop from intra_source_use_cases.py:22-30, but run it twice and prefix each
-    #   block, e.g. "Source A: {source_a.name} ({source_a.source_type})" / "Source B: ...".
-    #   The labels matter — Step 3's output references which source each table came from.
-    #
-    # TODO(stub): join_key_candidates is the Step 2 (pair-scoring) output and is UNUSED in
-    #   Phase 1 (Step 2 doesn't exist yet). Keep the parameter with a None default so the
-    #   signature is stable for Phase 2; if provided later, render them as hints in the
-    #   prompt ("These columns look like likely join keys: ..."). For now, do nothing with it.
-    #
-    # TODO(stub): Optionally include each source's Source Overview insight text as context.
-    #   If you do, fetch it the CORRECT way — filter InsightTarget by BOTH the source
-    #   (content_type + object_id) AND insight__insight_type='source_overview', as in
-    #   views.py:79-83. Do NOT copy the latent bug in intra_source_use_cases.py:33-37, which
-    #   omits the insight_type filter and grabs whichever target is first.
-    #
-    # TODO(stub): Ask for the exact Step 3 JSON shape from the featuredoc:
-    #     {
-    #       "join_opportunities": [
-    #         {"source_a_table", "source_a_column", "source_b_table", "source_b_column",
-    #          "confidence": "high|medium|low", "join_type": "direct|fuzzy|temporal",
-    #          "reasoning"}
-    #       ],
-    #       "semantic_overlaps": [
-    #         {"concept", "source_a_signal", "source_b_signal", "reasoning"}
-    #       ]
-    #     }
-    #   End with "Return ONLY a JSON object in this exact format, with no text before or
-    #   after it." (copy the framing from build_use_case_suggestions_prompt).
-    #
-    # TODO(stub): Return the assembled prompt string. Return type is str.
-    ...
+def build_relationship_discovery_prompt(source_a: "Source", source_b: "Source", join_key_candidates: list[dict] | None = None) -> str:
+    source_a_ddl = _build_ddl_summary(source_a)
+    source_b_ddl = _build_ddl_summary(source_b)
+    source_a_overview = _get_source_overview_text(source_a)
+    source_b_overview = _get_source_overview_text(source_b)
+
+    # join_key_candidates is reserved for Phase 2 pair-scoring hints; unused in Phase 1.
+
+    prompt = f"""You are comparing two separate data sources to find how they can be combined for cross-source analysis.
+
+Source A: "{source_a.name}" (type: {source_a.source_type})
+
+Schema:
+
+{source_a_ddl}
+"""
+
+    if source_a_overview:
+        prompt += f"""
+Overview of Source A:
+
+{source_a_overview}
+"""
+
+    prompt += f"""
+Source B: "{source_b.name}" (type: {source_b.source_type})
+
+Schema:
+
+{source_b_ddl}
+"""
+
+    if source_b_overview:
+        prompt += f"""
+Overview of Source B:
+
+{source_b_overview}
+"""
+
+    prompt += """
+Identify how Source A and Source B can be combined. Find:
+- Join opportunities: specific Source A table.column to Source B table.column pairs that share a real-world key (emails, user/customer/account IDs, foreign keys).
+- Semantic overlaps: where both sources describe the same business concept through different fields, even if there is no direct join key.
+
+Only reference table and column names that actually appear in the schemas above; never invent names. When a key match is approximate (e.g. email vs. user_email, or a shared date range) classify it as fuzzy or temporal rather than direct.
+
+Return ONLY a JSON object in this exact format, with no text before or after it:
+
+{
+  "join_opportunities": [
+    {
+      "source_a_table": "table name in Source A",
+      "source_a_column": "column name in Source A",
+      "source_b_table": "table name in Source B",
+      "source_b_column": "column name in Source B",
+      "confidence": "high | medium | low",
+      "join_type": "direct | fuzzy | temporal",
+      "reasoning": "Why these columns join and what the match is based on."
+    }
+  ],
+  "semantic_overlaps": [
+    {
+      "concept": "Shared business concept",
+      "source_a_signal": "Field or table in Source A that represents it",
+      "source_b_signal": "Field or table in Source B that represents it",
+      "reasoning": "Why these represent the same concept."
+    }
+  ]
+}
+"""
+    return prompt
 
 
 # ---------------------------------------------------------------------------
-# Step 4 — Hypothesis Generation
+# Hypothesis Generation
 # ---------------------------------------------------------------------------
 
-# TODO(stub): Constants for the hypothesis call:
-#     HYPOTHESIS_SYSTEM_MESSAGE: str  — "given a confirmed join, what could a business
-#         analyst actually discover?" Focus shifts from structural to analytical value.
-#         Still JSON-only.
-#     OPENAI_HYPOTHESIS_MODEL / ANTHROPIC_HYPOTHESIS_MODEL: str  — cheaper tier again.
-#     HYPOTHESIS_MAX_TOKENS: int
+HYPOTHESIS_SYSTEM_MESSAGE: str = (
+    "You are a senior data analyst. Given a confirmed relationship between two data sources — "
+    "either a concrete join key or a semantic overlap — you generate specific, actionable "
+    "analytical hypotheses that a business analyst could investigate by combining the two "
+    "sources. Each hypothesis must be concrete: name the actual metric to compute, the pattern "
+    "you would expect to find, and the business decision it would inform. Avoid vague suggestions "
+    "like 'gain insights' or 'better understand the data' — every hypothesis should point at a "
+    "real question with a real answer. Only reference tables and columns that appear in the "
+    "provided schemas; never invent column names — every column you cite must exist in one of the "
+    "schemas. Rate your own confidence in each hypothesis's specificity honestly, so weak ones can "
+    "be filtered out. Return only valid JSON — no prose, no markdown, no explanation outside the "
+    "JSON structure."
+)
+OPENAI_HYPOTHESIS_MODEL: str = "gpt-5.4-mini"
+ANTHROPIC_HYPOTHESIS_MODEL: str = "claude-haiku-4-5"
+HYPOTHESIS_MAX_TOKENS: int = 4000
 
 
-def build_hypothesis_prompt(relationship: dict) -> str:
-    # TODO(stub): `relationship` is ONE element from Step 3's output (a single
-    #   join_opportunity or semantic_overlap dict). Render its fields into the prompt so
-    #   the LLM knows exactly which join to reason over.
-    #
-    # TODO(stub): Ask: "Given these two sources can be joined on X, what are 3-5 specific,
-    #   actionable insights a business analyst could extract? Name the metrics, the expected
-    #   patterns, and the business decision each supports." Be explicit that vague output is
-    #   unwanted.
-    #
-    # TODO(stub): Request the Step 4 JSON shape:
-    #     {"hypotheses": [
-    #        {"title", "description", "business_value", "join_strategy",
-    #         "required_data": ["table.column", ...], "specificity_score": 0.0-1.0}
-    #     ]}
-    #   specificity_score is the LLM's self-assessment — Phase 3's quality filter uses it.
-    #
-    # TODO(stub): Return the prompt string. Return type is str.
-    ...
+def build_hypothesis_prompt(relationship: dict, source_a: "Source", source_b: "Source") -> str:
+    relationship_json = json.dumps(relationship, indent=2)
+    source_a_ddl = _build_ddl_summary(source_a)
+    source_b_ddl = _build_ddl_summary(source_b)
+
+    prompt = f"""Two data sources can be combined based on the following relationship discovered between them:
+
+{relationship_json}
+
+Here are the full schemas of both sources. Ground every hypothesis in tables and columns that actually exist below.
+
+Source A: "{source_a.name}" (type: {source_a.source_type})
+
+{source_a_ddl}
+
+Source B: "{source_b.name}" (type: {source_b.source_type})
+
+{source_b_ddl}
+
+Given the relationship above, generate 3-5 specific, actionable analytical hypotheses that a business analyst could investigate by combining the two sources. For each hypothesis:
+- Name the concrete metric or comparison to compute.
+- Describe the pattern you would expect to find in the data.
+- State the business decision the finding would inform.
+
+Only reference tables and columns that appear in the schemas above; never invent column names. Every column in required_data, and every column used in join_strategy, must exist in one of the schemas.
+"""
+
+    prompt += """
+Return ONLY a JSON object in this exact format, with no text before or after it:
+
+{
+  "hypotheses": [
+    {
+      "title": "Short plain-English name for the hypothesis",
+      "description": "2-3 sentences naming the metric to compute and the pattern to look for.",
+      "business_value": "The business decision this finding supports.",
+      "join_strategy": "How to combine the two sources to test this — which tables and columns to join.",
+      "required_data": ["table.column", "table.column"],
+      "specificity_score": 0.0
+    }
+  ]
+}
+"""
+    return prompt
 
 
 # ---------------------------------------------------------------------------
-# Step 6 — Cross-Source Insight (final user-facing write)
+# Cross-Source Insight
 # ---------------------------------------------------------------------------
 
-# TODO(stub): Constants for the insight-writing call:
-#     CROSS_SOURCE_INSIGHT_SYSTEM_MESSAGE: str  — this is the output the USER reads, so the
-#         system message should ask for a clear, concrete narrative: what the combination
-#         reveals, how to measure it, and the business decision it supports.
-#     OPENAI_CROSS_SOURCE_INSIGHT_MODEL / ANTHROPIC_CROSS_SOURCE_INSIGHT_MODEL: str  — use
-#         the BETTER model tier here (only the final write justifies the cost).
-#     CROSS_SOURCE_INSIGHT_MAX_TOKENS: int
+CROSS_SOURCE_INSIGHT_SYSTEM_MESSAGE: str = (
+    "You are a senior data analyst writing an insight that a business user will read and act on. "
+    "Given an analytical hypothesis about combining two data sources, you write a clear, concrete "
+    "narrative that explains what the combination reveals, how to measure it (which tables and "
+    "columns to join and what to compute), and the business decision it supports. Write for a "
+    "smart non-technical reader: specific and jargon-free, no filler. Include a genuine, runnable "
+    "starter SQL query that uses real table and column names from the provided schemas — never "
+    "invent a table or column that is not in the schemas — a useful starting point, not a toy "
+    "example, and intentionally left without WHERE filters or date ranges so the reader can adapt "
+    "it. Make sure the SQL is valid, executable standard SQL — for example, never place a window "
+    "function such as NTILE inside GROUP BY; compute it in an outer query or subquery instead. If "
+    "the two sources cannot be joined directly, provide two separate queries instead. Return only "
+    "valid JSON — no prose, no markdown, no explanation outside the JSON structure."
+)
+OPENAI_CROSS_SOURCE_INSIGHT_MODEL: str = "gpt-5.4"
+ANTHROPIC_CROSS_SOURCE_INSIGHT_MODEL: str = "claude-sonnet-4-6"
+CROSS_SOURCE_INSIGHT_MAX_TOKENS: int = 4000
 
+def build_cross_source_insight_prompt(hypothesis: dict, source_a: "Source", source_b: "Source") -> str:
+    hypothesis_json = json.dumps(hypothesis, indent=2)
+    source_a_ddl = _build_ddl_summary(source_a)
+    source_b_ddl = _build_ddl_summary(source_b)
 
-def build_cross_source_insight_prompt(hypothesis: dict) -> str:
-    # TODO(stub): `hypothesis` is one surviving element from Step 4's output. Render its
-    #   fields (title, description, business_value, join_strategy, required_data) into the
-    #   prompt as the brief for the final write.
-    #
-    # TODO(stub): Require a runnable, cross-source starter SQL query that references REAL
-    #   table/column names from the hypothesis. It's display-only for now (no execution),
-    #   but must be genuine, not a toy. If the two sources can't be directly joined, the
-    #   spec allows two separate queries.
-    #
-    # TODO(stub): Request the Step 6 JSON shape that gets stored in Insight.structured_data:
-    #     {"title", "description", "business_value", "starter_sql"}
-    #   Keep SQL in its own field — never embed it in prose (matches the use_case pattern).
-    #
-    # TODO(stub): Return the prompt string. Return type is str.
-    ...
+    prompt = f"""Write a cross-source insight for a business user, based on the following analytical hypothesis about combining two data sources:
+
+{hypothesis_json}
+
+Here are the full schemas of both sources. Every table and column you reference — especially in the SQL — must come from these schemas.
+
+Source A: "{source_a.name}" (type: {source_a.source_type})
+
+{source_a_ddl}
+
+Source B: "{source_b.name}" (type: {source_b.source_type})
+
+{source_b_ddl}
+
+Turn this into a clear, concrete insight that:
+- Explains what combining the two sources reveals.
+- Describes how to measure it — which tables and columns to join and what to compute.
+- States the business decision the insight supports.
+
+Then write a genuine, runnable starter SQL query using real table and column names from the schemas above. Make it a useful starting point — no WHERE filters or date ranges — so the reader can adapt it. If the two sources cannot be joined directly, provide two separate queries instead.
+"""
+
+    prompt += """
+Return ONLY a JSON object in this exact format, with no text before or after it:
+
+{
+  "title": "Short plain-English name for the insight",
+  "description": "2-3 sentences explaining what the data combination reveals and how to measure it.",
+  "business_value": "The business decision this insight supports.",
+  "starter_sql": "SELECT ... FROM ... JOIN ... ;"
+}
+"""
+    return prompt

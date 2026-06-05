@@ -34,8 +34,11 @@ def build_use_case_suggestions_prompt(source: Source) -> str:
     target = InsightTarget.objects.filter(
         content_type=content_type,
         object_id=source.pk,
+        account=source.account,
+        insight__insight_type='source_overview',
     ).select_related('insight').first()
-    source_overview = target.insight.text if target else None
+    overview_insight = target.insight if target else None
+    source_overview = overview_insight.text if overview_insight and overview_insight.status == 'active' else None
 
     prompt = f"""You are analyzing a data source named "{source.name}" (type: {source.source_type}).
 

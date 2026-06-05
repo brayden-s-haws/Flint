@@ -26,7 +26,8 @@ For speculative or longer-horizon ideas, see `devdocs/potential_features.md`.
     10d. ~~Move Sync Schedule + Sync History into a right-hand column beside Source Overview / Schemas & Tables (3/5 + 2/5 split).~~ COMPLETE
     10e. ~~Swap Source Overview and Schemas & Tables cards.~~ COMPLETE
 10f. ~~Delete source → cascade-clean its insights~~ COMPLETE — see `devdocs/featuredocs/source-delete-insight-cleanup.md`. Added a `pre_delete` signal on `Source` (`cleanup_insights_on_source_delete` in `apps/sources/signals.py`) that hard-deletes source-targeted (Source Overview, use-case) and table-targeted (table-description) `Insight` rows — which cascade their `InsightTarget`s — before the source and its tables are removed. Scoped by account; manually verified via the UI. Automated tests deferred to the Phase 6 testing pass (`devdocs/testing.md` → `apps.sources`). Found during the 10b work; split to its own branch to keep that one focused.
-11. Agentic cross-source discovery — `insights` (depends on 2+ sources connected) Note: we should add this to the dashboard as one of the main cards next to the Insights card
+11. Agentic cross-source discovery — `insights` (depends on 2+ sources connected) Note: we should add this to the dashboard as one of the main cards next to the Insights card — see `devdocs/featuredocs/agentic-cross-source-discovery.md`
+11b. **Convert intra-source use-case generation to async — `insights` — TACKLE NEXT (after #11 ships).** Today `generate_intra_use_case_suggestions` (`apps/insights/views.py:146`) makes the LLM call synchronously inside the request/response cycle — the only insight generator still doing so (table descriptions and source overview are already Celery tasks). It's a heavy call (`USE_CASE_MAX_TOKENS=4000`, 4–6 use cases with SQL) that ties up a web worker and risks the gunicorn timeout. Convert it to the established async-on-first-view pattern: a `generate_use_cases_task` in `apps/insights/tasks.py`, create `pending` placeholder insights, enqueue, poll via the existing `use_cases_status` endpoint (`views.py:112`). This is the documented "migrate per-feature when revisited" step from `architecture.md:273`. **Bonus:** the async restructure also fixes the destructive-sequence bug logged in the bug-bash section (the view deletes existing use cases *before* the LLM call — a failed call currently leaves the user with nothing). Suggested branch: `feature/async-use-cases`.
 12. Demo Mode Phase 2 (product scenario + auto-trigger insights after load)
 
 **Phase 4 — New apps and connector expansion, depend on Phase 2 & 3**
@@ -54,7 +55,7 @@ Cross-cutting cleanup items addressed after all feature work in this doc is comp
 23. **Add docstrings to all files** — sweep every module and add module- and function-level docstrings. Task Claude to find all files currently missing them.
 24. **Address `devdocs/testing.md` in full** — fill in the stubbed test sections for each app (`apps.sources`, `apps.catalog`, `apps.insights`), write the tests, and run the full suite (`python manage.py test`) until it passes. Multi-tenancy boundary tests (account A cannot see account B's data) are required for every tenant-scoped app.
 25. **Address `devdocs/logging.md` in full** — add the `LOGGING` config to `settings.py` and instrument every app per the logging plan (tenant middleware, auth events, sync lifecycle, LLM calls). Never log credentials, tokens, or LLM prompt/response content.
-26. **Run the bug bash** — broad sweep for bugs, dead code, and rough edges across the codebase; produce a single triaged punch list (see the "bug bash" section below). Find, don't fix — fixes happen in follow-up sessions.
+26. **Run the bug bash** — broad sweep for bugs, dead code, and rough edges across the codebase; produce a single triaged punch list (see the "bug bash" section below). Find, don't fix — fixes happen in follow-up sessions. **Items already found during feature work are accumulating in `devdocs/bug_bash.md`** — start there, then sweep for the rest.
 27. **Add AI evals** — build an evaluation harness for the LLM-generated outputs (table descriptions, source overviews, use case suggestions, cross-source insights) so quality regressions are caught as prompts and models change.
 28. **Update the README** — revise the README drafted in build order item #9 so it reflects the final feature set.
 
@@ -174,6 +175,7 @@ On initial page load, if no suggestions have been generated yet, show an empty s
 - **Cross-source insights** — insights that span multiple sources or tables
 - ~~**Batch insight generation** — generate descriptions for all tables in a source at once (requires Celery)~~ COMPLETE as async-on-first-view instead of bulk fan-out — see `devdocs/featuredocs/async-table-descriptions.md`. The scope pivot is documented there: bulk generation would have wasted LLM spend on tables nobody views, and forced a "click to continue" UX on large databases. The async path keeps the existing lazy-trigger behavior, just unblocks the page render.
 - **Insight approval/rating** — thumbs up/down workflow so users can accept or reject generated insights
+- **Async intra-source use-case generation** — `generate_intra_use_case_suggestions` still runs the LLM call synchronously in the request cycle (`apps/insights/views.py:146`); the only generator not yet on Celery. Migrate to the async-on-first-view pattern. Scheduled as build-order item **11b** (tackle right after the agentic cross-source discovery feature). Also fixes the delete-before-LLM destructive-sequence bug. See item 11b for detail.
 
 ---
 
@@ -466,6 +468,9 @@ LLM calls per account per run scale with the number of source pairs, not the num
 4. **Phase 4 — Email digest and quality iteration**
    Add weekly email digest. Use accumulated feedback signals (accepted vs. dismissed insights) to tune the pair scoring weights and model prompt selection.
 
+5. **Phase 5 (future) — Multi-source combinations (3+ sources)**
+   The whole pipeline is intentionally built around *pairs* through Phase 4 — it's cheaper, easier to validate, and the cost model (LLM calls scale with the number of pairs) assumes two sources at a time. But the most interesting cross-source insights often span three or more sources (e.g. the Sales demo scenario's CRM + Web Analytics + Customer DB joined on a shared email key). A future phase generalizes Step 3 onward to reason over a *combination* of sources, not just a pair: build N labelled DDL blocks instead of two, and surface multi-hop join chains (A↔B↔C). Defer until two-source discovery has proven its value — the combinatorial blow-up is the reason to wait: scoring every k-subset of N sources grows far faster than pairs (with 5 sources there are 10 pairs but 26 combinations of size ≥2), so Step 2 pre-filtering and the per-run LLM-call cap become load-bearing, not optional. Keep the Phase 1–4 signatures (`source_a`, `source_b`) as-is; generalize to a `list[Source]` only when this phase is actually picked up.
+
 ---
 
 ### Relationship to Existing Features
@@ -646,6 +651,8 @@ When each section is filled in, run the full test suite (`python manage.py test`
 ## bug bash
 
 After feature work is complete, run a broad sweep with Claude to surface bugs, dead code, and rough edges that accumulated during fast feature iteration. The goal is a triaged punch list, not on-the-fly fixes — separate the *finding* from the *fixing* so the scope stays bounded.
+
+> **Running list:** concrete items spotted during feature development are logged as they're found in `devdocs/bug_bash.md` (triaged by severity, with file paths and line numbers). Fold that file into the sweep below rather than rediscovering those items.
 
 Areas to cover during the sweep:
 
