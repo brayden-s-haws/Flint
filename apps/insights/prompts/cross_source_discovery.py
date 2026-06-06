@@ -47,9 +47,9 @@ RELATIONSHIP_DISCOVERY_SYSTEM_MESSAGE: str = (
     "rather than direct. Return only valid JSON — no prose, no markdown, no explanation outside "
     "the JSON structure."
 )
-OPENAI_RELATIONSHIP_MODEL: str = "gpt-5.4-mini"
-ANTHROPIC_RELATIONSHIP_MODEL: str = "claude-haiku-4-5"
-RELATIONSHIP_MAX_TOKENS: int = 4000
+OPENAI_RELATIONSHIP_DISCOVERY_MODEL: str = "gpt-5.4-mini"
+ANTHROPIC_RELATIONSHIP_DISCOVERY_MODEL: str = "claude-haiku-4-5"
+RELATIONSHIP_DISCOVERY_MAX_TOKENS: int = 4000
 
 
 def build_relationship_discovery_prompt(source_a: "Source", source_b: "Source", join_key_candidates: list[dict] | None = None) -> str:
@@ -197,7 +197,7 @@ Return ONLY a JSON object in this exact format, with no text before or after it:
 # Cross-Source Insight
 # ---------------------------------------------------------------------------
 
-CROSS_SOURCE_INSIGHT_SYSTEM_MESSAGE: str = (
+CROSS_SOURCE_USE_CASE_SYSTEM_MESSAGE: str = (
     "You are a senior data analyst writing an insight that a business user will read and act on. "
     "Given an analytical hypothesis about combining two data sources, you write a clear, concrete "
     "narrative that explains what the combination reveals, how to measure it (which tables and "
@@ -211,11 +211,11 @@ CROSS_SOURCE_INSIGHT_SYSTEM_MESSAGE: str = (
     "the two sources cannot be joined directly, provide two separate queries instead. Return only "
     "valid JSON — no prose, no markdown, no explanation outside the JSON structure."
 )
-OPENAI_CROSS_SOURCE_INSIGHT_MODEL: str = "gpt-5.4"
-ANTHROPIC_CROSS_SOURCE_INSIGHT_MODEL: str = "claude-sonnet-4-6"
-CROSS_SOURCE_INSIGHT_MAX_TOKENS: int = 4000
+OPENAI_CROSS_SOURCE_USE_CASE_MODEL: str = "gpt-5.4"
+ANTHROPIC_CROSS_SOURCE_USE_CASE_MODEL: str = "claude-sonnet-4-6"
+CROSS_SOURCE_USE_CASE_MAX_TOKENS: int = 4000
 
-def build_cross_source_insight_prompt(hypothesis: dict, source_a: "Source", source_b: "Source") -> str:
+def build_cross_source_use_case_prompt(hypothesis: dict, source_a: "Source", source_b: "Source") -> str:
     hypothesis_json = json.dumps(hypothesis, indent=2)
     source_a_ddl = _build_ddl_summary(source_a)
     source_b_ddl = _build_ddl_summary(source_b)
