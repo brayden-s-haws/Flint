@@ -1,39 +1,29 @@
 from __future__ import annotations
 
-# TODO(stub): Imports you'll need (don't add until used, to keep the linter quiet):
-#   - from apps.sources.models import Source            (the two sources in the pair)
-#   - from apps.insights.models import Insight, InsightTarget
-#   - from apps.insights.services.provider import get_service
-#   - from django.contrib.contenttypes.models import ContentType
-#   Type hints are required on every function (CLAUDE.md). Use `Source` for the
-#   two source params and `int` for the return (insights-created count).
+from apps.sources.models import Source
+from apps.insights.models import Insight, InsightTarget
+from apps.insights.services.provider import get_service
+from django.contrib.contenttypes.models import ContentType
 
+CONFIDENCE_RANK = {
+    'high': 3,
+    'medium': 2,
+    'low': 1
+}
+SEMANTIC_OVERLAP_RANK = 0
 
-# ---------------------------------------------------------------------------
-# Relationship flattening + ranking  (the one real design decision in this file)
-# ---------------------------------------------------------------------------
-
-# TODO(stub): _flatten_and_rank_relationships(relationship: dict) -> list[dict]
-#   Step 3 (`discover_cross_source_relationships`) returns the FULL dict:
-#       {"join_opportunities": [...], "semantic_overlaps": [...]}
-#   The two lists have DIFFERENT shapes:
-#       - join_opportunity: source_a_table/column, source_b_table/column,
-#         confidence ("high|medium|low"), join_type, reasoning
-#       - semantic_overlap:  concept, source_a_signal, source_b_signal, reasoning
-#         (NOTE: semantic_overlaps carry NO `confidence` field)
-#   This helper merges them into ONE ranked list of relationship dicts that
-#   Step 4 can consume one at a time. Decisions to make here:
-#     1. ORDERING: join_opportunities have `confidence`; semantic_overlaps don't.
-#        Decide a single sort key. Suggested: map confidence high/medium/low -> 3/2/1,
-#        give semantic_overlaps a default rank (e.g. treat as "medium"/2, or always
-#        rank them below join_opportunities since a real join key is stronger signal).
-#        Sort the merged list descending by that rank.
-#     2. SHAPE: Step 4's `build_hypothesis_prompt` just does json.dumps(relationship),
-#        so it's shape-agnostic — you can pass either kind through as-is. You do NOT
-#        need to normalize the two shapes into one; only rank them.
-#     3. (Optional) tag each item with its kind (e.g. add a "_kind" key) if later
-#        phases will branch on join vs. overlap — but Phase 1 doesn't require it.
-#   Returns the merged, ranked list. Keep this pure (no DB, no LLM) so it's unit-testable.
+def _flatten_and_rank_relationships(relationship: dict) -> list[dict]:
+    join_opportunities = relationship.get('join_opportunities', [])
+    semantic_overlaps = relationship.get('semantic_overlaps', [])
+    for jo in join_opportunities:
+        jo['_rank'] = CONFIDENCE_RANK.get(jo.get('confidence', '').lower(), 0)
+    for so in semantic_overlaps:
+        so['_rank'] = SEMANTIC_OVERLAP_RANK
+    merged = join_opportunities + semantic_overlaps
+    merged.sort(key=lambda item: item['_rank'], reverse=True)
+    for item in merged:
+        del item['_rank']
+    return merged
 
 
 # ---------------------------------------------------------------------------

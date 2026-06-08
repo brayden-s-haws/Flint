@@ -3,7 +3,6 @@ from __future__ import annotations
 import anthropic
 import json
 
-from openai.types.responses import response
 
 from apps.catalog.models import Table
 from apps.sources.models import Source

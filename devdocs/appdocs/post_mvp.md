@@ -239,29 +239,17 @@ Fetch all `Source` records for the account where `last_synced_at` is not null (i
 - Column names and types (used for join key discovery)
 - Last sync time (used to skip stale sources)
 
-Group sources by their `SourceType.category` (e.g., `crm`, `analytics`, `database`, `ecommerce`, `support`). This category grouping will be used in Step 2 to apply known cross-domain patterns before doing any LLM reasoning.
+No source-type grouping is applied. (An earlier draft grouped sources by a `SourceType.category` field to drive a cross-domain matrix in Step 2; that was dropped — see Step 2 and the "Design decisions" note on source-type bias. Step 2 scores pairs on structure, not declared type.)
 
 ---
 
-### Step 2: Source Pair Scoring (Pre-LLM Filter)
+### Step 2: Source Pair Scoring (Pre-LLM Ranker)
 
-Before making any LLM calls, score every source pair for cross-source potential. This is a cheap, deterministic pre-filter to avoid burning LLM tokens on hopeless combinations.
+Before making any LLM calls, score every source pair for cross-source potential. This is a cheap, deterministic, **structural-only** signal used to *order* which pairs get the per-run LLM budget first — not a hard gate that excludes pairs, and deliberately **not** based on what type the sources are.
 
-**Signal 1: Known cross-domain relationship matrix**
+> **Why no source-type matrix (decided):** an earlier draft had a "Signal 1" cross-domain matrix that scored pairs higher when their `SourceType.category` values were known to relate (CRM × analytics, etc.). That was dropped. A type prior bakes in exactly the assumption that suppresses the *surprising* cross-domain insights this feature exists to find, and it's largely redundant with the fingerprint signal below (same-domain sources already share `contact`/`email`/`*_id` columns). It also required a new `SourceType.category` field + a hand-maintained matrix. The fuzzy/semantic matching such a prior might have caught is already Step 3's (the LLM's) job. Reversible later if structural scoring proves to under-filter at high source counts.
 
-Some source type combinations are known to have high analytical value:
-
-| Source A | Source B | Opportunity |
-|---|---|---|
-| CRM (HubSpot, Salesforce) | Web Analytics (GA, Mixpanel) | Marketing attribution — correlate campaign touches with CRM outcomes |
-| CRM | E-commerce (Shopify, Stripe) | Customer lifetime value, deal-to-purchase conversion |
-| CRM | Support (Zendesk, Intercom) | Customer health, churn signal detection |
-| E-commerce | Analytics | Funnel analysis, cart abandonment |
-| Database (Postgres) | Any SaaS | Operational data vs. tool data enrichment |
-
-Pairs with a known pattern score higher automatically.
-
-**Signal 2: Shared column name fingerprints**
+**Signal 1: Shared column name fingerprints**
 
 Scan column names across both sources for likely join keys. Look for columns matching patterns like:
 
@@ -271,11 +259,11 @@ Scan column names across both sources for likely join keys. Look for columns mat
 
 Any pair sharing at least one likely join key scores much higher. Use a simple normalized name comparison (lowercase, strip underscores/camelCase) — no LLM needed here.
 
-**Signal 3: Temporal overlap**
+**Signal 2: Temporal overlap**
 
 Both sources have date-typed columns covering a common time range → higher score. Both have event-style tables with timestamps → potential for time-series correlation.
 
-Only source pairs scoring above a threshold advance to Step 3. For accounts with many sources, this keeps LLM call count bounded.
+Pairs are ranked by this structural score and Step 3 runs on them highest-first up to the per-run LLM-call cap. At typical scale (2–5 sources = 1–10 pairs) every pair can advance; the cap — not a category threshold — is what keeps the LLM call count bounded as accounts grow.
 
 ---
 
@@ -454,7 +442,7 @@ LLM calls per account per run scale with the number of source pairs, not the num
 - **Pre-filter aggressively in Step 2.** The pair scoring step should eliminate most combinations before any LLM calls are made.
 - **Cap LLM calls per run.** Set a max (e.g., 10 LLM calls per account per run) and prioritize highest-scoring pairs. Log when the cap is hit.
 - **Cache Step 3 results.** `CrossSourceRelationship` records don't need to be rediscovered every run. Only redo Step 3 for pairs where a new sync has added significant new tables/columns since the last discovery.
-- **Use cheaper models for Step 2 filtering and Step 3 discovery.** Reserve the better model for Step 6 (the actual insight writing that the user will read).
+- **Use cheaper models for Step 3 discovery and Step 4 hypotheses.** (Step 2 is deterministic and makes no LLM calls.) Reserve the better model for Step 6 (the actual insight writing that the user will read).
 
 ---
 
@@ -464,7 +452,7 @@ LLM calls per account per run scale with the number of source pairs, not the num
    Build the pipeline end-to-end but only for user-initiated runs on one explicitly selected source pair. No scheduling, no Step 2 scoring. Good for validating prompt quality and the review workflow.
 
 2. **Phase 2 — Multi-pair with scoring, event-triggered**
-   Add Step 2 pair scoring. Trigger the pipeline automatically when a new source is connected. Store `CrossSourceRelationship` records. Introduce `AgentInsightRun` tracking.
+   Add Step 2 structural pair scoring (shared column fingerprints + temporal overlap — no source-type matrix). Trigger the pipeline automatically when a new source is connected. Store `CrossSourceRelationship` records. Introduce `AgentInsightRun` tracking.
 
 3. **Phase 3 — Scheduled runs and deduplication**
    Add Celery beat scheduling. Add embedding-based deduplication (Step 5). Add the dismissed-insight feedback signal.
