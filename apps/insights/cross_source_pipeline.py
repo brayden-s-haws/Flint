@@ -1,9 +1,12 @@
 from __future__ import annotations
+import logging
 
 from apps.sources.models import Source
 from apps.insights.models import Insight, InsightTarget
 from apps.insights.services.provider import get_service
 from django.contrib.contenttypes.models import ContentType
+
+logger = logging.getLogger(__name__)
 
 CONFIDENCE_RANK = {
     'high': 3,
@@ -30,52 +33,40 @@ def _flatten_and_rank_relationships(relationship: dict) -> list[dict]:
 # Pipeline orchestration
 # ---------------------------------------------------------------------------
 
-# TODO(stub): run_discovery_for_pair(source_a: Source, source_b: Source, run=None) -> int
-#   Orchestrates Steps 3 -> 4 -> 6 -> 7 for ONE explicitly-selected source pair and
-#   returns the number of insights created. Plain Python control flow; the LLM calls
-#   go through get_service(provider). `run` is the AgentInsightRun (Phase 2) — accept
-#   it now but allow None in Phase 1 (pass run=None from the caller/task).
+# Orchestrates Steps 3 -> 4 -> 6 -> 7 for ONE explicitly-selected source pair and
+# returns the number of insights created. Plain Python control flow; LLM calls go
+# through get_service(). Fan-out cap (featuredoc "Phase 1 fan-out policy"): top 5
+# relationships -> Step 4 -> pool -> top 5 hypotheses by specificity_score -> Step 6.
+# `run` is the Phase 2 AgentInsightRun — accept it now, None in Phase 1.
 #
-#   Pick the provider once at the top (e.g. service = get_service('anthropic'), matching
-#   how generate_intra_use_case_suggestions hardcodes 'anthropic' in views.py:146).
-#
-#   STEP 3 — discovery:
-#     - relationship_dict = service.discover_cross_source_relationships(source_a, source_b)
-#     - merged = _flatten_and_rank_relationships(relationship_dict)
-#     - Cap the fan-out: take only the top ~2-3 relationships (slice merged[:3]).
-#       Why: Step 4 yields 3-5 hypotheses EACH, and Step 6 (the expensive Sonnet call)
-#       runs once per surviving hypothesis — so the cap keeps cost bounded. See the
-#       featuredoc "Phase 1 fan-out policy".
-#
-#   STEP 4 — hypotheses (loop over the capped relationships):
-#     - For each relationship: hypotheses = service.generate_cross_source_hypotheses(
-#           relationship, source_a, source_b)  -> list[dict]
-#     - POOL all hypotheses from all relationships into one list (extend, don't nest).
-#     - Each hypothesis carries its own `specificity_score` (0.0-1.0) from the LLM.
-#
-#   RANK + CAP (the top-5 rule):
-#     - Sort the pooled hypotheses DESCENDING by hypothesis['specificity_score'].
-#     - Take the top 5 (slice [:5]). This is the embedding-free Phase 1 version of the
-#       spec's "surface at most N, ranked" rule. Guard against a missing/None score
-#       (default to 0.0) so the sort can't KeyError on a sloppy LLM response.
-#
-#   STEP 6 — final insight write (loop over the top-5 survivors):
-#     - For each hypothesis: insight_data = service.generate_cross_source_use_case(
-#           hypothesis, source_a, source_b)  -> dict
-#       (full dict: title, description, business_value, starter_sql)
-#     - Hand each insight_data to the storage step below.
-#
-#   STEP 7 — storage (NON-DESTRUCTIVE — see its own TODO below).
-#
-#   RETURN: the count of Insight rows created (int).
-#
-#   ERROR HANDLING: wrap LLM calls so one bad relationship/hypothesis doesn't sink the
-#   whole run. In Phase 1 a try/except around the per-item LLM call that logs + skips is
-#   enough; Phase 2 writes failures into AgentInsightRun.error_log. Do NOT let a single
-#   Step 4/Step 6 exception abort the others.
-#
-#   (Phase 2 hook, not now: if `run` is not None, update its counters —
-#   pairs_evaluated, hypotheses_generated, insights_created — as you go.)
+# TODO(remaining): wire Step 6 result into _store_cross_source_insight(), count the
+#   created insights, return the count, and add per-item try/except around Step 4 and
+#   Step 6 so one bad item doesn't sink the run.
+def run_discovery_for_pair(source_a: Source, source_b: Source, run=None) -> int:
+    service = get_service('anthropic')
+    relationship_dict = service.discover_cross_source_relationships(source_a, source_b)
+    merged = _flatten_and_rank_relationships(relationship_dict)
+    top_5_relationships = merged[:5]
+    hypotheses = []
+    for relationship in top_5_relationships:
+        try:
+            hypotheses.extend(service.generate_cross_source_hypotheses(relationship, source_a, source_b))
+        except Exception:
+            logger.exception("Failed to generate join hypothesis for source pair %s-%s; skipping", source_a, source_b)
+            continue
+    sorted_hypotheses = sorted(hypotheses, key=lambda h: h.get('specificity_score') or 0.0, reverse=True)
+    top_5_hypotheses = sorted_hypotheses[:5]
+    created_use_cases = 0
+    for hypothesis in top_5_hypotheses:
+        try:
+            use_case = service.generate_cross_source_use_case(hypothesis, source_a, source_b)
+            created_use_cases += 1
+        except Exception:
+            logger.exception("Failed to generate use case for hypothesis %s; skipping", hypothesis.get('title') or 'unknown')
+            continue
+    return created_use_cases
+
+
 
 
 # ---------------------------------------------------------------------------
