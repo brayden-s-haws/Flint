@@ -770,8 +770,8 @@ A visual entity-relationship diagram view generated from catalog metadata. Table
 
 The ERD is a **derived view of the catalog** — it stores no extra data. Every node and edge is computed at view time from `Schema`, `Table`, `Column`, and the FK relationship records captured during sync. When the source schema changes and a re-sync runs, the diagram updates automatically.
 
-This pairs naturally with the queries app: a user exploring "what's in this database?" can flip between the ERD (structural view) and the natural-language query box (analytical view) on the same source.
-
+This pairs naturally with the queries app: a user exploring "what's in this database?" can flip between the ERD (structural view) and the natural-language query box (analytical view) on the same source. 
+Look at this for inspiration: https://github.com/royalbhati/sqltoerdiagram
 ---
 
 ### Where It Lives in the UI

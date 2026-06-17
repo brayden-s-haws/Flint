@@ -18,8 +18,12 @@ from apps.catalog.models import Table
 from apps.core.mixins import TenantQuerysetMixin
 from apps.insights.models import Insight, InsightTarget
 from apps.insights.services.provider import get_service
-from apps.insights.tasks import generate_table_description_task
+from apps.insights.tasks import generate_table_description_task, run_cross_source_discovery_task
 from apps.sources.models import Source
+
+# ---------------------------------------------------------------------------
+# Intra-Source Insights
+# ---------------------------------------------------------------------------
 
 class InsightListView(TenantQuerysetMixin, LoginRequiredMixin, ListView):
     model = Insight
@@ -46,7 +50,7 @@ class InsightListView(TenantQuerysetMixin, LoginRequiredMixin, ListView):
                 Q(insighttarget__content_type=source_ct, insighttarget__object_id=source_pk) |
                 Q(insighttarget__content_type=table_ct, insighttarget__object_id__in=table_pks)
             )
-        return qs
+        return qs # type: ignore[return-value]
 
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
@@ -197,3 +201,81 @@ def insight_retry(request, insight_id: int) -> HttpResponse:
     insight.save()
     generate_table_description_task.delay(insight.id)
     return render(request, 'insights/_insight_pending.html', {'insight': insight})
+
+# ---------------------------------------------------------------------------
+# Cross-Source Insights
+# ---------------------------------------------------------------------------
+
+class CrossSourceDiscoveryView(TenantQuerysetMixin, LoginRequiredMixin, ListView):
+    model = Insight
+    template_name = 'insights/cross_source_discovery.html'
+    context_object_name = 'insights'
+
+    def get_queryset(self) -> QuerySet[Insight]:
+        q = self.request.GET.get('q')
+        source_pk = self.request.GET.get('source')
+        qs = super().get_queryset().filter(insight_type='cross_source_use_case').prefetch_related('insighttarget_set').order_by('-created_at')
+        if q:
+            qs = qs.filter(text__icontains=q)
+        if source_pk:
+            source_ct = ContentType.objects.get_for_model(Source)
+            qs = qs.filter(insighttarget__content_type=source_ct, insighttarget__object_id=source_pk).distinct()
+        return qs # type: ignore[return-value]
+
+    # TODO(stub): get_context_data(self, **kwargs) -> dict[str, Any]
+    #   The template needs more than the insight list — it has a pair selector + a
+    #   filter/search bar + a "Run discovery" button at the top. Mirror the shape of
+    #   InsightListView.get_context_data above. Put into context:
+    #     - 'sources': Source.objects.filter(account=self.request.account)  (synced ones only
+    #        if you want — e.g. .filter(first_synced_at__isnull=False)); feeds BOTH the pair
+    #        <select>s and the source filter <select>.
+    #     - 'q' and 'selected_source': the current GET values, so the filter form stays
+    #        populated after submit (same as the list view echoes them back).
+    #     - rate-limit hint for the Run button (optional but nice): whether a run happened in
+    #        the last 24h. Unlike intra-source (which keys off one source's most-recent
+    #        insight), a cross-source run is per-PAIR — so a global "any cross_source_use_case
+    #        in last 24h" check is the simple Phase 1 version. Decide and document the grain.
+
+
+# TODO(stub): run_cross_source_discovery(request) -> HttpResponse   [POST /insights/discovery/run/]
+#   The trigger. Closest analog is generate_intra_use_case_suggestions above — copy its
+#   SHAPE (decorators, validation, rate-limit guard, enqueue, render partial) but NOTE the
+#   key differences flagged below. Decorators: @login_required + @require_POST.
+#   1. Read the two source ids from request.POST (e.g. 'source_a', 'source_b').
+#   2. Validate BOTH belong to the account AND are distinct AND are synced:
+#        get_object_or_404(Source, pk=source_a_id, account=request.account) x2
+#        - reject if source_a_id == source_b_id (can't pair a source with itself) -> 400
+#        - reject if either is not synced (Source has no last_synced_at; check first_synced_at
+#          is None, OR the Max('sourcesynclog__completed_at') pattern — see featuredoc Notes) -> 400
+#   3. Rate-limit (per the spec, once / 24h) — mirror the recent-suggestion check, but for
+#      a PAIR. Phase 1 simple version: look for any cross_source_use_case insight linked to
+#      BOTH of these sources created in the last 24h. (Document the grain you choose.)
+#   4. DO NOT DELETE existing insights here. This is the big departure from the intra-source
+#      view (lines 141-147 delete-then-create). Cross-source is NON-DESTRUCTIVE (featuredoc) —
+#      the pipeline appends. No delete block.
+#   5. Enqueue, don't run inline: run_cross_source_discovery_task.delay(request.account.id,
+#      source_a.id, source_b.id). (The pipeline is slow + Sonnet-heavy; it must be async,
+#      unlike the intra-source view which calls the service synchronously.)
+#   6. Return the results-section partial so HTMX can show a spinner and start polling the
+#      status endpoint:  render(request, 'insights/_cross_source_discovery_results.html', {...})
+#
+# TODO(stub): cross_source_discovery_status(request) -> HttpResponse   [GET /insights/discovery/status/]
+#   HTMX poll endpoint (analog: use_cases_status above). @login_required.
+#   Re-render 'insights/_cross_source_discovery_results.html' with the current newest-first
+#   cross_source_use_case queryset for the account (reuse the same filtering you build in the
+#   view's get_queryset — consider extracting a small helper so the page and the poll share
+#   one query). The partial shows the spinner while a run is in flight and the list once
+#   insights start landing. Mirror the async-on-first-view pattern in
+#   devdocs/featuredocs/async-table-descriptions.md.
+#
+# TODO(stub): accept_agent_insight(request, insight_id: int) -> HttpResponse   [POST .../accept/]
+#   @login_required + @require_POST. get_object_or_404(Insight, pk=insight_id,
+#   account=request.account). Guard: only flip if status == 'pending_review' (else 400).
+#   Set status='active', save, and render the single-card partial
+#   'insights/_agent_insight_card.html' so HTMX swaps just that row (analog: rate_insight).
+#
+# TODO(stub): dismiss_agent_insight(request, insight_id: int) -> HttpResponse   [POST .../dismiss/]
+#   Same shape as accept, but status -> 'dismissed'. Same pending_review guard + card re-render.
+#   (Decide whether a dismissed card stays visible greyed-out or is removed from the list —
+#   that choice drives whether the partial renders the card or an empty response for HTMX to
+#   swap away. Note it in the template TODOs.)

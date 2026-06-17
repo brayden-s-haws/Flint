@@ -1,7 +1,7 @@
 # Feature: Agentic Cross-Source Discovery
 
 **Source:** `devdocs/appdocs/post_mvp.md` — "insights — Agentic Cross-Source Discovery" (build order item #11)
-**Status:** Phase 1 in progress — models + prompt module + service layer + pipeline (incl. storage) done and shell-verified end-to-end; Celery task → views/URLs → templates → tests remain
+**Status:** Phase 1 in progress — models + prompt module + service layer + pipeline (incl. storage) + Celery task done and verified; views/URLs → templates → dashboard card → tests remain
 **Target phase:** Post-MVP Phase 3 (after Celery + Redis, depends on 2+ sources connected)
 **Suggested branch:** `feature/cross-source-discovery` (Phase 1) — already checked out
 
@@ -78,7 +78,7 @@ End-to-end pipeline for one user-selected pair. No Step 2 scoring, no scheduling
 - [ ] Add the URL patterns to `apps/insights/urls.py` under `app_name = 'insights'`.
 
 #### Celery
-- [ ] `run_cross_source_discovery_task(account_id, source_a_id, source_b_id)` in `apps/insights/tasks.py` — IDs only (per `CLAUDE.md` Celery rule). Loads objects, calls the pipeline, marks the `AgentInsightRun` (created in Phase 2; Phase 1 may pass `run=None`) complete/failed. Catch + log exceptions like the existing tasks.
+- [x] `run_cross_source_discovery_task(account_id, source_a_id, source_b_id)` in `apps/insights/tasks.py` — IDs only (per `CLAUDE.md` Celery rule). Loads both `Source`s **scoped to `account_id`** (`Source.objects.get(pk=..., account_id=account_id)` — tenancy guard, last line of defense behind the view), calls `run_discovery_for_pair` with `run=None` (Phase 1), logs the insights-created count on success. Whole-run `try/except` (`logger.exception`) — the pipeline already isolates per-item failures internally, and since it creates many `pending_review` insights there's no single row to mark failed, so the task just logs. Verified the module imports and the task registers with Celery. *(Phase 2 hook noted in code: create an `AgentInsightRun`, thread `run=` through, mark complete/failed here.)*
 
 #### Templates
 - [ ] `insights/cross_source_discovery.html` — the **dedicated page** (extends `base.html`). Top: pair selector (two `<select>` of the account's synced sources) + "Run discovery" button, and the filter/search controls (source `<select>` + search `<input>` as a GET form, styled like the catalog/insights list pages). Below: the newest-first list of insight cards. Includes the results-section partial for HTMX swap during a run.
