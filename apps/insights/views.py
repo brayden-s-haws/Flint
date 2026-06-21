@@ -222,19 +222,12 @@ class CrossSourceDiscoveryView(TenantQuerysetMixin, LoginRequiredMixin, ListView
             qs = qs.filter(insighttarget__content_type=source_ct, insighttarget__object_id=source_pk).distinct()
         return qs # type: ignore[return-value]
 
-    # TODO(stub): get_context_data(self, **kwargs) -> dict[str, Any]
-    #   The template needs more than the insight list — it has a pair selector + a
-    #   filter/search bar + a "Run discovery" button at the top. Mirror the shape of
-    #   InsightListView.get_context_data above. Put into context:
-    #     - 'sources': Source.objects.filter(account=self.request.account)  (synced ones only
-    #        if you want — e.g. .filter(first_synced_at__isnull=False)); feeds BOTH the pair
-    #        <select>s and the source filter <select>.
-    #     - 'q' and 'selected_source': the current GET values, so the filter form stays
-    #        populated after submit (same as the list view echoes them back).
-    #     - rate-limit hint for the Run button (optional but nice): whether a run happened in
-    #        the last 24h. Unlike intra-source (which keys off one source's most-recent
-    #        insight), a cross-source run is per-PAIR — so a global "any cross_source_use_case
-    #        in last 24h" check is the simple Phase 1 version. Decide and document the grain.
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        context['sources'] = Source.objects.filter(account=self.request.account, first_synced_at__isnull=False) # type: ignore[attr-defined]
+        context['q'] = self.request.GET.get('q')
+        context['selected_source'] = self.request.GET.get('source')
+        return context
 
 
 # TODO(stub): run_cross_source_discovery(request) -> HttpResponse   [POST /insights/discovery/run/]
@@ -249,7 +242,7 @@ class CrossSourceDiscoveryView(TenantQuerysetMixin, LoginRequiredMixin, ListView
 #          is None, OR the Max('sourcesynclog__completed_at') pattern — see featuredoc Notes) -> 400
 #   3. Rate-limit (per the spec, once / 24h) — mirror the recent-suggestion check, but for
 #      a PAIR. Phase 1 simple version: look for any cross_source_use_case insight linked to
-#      BOTH of these sources created in the last 24h. (Document the grain you choose.)
+#      BOTH of these sources created in the last 24h. (Make this be per unique pair)
 #   4. DO NOT DELETE existing insights here. This is the big departure from the intra-source
 #      view (lines 141-147 delete-then-create). Cross-source is NON-DESTRUCTIVE (featuredoc) —
 #      the pipeline appends. No delete block.
