@@ -749,6 +749,7 @@ The queries app generates SQL; the query client is where users actually **run** 
 - The natural-language-generated SQL produced by the queries app
 - The starter SQL attached to generated use case suggestions (today these are display-only — see the `sources — Intra-Source Suggested Use Cases` section) and to cross-source agent insights
 - Ad-hoc SQL a user writes or pastes themselves for that source
+- Look at django-sql-explorer as an option for this
 
 ### Key Principle — Results Are Not Stored
 

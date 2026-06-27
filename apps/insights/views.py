@@ -251,6 +251,35 @@ class CrossSourceDiscoveryView(TenantQuerysetMixin, LoginRequiredMixin, ListView
 #      unlike the intra-source view which calls the service synchronously.)
 #   6. Return the results-section partial so HTMX can show a spinner and start polling the
 #      status endpoint:  render(request, 'insights/_cross_source_discovery_results.html', {...})
+
+@login_required
+@require_POST
+def run_cross_source_discovery(request) -> HttpResponse:
+    source_a_id = request.POST.get('source_a')
+    source_b_id = request.POST.get('source_b')
+    if source_a_id == source_b_id:
+        return HttpResponse("Cannot pair a source with itself", status=400)
+    source_a = get_object_or_404(Source, pk=source_a_id, account=request.account)
+    source_b = get_object_or_404(Source, pk=source_b_id, account=request.account)
+    if source_a.first_synced_at is None or source_b.first_synced_at is None:
+        return HttpResponse("Sources must be synced before running discovery", status=400)
+    source_ct = ContentType.objects.get_for_model(Source)
+    cutoff = timezone.now() - timedelta(hours=24)
+    recent_pair_run = (
+        Insight.objects.filter(
+            account=request.account,
+            insight_type='cross_source_use_case',
+            created_at__gte=cutoff,
+            insighttarget__content_type=source_ct,
+            insighttarget__object_id=source_a_id,
+        )
+        .filter(insighttarget__object_id=source_b_id)
+        .exists()
+    )
+    if recent_pair_run:
+        return HttpResponse("Cross-source discovery is rate-limited to once per 24h for this pair", status=400)
+    run_cross_source_discovery_task.delay(request.account.id, source_a.id, source_b.id)
+    return render(request, 'insights/_cross_source_discovery_results.html', {})
 #
 # TODO(stub): cross_source_discovery_status(request) -> HttpResponse   [GET /insights/discovery/status/]
 #   HTMX poll endpoint (analog: use_cases_status above). @login_required.
