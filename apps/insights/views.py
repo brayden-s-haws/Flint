@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from typing import Any
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -229,6 +229,15 @@ class CrossSourceDiscoveryView(TenantQuerysetMixin, LoginRequiredMixin, ListView
         context['selected_source'] = self.request.GET.get('source')
         return context
 
+def build_cross_source_results_context(request, *, since: datetime | None) -> dict[str, Any]:
+    insights = (
+        Insight.objects
+            .filter(account=request.account, insight_type='cross_source_use_case')
+            .prefetch_related('insighttarget_set')
+            .order_by('-created_at')
+    )
+    running = since is not None and not insights.filter(created_at__gt=since).exists()
+    return {'insights': insights, 'since': since.isoformat() if since else '', 'running': running}
 
 # TODO(stub): run_cross_source_discovery(request) -> HttpResponse   [POST /insights/discovery/run/]
 #   The trigger. Closest analog is generate_intra_use_case_suggestions above — copy its
@@ -279,7 +288,7 @@ def run_cross_source_discovery(request) -> HttpResponse:
     if recent_pair_run:
         return HttpResponse("Cross-source discovery is rate-limited to once per 24h for this pair", status=400)
     run_cross_source_discovery_task.delay(request.account.id, source_a.id, source_b.id)
-    return render(request, 'insights/_cross_source_discovery_results.html', {})
+    return render(request, 'insights/_cross_source_discovery_results.html', build_cross_source_results_context(request, since=timezone.now()))
 #
 # TODO(stub): cross_source_discovery_status(request) -> HttpResponse   [GET /insights/discovery/status/]
 #   HTMX poll endpoint (analog: use_cases_status above). @login_required.
