@@ -214,7 +214,7 @@ class CrossSourceDiscoveryView(TenantQuerysetMixin, LoginRequiredMixin, ListView
     def get_queryset(self) -> QuerySet[Insight]:
         q = self.request.GET.get('q')
         source_pk = self.request.GET.get('source')
-        qs = super().get_queryset().filter(insight_type='cross_source_use_case').prefetch_related('insighttarget_set').order_by('-created_at')
+        qs = super().get_queryset().filter(insight_type='cross_source_use_case').exclude(status='dismissed').prefetch_related('insighttarget_set').order_by('-created_at')
         if q:
             qs = qs.filter(text__icontains=q)
         if source_pk:
@@ -233,33 +233,12 @@ def build_cross_source_results_context(request, *, since: datetime | None) -> di
     insights = (
         Insight.objects
             .filter(account=request.account, insight_type='cross_source_use_case')
+            .exclude(status='dismissed')
             .prefetch_related('insighttarget_set')
             .order_by('-created_at')
     )
     running = since is not None and not insights.filter(created_at__gt=since).exists()
     return {'insights': insights, 'since': since.isoformat() if since else '', 'running': running}
-
-# TODO(stub): run_cross_source_discovery(request) -> HttpResponse   [POST /insights/discovery/run/]
-#   The trigger. Closest analog is generate_intra_use_case_suggestions above — copy its
-#   SHAPE (decorators, validation, rate-limit guard, enqueue, render partial) but NOTE the
-#   key differences flagged below. Decorators: @login_required + @require_POST.
-#   1. Read the two source ids from request.POST (e.g. 'source_a', 'source_b').
-#   2. Validate BOTH belong to the account AND are distinct AND are synced:
-#        get_object_or_404(Source, pk=source_a_id, account=request.account) x2
-#        - reject if source_a_id == source_b_id (can't pair a source with itself) -> 400
-#        - reject if either is not synced (Source has no last_synced_at; check first_synced_at
-#          is None, OR the Max('sourcesynclog__completed_at') pattern — see featuredoc Notes) -> 400
-#   3. Rate-limit (per the spec, once / 24h) — mirror the recent-suggestion check, but for
-#      a PAIR. Phase 1 simple version: look for any cross_source_use_case insight linked to
-#      BOTH of these sources created in the last 24h. (Make this be per unique pair)
-#   4. DO NOT DELETE existing insights here. This is the big departure from the intra-source
-#      view (lines 141-147 delete-then-create). Cross-source is NON-DESTRUCTIVE (featuredoc) —
-#      the pipeline appends. No delete block.
-#   5. Enqueue, don't run inline: run_cross_source_discovery_task.delay(request.account.id,
-#      source_a.id, source_b.id). (The pipeline is slow + Sonnet-heavy; it must be async,
-#      unlike the intra-source view which calls the service synchronously.)
-#   6. Return the results-section partial so HTMX can show a spinner and start polling the
-#      status endpoint:  render(request, 'insights/_cross_source_discovery_results.html', {...})
 
 @login_required
 @require_POST
