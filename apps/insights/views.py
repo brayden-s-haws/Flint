@@ -268,6 +268,7 @@ def run_cross_source_discovery(request) -> HttpResponse:
         return HttpResponse("Cross-source discovery is rate-limited to once per 24h for this pair", status=400)
     run_cross_source_discovery_task.delay(request.account.id, source_a.id, source_b.id)
     return render(request, 'insights/_cross_source_discovery_results.html', build_cross_source_results_context(request, since=timezone.now()))
+
 #
 # TODO(stub): cross_source_discovery_status(request) -> HttpResponse   [GET /insights/discovery/status/]
 #   HTMX poll endpoint (analog: use_cases_status above). @login_required.
@@ -277,6 +278,11 @@ def run_cross_source_discovery(request) -> HttpResponse:
 #   one query). The partial shows the spinner while a run is in flight and the list once
 #   insights start landing. Mirror the async-on-first-view pattern in
 #   devdocs/featuredocs/async-table-descriptions.md.
+@login_required
+def cross_source_discovery_status(request) -> HttpResponse:
+    since_raw = request.GET.get('since')
+    since = datetime.fromisoformat(since_raw) if since_raw else None
+    return render(request, 'insights/_cross_source_discovery_results.html', build_cross_source_results_context(request, since=since))
 #
 # TODO(stub): accept_agent_insight(request, insight_id: int) -> HttpResponse   [POST .../accept/]
 #   @login_required + @require_POST. get_object_or_404(Insight, pk=insight_id,
