@@ -1,9 +1,10 @@
 # Feature: Agentic Cross-Source Discovery
 
 **Source:** `devdocs/appdocs/post_mvp.md` — "insights — Agentic Cross-Source Discovery" (build order item #11)
+**Scope (narrowed 2026-07-02):** This feature ships as **Phase 1 only** — a manual, user-triggered single-pair discovery with an accept/dismiss review workflow. That reaches parity with intra-source use cases and lets us validate the feature before investing further. **The automation layer (multi-pair scoring, scheduling, embedding dedup, event triggers) is deferred** — it now lives in `devdocs/appdocs/post_mvp.md` as build item **22b (Phase 5b)**, with full detail in that doc's "insights — Agentic Cross-Source Discovery" section. The Phase 2 / Phase 3 checklists that used to live here have moved there.
 **Status:** Phase 1 in progress — models + prompt module + service layer + pipeline (incl. storage) + Celery task + views/URLs done and verified; templates → dashboard card → tests remain
-**Target phase:** Post-MVP Phase 3 (after Celery + Redis, depends on 2+ sources connected)
-**Suggested branch:** `feature/cross-source-discovery` (Phase 1) — already checked out
+**Target phase:** Post-MVP build item #11 (after Celery + Redis, depends on 2+ sources connected)
+**Suggested branch:** `feature/cross-source-discovery` — already checked out
 
 ---
 
@@ -23,8 +24,8 @@ A multi-step deterministic pipeline that proactively inspects all of an account'
 - [x] `apps/sources/signals.py` + `apps/sources/apps.py::ready()` — signal wiring pattern already established; the Phase 2 event trigger ("new source synced") hangs off this.
 - [x] `apps/catalog/` `Schema`, `Table`, `Column` — the metadata reasoned over. DDL-summary reconstruction pattern already exists in `apps/insights/prompts/intra_source_use_cases.py::build_use_case_suggestions_prompt`.
 - [x] 2+ sources connected and synced for an account (otherwise nothing to pair). Sync completion is detectable via `Source.first_synced_at` and `SourceSyncLog`.
-- [ ] **Phase 3 only:** pgvector for embedding-based deduplication. Requires PostgreSQL (dev is currently SQLite — see Notes). Shared with the future queries-app embedding index.
-- [ ] **Phase 3 only:** an embeddings call path (OpenAI/Anthropic embeddings) added to the service layer — does not exist yet.
+- [ ] **Deferred to build item 22b (not part of this Phase 1 feature):** pgvector for embedding-based deduplication. Requires PostgreSQL (dev is currently SQLite — see Notes). Shared with the future queries-app embedding index.
+- [ ] **Deferred to build item 22b:** an embeddings call path (OpenAI/Anthropic embeddings) added to the service layer — does not exist yet.
 
 ---
 
@@ -36,9 +37,9 @@ A multi-step deterministic pipeline that proactively inspects all of an account'
 
 ## Implementation Checklist
 
-### Phase 1 — Manual trigger, single explicitly-selected source pair
+### Phase 1 — Manual trigger, single explicitly-selected source pair (the shipped scope)
 
-End-to-end pipeline for one user-selected pair. No Step 2 scoring, no scheduling, no embeddings. Goal: validate prompt quality (Steps 3, 4, 6) and the review workflow (Step 7).
+End-to-end pipeline for one user-selected pair. No Step 2 scoring, no scheduling, no embeddings. Goal: validate prompt quality (Steps 3, 4, 6) and the review workflow (Step 7). **This is the entire scope of this feature as currently planned** — the automation phases that used to follow have moved to `post_mvp.md` build item 22b (see the Scope note at the top).
 
 #### Models
 - [x] Extend `Insight.insight_type` choices in `apps/insights/models.py` with `('cross_source_use_case', 'Cross Source Use Case')`. Migration generated + applied. *(Named `cross_source_use_case` — the cross-source twin of intra-source `use_case_suggestion` — not the spec's prose `cross_source_agent`. This featuredoc is authoritative for the literal string.)*
@@ -94,46 +95,9 @@ End-to-end pipeline for one user-selected pair. No Step 2 scoring, no scheduling
 
 ---
 
-### Phase 2 — Multi-pair with Step 2 scoring, event-triggered
+### Phases 2 & 3 — moved out of this feature
 
-#### Models
-- [ ] `AgentInsightRun` (new model, `apps/insights/models.py`, extends `TenantAwareModel`) — fields per spec: `status` (running/completed/failed/partial), `started_at`, `completed_at` (nullable), `sources_analyzed`, `pairs_evaluated`, `hypotheses_generated`, `insights_created`, `error_log` (TextField), `triggered_by` (schedule/new_source/manual). Migration + admin.
-- [ ] `CrossSourceRelationship` (new model, `apps/insights/models.py`, extends `TenantAwareModel`) — `source_a`/`source_b` FKs to `sources.Source`, `source_a_table`/`source_a_column`/`source_b_table`/`source_b_column` CharFields, `join_type` (direct/fuzzy/temporal), `confidence` (high/medium/low), `reasoning` TextField, `first_discovered`, `last_confirmed`, `is_active` BooleanField. Migration + admin.
-
-#### Pipeline
-- [ ] Step 1 — `gather_source_inventory(account)` returns the account's synced sources with table/column metadata and sync recency. (No `SourceType.category` grouping — see the "no source-type bias" decision below.)
-- [ ] Step 2 — `score_source_pair(source_a, source_b) -> float` deterministic, **structural-only** ranker (no LLM calls, no source-type prior). Combines: (1) shared normalized column-name fingerprints (lowercase, strip underscores/camelCase — `email`/`user_id`/`*_id`/date families), (2) temporal overlap (both have date-typed columns). Used to **order** pairs for spending the per-run LLM cap, **not** as a hard gate — at typical scale (2–5 sources = 1–10 pairs) run Step 3 on every pair up to the cap, highest-fingerprint-score first. Deliberately does **not** weight pairs by whether their source types "should" relate — that bias is what would suppress the surprising cross-domain insights this feature exists to find.
-- [ ] Cache Step 3 — persist results as `CrossSourceRelationship`; reuse across runs; only re-run Step 3 for a pair when new tables/columns were synced since `last_confirmed`. Set `is_active=False` when a referenced source/column no longer exists.
-- [ ] Cap LLM calls per run (e.g. 10); prioritize highest-scoring pairs (by the structural score above); log when the cap is hit. Update `AgentInsightRun` counters as the run progresses. **The per-run cap — not a category threshold — is the cost lever.**
-
-#### Triggering
-- [ ] Event trigger — when a source finishes its **first** successful sync (extend the completion path in `apps/sources/tasks.py::sync_source_task`, or add a signal), enqueue the full account pipeline if the account now has 2+ synced sources. `triggered_by='new_source'`.
-- [ ] Manual full-account run — extend the Phase 1 button to also offer "Run discovery across all sources" (not just one pair), rate-limited to once / 24h. `triggered_by='manual'`.
-
-#### Tests
-- [ ] Pair scoring: a pair sharing join-key fingerprints (e.g. both have `email`/`*_id`) scores above a pair with no shared fingerprints and no temporal overlap. Scoring is order-only, so assert relative ordering, not a fixed threshold.
-- [ ] `CrossSourceRelationship` is reused (not re-discovered) when no new catalog rows since `last_confirmed`.
-- [ ] New-source sync on an account with one prior synced source fires exactly one pipeline run.
-
----
-
-### Phase 3 — Scheduled runs + embedding deduplication
-
-#### Scheduling
-- [ ] Celery beat periodic task running the pipeline weekly for every eligible account (2+ synced sources, last `AgentInsightRun` > 6 days ago). `triggered_by='schedule'`. Use the `django-celery-beat` DB scheduler already configured.
-
-#### Deduplication (Step 5)
-- [ ] pgvector enabled (requires Postgres — see Notes). Embed each new hypothesis's title+description; embed/lookup existing account `Insight`s; cosine similarity > ~0.85 → skip as already-known. Reuses the embedding index intended for the queries app.
-- [ ] Quality filter (Step 5, can land earlier): discard hypotheses with `specificity_score < 0.6`, generic vapid-phrase titles, or `required_data` columns that don't exist in `catalog.Column`.
-- [ ] Per-run rate cap: surface at most N new insights/account/run (e.g. 5), ranked by specificity + pair novelty.
-
-#### Dismissed-insight feedback
-- [ ] Persist the dismissed signal so the same pattern isn't resurfaced (e.g. store a fingerprint of dismissed hypotheses and skip near-matches on later runs).
-
-#### Tests
-- [ ] Near-duplicate hypothesis (high cosine similarity to an existing insight) is skipped.
-- [ ] Hypothesis referencing a non-existent column is discarded by the quality filter.
-- [ ] Scheduled run skips accounts whose last run was < 6 days ago.
+The automation layer — multi-pair Step 2 scoring, the `AgentInsightRun` / `CrossSourceRelationship` models, event-triggered and Celery-beat-scheduled runs, and embedding-based dedup — is **no longer part of this feature.** It's parked as **build item 22b (Phase 5b)** in `devdocs/appdocs/post_mvp.md`, with the full pipeline spec (Steps 1–7, data model, triggering, cost controls) in that doc's "insights — Agentic Cross-Source Discovery" detailed section. When 22b is picked up, write a fresh featuredoc for it; the design decisions that specifically govern that work (pair scoring, no source-type bias, the relationship cache, cost-per-pair) live in the post_mvp detailed section, not here.
 
 ---
 
@@ -153,20 +117,15 @@ These were originally sketched as later phases but are **not** part of shipping 
 - **`pending_review` status + review queue.** Agent insights are surfaced for accept/dismiss before becoming `active`, at least initially — the agent is proactive and unprompted, so a human gate protects insight-list quality.
 - **Non-destructive regeneration.** Re-running discovery never deletes prior insights — it appends, and the list renders newest-first so re-runs stack on top with full history preserved. The pipeline has no delete step. This is a deliberate departure from the original intra-source regenerate flow (delete-then-generate, which both risks leaving the user with nothing on a failed LLM call *and* throws away past suggestions) and is the model the intra-source rework (post_mvp item 11b) will follow. Lives on a **dedicated page** (`/insights/discovery/`) with source filter + search, reached from a dashboard stat card alongside Sources/Tables/Insights.
 - **Dismiss is permanent removal, not a delete (decided).** Dismissing a card flips the insight to `status='dismissed'` (the row stays in the DB) and HTMX swaps the card away. For that to hold, **every query that surfaces or counts cross-source insights must `.exclude(status='dismissed')`** — otherwise dismissed insights reappear on reload, on a status poll, or in the dashboard count. Use `.exclude(status='dismissed')` (keeps `pending_review` *and* accepted `active`), not `.filter(status='pending_review')`. Applies to: `CrossSourceDiscoveryView.get_queryset`, `build_cross_source_results_context` (the status-poll helper) — both done — and the dashboard count (still TODO). **Deliberate exception:** the `run_cross_source_discovery` 24h rate-limit check does **not** exclude dismissed — it asks "did a run happen for this pair recently," and a dismissed insight still proves a run happened, so it should keep counting.
-- **Rank, don't gate, before spending tokens (Step 2).** Pair scoring is deterministic and LLM-free, used to *order* which pairs get the per-run LLM budget — not to hard-exclude pairs. Cap LLM calls per run and use cheaper models for discovery/hypothesis, the better model only for the final insight.
-- **No source-type bias in pairing (decided — reversal of the original spec).** Step 2 scoring is *structural only* — shared column-name fingerprints + temporal overlap — with **no `SourceType.category` cross-domain matrix**. A category prior ("CRM joins with analytics") would bake in exactly the assumption that suppresses the surprising cross-domain insights this feature exists to surface, and it's largely redundant with the fingerprint signal (same-domain sources already share `contact`/`email`/`*_id` columns). The `SourceType.category` field was dropped from Phase 2 entirely — no new model field, migration, admin, or hand-maintained matrix. Fully reversible: if structural scoring under-filters at high source counts, add category *then*, informed by real data. The fuzzy/semantic matching a category prior might have caught is already Step 3's (the LLM's) job; Step 2 only decides spend order.
-- **`CrossSourceRelationship` is a cache.** Discovered joins persist and are reused across runs; Step 3 only re-runs for pairs with new catalog rows. This is the main cost lever for scheduled runs.
-- **Cost scales with source *pairs*, not tables.** 3 sources = 3 pairs, 5 sources = 10 pairs. Keep the per-run LLM cap in mind as accounts grow.
 - **`apps/insights/prompts/intra_source_use_cases.py` is the starting point.** The DDL-summary builder and JSON-output structure are nearly identical; the difference is feeding two sources' schemas instead of one.
+- **Automation-layer decisions live in post_mvp 22b.** The pair-scoring / "rank-don't-gate" / no-source-type-bias / relationship-cache / cost-per-pair decisions govern the deferred Phase 2 & 3 work and now live in the `post_mvp.md` detailed section, not here.
 
 ---
 
 ## Notes
 
 - **`last_synced_at` vs. reality:** the spec's Step 1 references `last_synced_at`, but `Source` has no such field — it has `first_synced_at` (set on first successful sync). The app already *derives* "last synced" the same way in two places: `SourceListView` annotates `last_synced_at=Max('sourcesynclog__completed_at')` (`apps/sources/views.py:41`) and `SourceDetailView` reads the latest `status='success'` `SourceSyncLog` (`:124`). Step 1 should reuse the `Max('sourcesynclog__completed_at')` annotation pattern for recency and `first_synced_at` for "has it ever synced." Don't add a `last_synced_at` model field.
-- **`SourceType.category` is intentionally not used** — the original spec proposed adding a `category` field to drive a Step 2 cross-domain matrix; that was dropped (see "No source-type bias in pairing" above). Step 2 scores pairs on structure (shared column fingerprints + temporal overlap), not on declared source type, so no `category` field is added in any phase.
-- **pgvector requires PostgreSQL.** Dev is currently SQLite (`db.sqlite3`). Phase 3 deduplication assumes the Postgres + pgvector move is done (it's also a queries-app prerequisite). **Confirmed plan:** stand up Postgres when Phase 3 starts — at that point Claude will provide step-by-step setup instructions (install Postgres + the pgvector extension, create the dev DB/role, point `DATABASE_URL` at it, migrate, enable the `vector` extension, swap the dev `DATABASES` engine). Until then Phase 1/2 stay on SQLite.
-- **No embeddings call path exists** in the service layer today; Phase 3 adds one. The current `BaseService` only does text completions.
+- **Automation-layer notes moved.** The `SourceType.category` "not used" decision, the pgvector/Postgres prerequisite, and the "no embeddings call path yet" note all pertain to the deferred Phase 2 & 3 work and now live with build item 22b in `post_mvp.md`. Phase 1 stays on SQLite and needs none of them.
 - **Package layout (decided):** built in `apps/insights/` — no `apps/agents/` app. If `cross_source_pipeline.py` + the three prompt builders + services grow large, extract to an `apps/insights/agent/` sub-package rather than a new Django app. Note: the natural-language-to-SQL "queries" feature (post_mvp item #15) is currently scoped as its own `apps/queries/` app in `post_mvp.md`; that's a separate decision and doesn't change where cross-source discovery lives. If you also want queries folded into `apps/insights/`, that's a `post_mvp.md` edit to make when that feature comes up — flag it then.
 - **Destructive-sequence caution:** unlike the intra-source regenerate flow (which deletes existing suggestions *before* the LLM call — flagged in the post_mvp bug-bash list), the agent pipeline should create new `pending_review` insights without deleting prior ones up front; dedup (Phase 3) handles overlap. Don't repeat the delete-before-LLM pattern here.
 - **Security:** credentials are never needed by this pipeline — it reasons over catalog metadata only, never connects to source DBs. The starter SQL is display-only until the queries app exists.
