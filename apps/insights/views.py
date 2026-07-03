@@ -269,29 +269,28 @@ def run_cross_source_discovery(request) -> HttpResponse:
     run_cross_source_discovery_task.delay(request.account.id, source_a.id, source_b.id)
     return render(request, 'insights/_cross_source_discovery_results.html', build_cross_source_results_context(request, since=timezone.now()))
 
-#
-# TODO(stub): cross_source_discovery_status(request) -> HttpResponse   [GET /insights/discovery/status/]
-#   HTMX poll endpoint (analog: use_cases_status above). @login_required.
-#   Re-render 'insights/_cross_source_discovery_results.html' with the current newest-first
-#   cross_source_use_case queryset for the account (reuse the same filtering you build in the
-#   view's get_queryset — consider extracting a small helper so the page and the poll share
-#   one query). The partial shows the spinner while a run is in flight and the list once
-#   insights start landing. Mirror the async-on-first-view pattern in
-#   devdocs/featuredocs/async-table-descriptions.md.
 @login_required
 def cross_source_discovery_status(request) -> HttpResponse:
     since_raw = request.GET.get('since')
     since = datetime.fromisoformat(since_raw) if since_raw else None
     return render(request, 'insights/_cross_source_discovery_results.html', build_cross_source_results_context(request, since=since))
-#
-# TODO(stub): accept_agent_insight(request, insight_id: int) -> HttpResponse   [POST .../accept/]
-#   @login_required + @require_POST. get_object_or_404(Insight, pk=insight_id,
-#   account=request.account). Guard: only flip if status == 'pending_review' (else 400).
-#   Set status='active', save, and render the single-card partial
-#   'insights/_agent_insight_card.html' so HTMX swaps just that row (analog: rate_insight).
-#
-# TODO(stub): dismiss_agent_insight(request, insight_id: int) -> HttpResponse   [POST .../dismiss/]
-#   Same shape as accept, but status -> 'dismissed'. Same pending_review guard + card re-render.
-#   (Decide whether a dismissed card stays visible greyed-out or is removed from the list —
-#   that choice drives whether the partial renders the card or an empty response for HTMX to
-#   swap away. Note it in the template TODOs.)
+
+@login_required
+@require_POST
+def accept_agent_insight(request, insight_id: int) -> HttpResponse:
+    insight = get_object_or_404(Insight, pk=insight_id, account=request.account, insight_type='cross_source_use_case',)
+    if insight.status != 'pending_review':
+        return HttpResponse("Only pending insights can be accepted", status=400)
+    insight.status = 'active'
+    insight.save()
+    return render(request, 'insights/_agent_insight_card.html', {'insight': insight})
+
+@login_required
+@require_POST
+def dismiss_agent_insight(request, insight_id: int) -> HttpResponse:
+    insight = get_object_or_404(Insight, pk=insight_id, account=request.account, insight_type='cross_source_use_case',)
+    if insight.status != 'pending_review':
+        return HttpResponse("Only pending insights can be dismissed", status=400)
+    insight.status = 'dismissed'
+    insight.save()
+    return HttpResponse('')
