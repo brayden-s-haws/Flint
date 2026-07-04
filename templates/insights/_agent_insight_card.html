@@ -1,0 +1,61 @@
+<!-- TODO(stub): Single cross-source insight card partial.
+     Returned directly by accept_agent_insight (the updated card) and looped over by
+     _cross_source_discovery_results.html. Reuse the card styling from
+     templates/sources/_use_cases_section.html lines 25-36 (the inner use-case card):
+       bg-flint-card rounded-md border border-flint-border p-4
+     Context available: `insight` (an Insight instance). READ CONTENT FROM
+     insight.structured_data, NOT insight.text — cross-source insights store the Step 6
+     payload there: .title, .description, .business_value, .starter_sql. -->
+<div id="agent-insight-{{ insight.pk }}"
+     hx-target="closest [id^=agent-insight]"
+     hx-swap="outerHTML">
+
+
+</div>
+<!-- TODO(stub): ROOT ELEMENT — this is the HTMX swap unit. Give it a stable, unique id
+     keyed by the insight pk, e.g. id="agent-insight-{{ insight.pk }}". Both Accept and
+     Dismiss buttons target THIS element with hx-target and hx-swap="outerHTML":
+       - Accept returns a re-rendered card (this same partial) -> replaces itself in-place.
+       - Dismiss returns an empty response -> replaces itself with nothing (card vanishes).
+     So the buttons can point hx-target at "#agent-insight-{{ insight.pk }}" (or use
+     hx-target="closest [id^=agent-insight]"). Keep the id here so both work. -->
+
+<!-- TODO(stub): TITLE — insight.structured_data.title in an <h3>
+     (text-lg font-semibold text-flint-text), matching the use-case card heading. -->
+
+<!-- TODO(stub): DESCRIPTION — insight.structured_data.description in a <p>
+     (text-sm text-flint-muted). -->
+
+<!-- TODO(stub): BUSINESS VALUE — insight.structured_data.business_value. The use-case card
+     has no equivalent, so add a small labelled block: a muted label ("Business value")
+     then the text. Only render if business_value is present (wrap in {% if %}). -->
+
+<!-- TODO(stub): TABLES-INVOLVED BADGES — the row of table-name badges, same as
+     _use_cases_section.html lines 28-33: a "Tables:" label then a {% for %} over the
+     table names, each in a badge span (bg-flint-border text-flint-muted text-xs px-2
+     py-0.5 rounded mr-1). NOTE: confirm the Step 6 payload key for the table list — the
+     intra-source card uses .tables; cross-source may store join tables under a different
+     key (check a real structured_data via the pipeline / shell). If cross-source has no
+     table list, drop this block or derive badges from the two linked sources via
+     insight.insighttarget_set instead. -->
+
+<!-- TODO(stub): STARTER SQL — collapsible, display-only. Same as the use-case card line 34:
+     <details><summary>View SQL</summary><pre class="whitespace-pre-wrap text-xs mt-2">
+     <code>{{ insight.structured_data.starter_sql }}</code></pre></details>. Wrap in {% if %}
+     so a card with no starter_sql doesn't render an empty <details>. -->
+
+<!-- TODO(stub): ACCEPT / DISMISS ACTIONS — only show these while the card is actionable,
+     i.e. {% if insight.status == 'pending_review' %}. Two POST forms (or hx-post buttons):
+       - Accept: hx-post="{% url 'insights:accept_agent_insight' insight.pk %}",
+         hx-target="#agent-insight-{{ insight.pk }}", hx-swap="outerHTML". Include
+         {% csrf_token %}. Style like the primary button (bg-flint-orange text-white).
+       - Dismiss: hx-post="{% url 'insights:dismiss_agent_insight' insight.pk %}", same
+         hx-target + hx-swap="outerHTML" (empty response removes the card). {% csrf_token %}.
+         Style like the secondary/outline button (border border-flint-border text-flint-muted).
+     Add hx-disabled-elt="this" or hx-indicator with the shared spinner
+     ({% include 'components/_spinner.html' %}) for the in-flight state.
+     {% else %} — for an already-accepted (status == 'active') card, show a small
+     "Accepted" badge instead of the buttons so the user can't re-click into the 400 guard. -->
+
+<!-- TODO(stub): OPTIONAL — created_at line (text-sm text-flint-muted), matching the insight
+     list card, so re-runs stacking newest-first are legible. -->

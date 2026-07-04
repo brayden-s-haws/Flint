@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block title %}Cross-Source Discovery | Flint{% endblock %}
+
+{% block content %}
+<main class="max-w-7xl mx-auto px-4 py-8">
+
+    <!-- TODO(stub): PAGE HEADER — an <h1> "Cross-Source Discovery" (text-2xl font-bold
+         text-flint-text), matching insight_list.html line 9. Optional one-line muted
+         subtitle explaining the feature ("Find join opportunities across two connected
+         sources."). -->
+
+    <!-- TODO(stub): RUN-DISCOVERY CONTROL — the pair selector + trigger. A form that
+         hx-post="{% url 'insights:run_cross_source_discovery' %}",
+         hx-target="#discovery-results", hx-swap="outerHTML",
+         hx-disabled-elt="find button", hx-indicator="find .spinner". Include {% csrf_token %}.
+         Two <select>s of synced sources — context var `sources` (already filtered to
+         first_synced_at__isnull=False in the view):
+           - name="source_a" and name="source_b", each a {% for source in sources %}
+             option loop ({{ source.pk }} / {{ source.name }}), styled like the list-page
+             selects (w-full bg-flint-card border border-flint-border-em rounded-md px-3
+             py-2 ... — see insight_list.html lines 20-25). Add appearance-none if native
+             select styling bleeds through.
+         Then a submit button "Run discovery" (bg-flint-orange text-white ...) and
+         {% include 'components/_spinner.html' with label="Discovering…" %}.
+         NOTE: the view rejects a self-pair (source_a == source_b) with a 400 — consider a
+         tiny helper note under the selects, and/or leave client-side validation for later.
+         The 400 body is plain text; HTMX won't swap it into #discovery-results by default,
+         so a same-source pick just no-ops visibly. Fine for the stub; polish later. -->
+
+    <!-- TODO(stub): FILTER / SEARCH CONTROLS — a SEPARATE GET <form> (method defaults to GET,
+         no HTMX) that reloads the page with query params, exactly like insight_list.html
+         lines 11-28. Context vars: `sources`, `q`, `selected_source`.
+           - text <input name="q" value="{{ q|default:'' }}"> placeholder "Search insights"
+           - <select name="source"> with an "All Sources" option then the {% for source in
+             sources %} loop; mark selected with
+             {% if selected_source == source.pk|stringformat:"s" %}selected{% endif %}
+           - a "Search" submit button and a "Clear" link back to
+             {% url 'insights:discovery' %}.
+         Keep this visually distinct from / below the Run-discovery control so the two
+         forms aren't confused. -->
+
+    <!-- TODO(stub): RESULTS SECTION — embed the results partial for the initial page load:
+         {% include 'insights/_cross_source_discovery_results.html' %}
+         The view's get_context_data does NOT set `running`/`since`, so on first load those
+         are falsy — the partial renders the current card list with no polling, which is
+         correct. After a run, the POST response swaps this #discovery-results element and
+         polling kicks in from there. -->
+
+</main>
+{% endblock content %}
