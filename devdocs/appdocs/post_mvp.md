@@ -26,7 +26,12 @@ For speculative or longer-horizon ideas, see `devdocs/potential_features.md`.
     10d. ~~Move Sync Schedule + Sync History into a right-hand column beside Source Overview / Schemas & Tables (3/5 + 2/5 split).~~ COMPLETE
     10e. ~~Swap Source Overview and Schemas & Tables cards.~~ COMPLETE
 10f. ~~Delete source → cascade-clean its insights~~ COMPLETE — see `devdocs/featuredocs/source-delete-insight-cleanup.md`. Added a `pre_delete` signal on `Source` (`cleanup_insights_on_source_delete` in `apps/sources/signals.py`) that hard-deletes source-targeted (Source Overview, use-case) and table-targeted (table-description) `Insight` rows — which cascade their `InsightTarget`s — before the source and its tables are removed. Scoped by account; manually verified via the UI. Automated tests deferred to the Phase 6 testing pass (`devdocs/testing.md` → `apps.sources`). Found during the 10b work; split to its own branch to keep that one focused.
-11. Agentic cross-source discovery — `insights` (depends on 2+ sources connected) Note: we should add this to the dashboard as one of the main cards next to the Insights card
+11. ~~Agentic cross-source discovery (**Phase 1 only** — manual pair trigger + accept/dismiss review) — `insights`~~ **COMPLETE (Phase 1 build; automated tests deferred to the Phase 6 testing pass #24, written up in `devdocs/testing.md`)** — see `devdocs/featuredocs/agentic-cross-source-discovery.md`. **Scope narrowed (2026-07-02):** shipped only the manual, user-triggered single-pair discovery with a review (accept/dismiss) workflow — this reaches parity with intra-source use cases and lets us validate the feature before investing further. Delivered: models/migrations, prompt module, service methods (both providers), the `run_discovery_for_pair` pipeline + storage, the Celery task, all five views + URLs, the three templates, and the dashboard "Cross Source Use Cases" card + "Discover" nav link. The automation layer (pair scoring, scheduling, embedding dedup, event triggers) is deferred to build item **22b** (Phase 5b) below.
+11b. **Convert intra-source use-case generation to async + make regeneration non-destructive — `insights` — TACKLE NEXT (after #11 ships).** Today `generate_intra_use_case_suggestions` (`apps/insights/views.py:146`) makes the LLM call synchronously inside the request/response cycle — the only insight generator still doing so (table descriptions and source overview are already Celery tasks). It's a heavy call (`USE_CASE_MAX_TOKENS=4000`, 4–6 use cases with SQL) that ties up a web worker and risks the gunicorn timeout. Convert it to the established async-on-first-view pattern: a `generate_use_cases_task` in `apps/insights/tasks.py`, create `pending` placeholder insights, enqueue, poll via the existing `use_cases_status` endpoint (`views.py:112`). This is the documented "migrate per-feature when revisited" step from `architecture.md:273`.
+    - **Non-destructive regeneration (matches the cross-source discovery decision in `devdocs/featuredocs/agentic-cross-source-discovery.md`).** Regenerating must **not** delete existing use cases. Remove the delete block at `apps/insights/views.py:137-143`; instead keep the old suggestions and **append the new ones to the top** (render the use-cases section newest-first, `order_by('-created_at')`). This both fixes the destructive-sequence bug (a failed LLM call currently leaves the user with nothing) and preserves the history of past suggestions.
+    - **Scrollable card.** Because the intra-source use cases live in a **card** on the source detail page (space-constrained, unlike the cross-source dedicated page), wrap the now-growing list in a fixed-height **scroll container** — same pattern as the Sync History card (`max-h-*` + `overflow-y-auto`) — so the card doesn't grow unbounded as suggestions accumulate.
+    - **Rate-limit interaction:** keep the existing 24h regenerate guard, but its purpose shifts from "avoid overwriting" to "avoid runaway LLM cost."
+    - Suggested branch: `feature/async-use-cases`.
 12. Demo Mode Phase 2 (product scenario + auto-trigger insights after load)
 
 **Phase 4 — New apps and connector expansion, depend on Phase 2 & 3**
@@ -46,6 +51,12 @@ For speculative or longer-horizon ideas, see `devdocs/potential_features.md`.
 21. Multi-account switching, role-based permissions — `accounts`
 22. Ontology Phases 2–6 (LLM suggestions, graph view, agent integration)
 
+**Phase 5b — Cross-Source Discovery Automation** (deferred until the Phase 1 manual feature — build item #11 — has proven out)
+22b. Agentic cross-source discovery — **Phases 2 & 3** — `insights` — the automation layer built on top of the shipped Phase 1 manual feature (#11). Deferred deliberately: Phase 1 (manual single-pair trigger + accept/dismiss review) ships and gets validated first, so we don't build scheduling/scoring/dedup before knowing the core discovery is worth automating.
+    - **Phase 2 — multi-pair, scored, event-triggered.** Add the `AgentInsightRun` and `CrossSourceRelationship` models (fields per the Data Model in the detailed section; `CrossSourceRelationship` doubles as a reuse cache so Step 3 only re-runs for pairs with new catalog rows). Add Step 1 `gather_source_inventory(account)` and Step 2 `score_source_pair` — a deterministic, **structural-only** ranker (shared column-name fingerprints + temporal overlap, **no** `SourceType.category` matrix — see the "no source-type bias" decision in the detailed section) that *orders* which pairs spend the per-run LLM-call cap rather than hard-gating. Event trigger: when a source finishes its **first** successful sync (`apps/sources/tasks.py::sync_source_task` completion path or a signal), enqueue the full-account pipeline if the account now has 2+ synced sources (`triggered_by='new_source'`). Extend the Phase 1 button to also offer a full-account run (`triggered_by='manual'`).
+    - **Phase 3 — scheduled + deduped.** Celery-beat weekly run for every eligible account (2+ synced sources, last `AgentInsightRun` > 6 days ago; `triggered_by='schedule'`). Embedding-based dedup (Step 5): requires the **Postgres + pgvector** move (also a queries-app prerequisite) and a new embeddings call path on `BaseService` (does not exist today) — cosine similarity > ~0.85 against existing account insights → skip as already-known. Quality filter (can land earlier): drop `specificity_score < 0.6`, vapid-phrase titles, and `required_data` columns absent from `catalog.Column`. Persist a dismissed-hypothesis fingerprint so near-matches aren't resurfaced.
+    - **Full spec** — pipeline Steps 1–7, exact model fields, triggering strategy, and cost/quality controls — lives in the "insights — Agentic Cross-Source Discovery" detailed section below (the Phased Build there labels these Phases 2–3, with the descoped email-digest/multi-source items as 4–5). Tests for this work are listed in the featuredoc's (now-removed) Phase 2/3 blocks — re-derive them from the detailed section when this is picked up.
+
 ---
 ## Phase 6 — General
 
@@ -54,7 +65,7 @@ Cross-cutting cleanup items addressed after all feature work in this doc is comp
 23. **Add docstrings to all files** — sweep every module and add module- and function-level docstrings. Task Claude to find all files currently missing them.
 24. **Address `devdocs/testing.md` in full** — fill in the stubbed test sections for each app (`apps.sources`, `apps.catalog`, `apps.insights`), write the tests, and run the full suite (`python manage.py test`) until it passes. Multi-tenancy boundary tests (account A cannot see account B's data) are required for every tenant-scoped app.
 25. **Address `devdocs/logging.md` in full** — add the `LOGGING` config to `settings.py` and instrument every app per the logging plan (tenant middleware, auth events, sync lifecycle, LLM calls). Never log credentials, tokens, or LLM prompt/response content.
-26. **Run the bug bash** — broad sweep for bugs, dead code, and rough edges across the codebase; produce a single triaged punch list (see the "bug bash" section below). Find, don't fix — fixes happen in follow-up sessions.
+26. **Run the bug bash** — broad sweep for bugs, dead code, and rough edges across the codebase; produce a single triaged punch list (see the "bug bash" section below). Find, don't fix — fixes happen in follow-up sessions. **Items already found during feature work are accumulating in `devdocs/bug_bash.md`** — start there, then sweep for the rest.
 27. **Add AI evals** — build an evaluation harness for the LLM-generated outputs (table descriptions, source overviews, use case suggestions, cross-source insights) so quality regressions are caught as prompts and models change.
 28. **Update the README** — revise the README drafted in build order item #9 so it reflects the final feature set.
 
@@ -174,6 +185,7 @@ On initial page load, if no suggestions have been generated yet, show an empty s
 - **Cross-source insights** — insights that span multiple sources or tables
 - ~~**Batch insight generation** — generate descriptions for all tables in a source at once (requires Celery)~~ COMPLETE as async-on-first-view instead of bulk fan-out — see `devdocs/featuredocs/async-table-descriptions.md`. The scope pivot is documented there: bulk generation would have wasted LLM spend on tables nobody views, and forced a "click to continue" UX on large databases. The async path keeps the existing lazy-trigger behavior, just unblocks the page render.
 - **Insight approval/rating** — thumbs up/down workflow so users can accept or reject generated insights
+- **Async intra-source use-case generation** — `generate_intra_use_case_suggestions` still runs the LLM call synchronously in the request cycle (`apps/insights/views.py:146`); the only generator not yet on Celery. Migrate to the async-on-first-view pattern. Scheduled as build-order item **11b** (tackle right after the agentic cross-source discovery feature). Also fixes the delete-before-LLM destructive-sequence bug. See item 11b for detail.
 
 ---
 
@@ -233,29 +245,17 @@ Fetch all `Source` records for the account where `last_synced_at` is not null (i
 - Column names and types (used for join key discovery)
 - Last sync time (used to skip stale sources)
 
-Group sources by their `SourceType.category` (e.g., `crm`, `analytics`, `database`, `ecommerce`, `support`). This category grouping will be used in Step 2 to apply known cross-domain patterns before doing any LLM reasoning.
+No source-type grouping is applied. (An earlier draft grouped sources by a `SourceType.category` field to drive a cross-domain matrix in Step 2; that was dropped — see Step 2 and the "Design decisions" note on source-type bias. Step 2 scores pairs on structure, not declared type.)
 
 ---
 
-### Step 2: Source Pair Scoring (Pre-LLM Filter)
+### Step 2: Source Pair Scoring (Pre-LLM Ranker)
 
-Before making any LLM calls, score every source pair for cross-source potential. This is a cheap, deterministic pre-filter to avoid burning LLM tokens on hopeless combinations.
+Before making any LLM calls, score every source pair for cross-source potential. This is a cheap, deterministic, **structural-only** signal used to *order* which pairs get the per-run LLM budget first — not a hard gate that excludes pairs, and deliberately **not** based on what type the sources are.
 
-**Signal 1: Known cross-domain relationship matrix**
+> **Why no source-type matrix (decided):** an earlier draft had a "Signal 1" cross-domain matrix that scored pairs higher when their `SourceType.category` values were known to relate (CRM × analytics, etc.). That was dropped. A type prior bakes in exactly the assumption that suppresses the *surprising* cross-domain insights this feature exists to find, and it's largely redundant with the fingerprint signal below (same-domain sources already share `contact`/`email`/`*_id` columns). It also required a new `SourceType.category` field + a hand-maintained matrix. The fuzzy/semantic matching such a prior might have caught is already Step 3's (the LLM's) job. Reversible later if structural scoring proves to under-filter at high source counts.
 
-Some source type combinations are known to have high analytical value:
-
-| Source A | Source B | Opportunity |
-|---|---|---|
-| CRM (HubSpot, Salesforce) | Web Analytics (GA, Mixpanel) | Marketing attribution — correlate campaign touches with CRM outcomes |
-| CRM | E-commerce (Shopify, Stripe) | Customer lifetime value, deal-to-purchase conversion |
-| CRM | Support (Zendesk, Intercom) | Customer health, churn signal detection |
-| E-commerce | Analytics | Funnel analysis, cart abandonment |
-| Database (Postgres) | Any SaaS | Operational data vs. tool data enrichment |
-
-Pairs with a known pattern score higher automatically.
-
-**Signal 2: Shared column name fingerprints**
+**Signal 1: Shared column name fingerprints**
 
 Scan column names across both sources for likely join keys. Look for columns matching patterns like:
 
@@ -265,11 +265,11 @@ Scan column names across both sources for likely join keys. Look for columns mat
 
 Any pair sharing at least one likely join key scores much higher. Use a simple normalized name comparison (lowercase, strip underscores/camelCase) — no LLM needed here.
 
-**Signal 3: Temporal overlap**
+**Signal 2: Temporal overlap**
 
 Both sources have date-typed columns covering a common time range → higher score. Both have event-style tables with timestamps → potential for time-series correlation.
 
-Only source pairs scoring above a threshold advance to Step 3. For accounts with many sources, this keeps LLM call count bounded.
+Pairs are ranked by this structural score and Step 3 runs on them highest-first up to the per-run LLM-call cap. At typical scale (2–5 sources = 1–10 pairs) every pair can advance; the cap — not a category threshold — is what keeps the LLM call count bounded as accounts grow.
 
 ---
 
@@ -448,23 +448,25 @@ LLM calls per account per run scale with the number of source pairs, not the num
 - **Pre-filter aggressively in Step 2.** The pair scoring step should eliminate most combinations before any LLM calls are made.
 - **Cap LLM calls per run.** Set a max (e.g., 10 LLM calls per account per run) and prioritize highest-scoring pairs. Log when the cap is hit.
 - **Cache Step 3 results.** `CrossSourceRelationship` records don't need to be rediscovered every run. Only redo Step 3 for pairs where a new sync has added significant new tables/columns since the last discovery.
-- **Use cheaper models for Step 2 filtering and Step 3 discovery.** Reserve the better model for Step 6 (the actual insight writing that the user will read).
+- **Use cheaper models for Step 3 discovery and Step 4 hypotheses.** (Step 2 is deterministic and makes no LLM calls.) Reserve the better model for Step 6 (the actual insight writing that the user will read).
 
 ---
 
 ### Phased Build
 
-1. **Phase 1 — Manual trigger only, single source pair**
-   Build the pipeline end-to-end but only for user-initiated runs on one explicitly selected source pair. No scheduling, no Step 2 scoring. Good for validating prompt quality and the review workflow.
+1. **Phase 1 — Manual trigger only, single source pair** — *shipping as build-order item #11; see `devdocs/featuredocs/agentic-cross-source-discovery.md`.*
+   Build the pipeline end-to-end but only for user-initiated runs on one explicitly selected source pair. No scheduling, no Step 2 scoring. Good for validating prompt quality and the review workflow. **This is the deliberately narrowed scope for now** — Phases 2 & 3 below are parked under build item **22b (Phase 5b)** until Phase 1 proves out.
 
 2. **Phase 2 — Multi-pair with scoring, event-triggered**
-   Add Step 2 pair scoring. Trigger the pipeline automatically when a new source is connected. Store `CrossSourceRelationship` records. Introduce `AgentInsightRun` tracking.
+   Add Step 2 structural pair scoring (shared column fingerprints + temporal overlap — no source-type matrix). Trigger the pipeline automatically when a new source is connected. Store `CrossSourceRelationship` records. Introduce `AgentInsightRun` tracking.
 
 3. **Phase 3 — Scheduled runs and deduplication**
    Add Celery beat scheduling. Add embedding-based deduplication (Step 5). Add the dismissed-insight feedback signal.
 
-4. **Phase 4 — Email digest and quality iteration**
-   Add weekly email digest. Use accumulated feedback signals (accepted vs. dismissed insights) to tune the pair scoring weights and model prompt selection.
+4. **Phase 4 — Email digest and quality iteration** — *descoped from the build; moved to `devdocs/potential_features.md` (Advanced Intelligence).* Weekly email digest + using accept/dismiss feedback to tune pair-scoring weights and model/prompt selection. Build later only if there's demand, not as part of shipping cross-source discovery.
+
+5. **Phase 5 (future) — Multi-source combinations (3+ sources)**
+   The whole pipeline is intentionally built around *pairs* through Phase 4 — it's cheaper, easier to validate, and the cost model (LLM calls scale with the number of pairs) assumes two sources at a time. But the most interesting cross-source insights often span three or more sources (e.g. the Sales demo scenario's CRM + Web Analytics + Customer DB joined on a shared email key). A future phase generalizes Step 3 onward to reason over a *combination* of sources, not just a pair: build N labelled DDL blocks instead of two, and surface multi-hop join chains (A↔B↔C). Defer until two-source discovery has proven its value — the combinatorial blow-up is the reason to wait: scoring every k-subset of N sources grows far faster than pairs (with 5 sources there are 10 pairs but 26 combinations of size ≥2), so Step 2 pre-filtering and the per-run LLM-call cap become load-bearing, not optional. Keep the Phase 1–4 signatures (`source_a`, `source_b`) as-is; generalize to a `list[Source]` only when this phase is actually picked up.
 
 ---
 
@@ -647,6 +649,8 @@ When each section is filled in, run the full test suite (`python manage.py test`
 
 After feature work is complete, run a broad sweep with Claude to surface bugs, dead code, and rough edges that accumulated during fast feature iteration. The goal is a triaged punch list, not on-the-fly fixes — separate the *finding* from the *fixing* so the scope stays bounded.
 
+> **Running list:** concrete items spotted during feature development are logged as they're found in `devdocs/bug_bash.md` (triaged by severity, with file paths and line numbers). Fold that file into the sweep below rather than rediscovering those items.
+
 Areas to cover during the sweep:
 
 - **Silent failure paths** — non-2xx responses from HTMX endpoints that don't surface to the user (e.g. the deferred error-path check in `devdocs/featuredocs/loading-indicators.md` — Phase B). Catalog each one and decide: surface inline, redirect with message, or genuinely safe to swallow.
@@ -751,6 +755,7 @@ The queries app generates SQL; the query client is where users actually **run** 
 - The natural-language-generated SQL produced by the queries app
 - The starter SQL attached to generated use case suggestions (today these are display-only — see the `sources — Intra-Source Suggested Use Cases` section) and to cross-source agent insights
 - Ad-hoc SQL a user writes or pastes themselves for that source
+- Look at django-sql-explorer as an option for this
 
 ### Key Principle — Results Are Not Stored
 
@@ -772,8 +777,8 @@ A visual entity-relationship diagram view generated from catalog metadata. Table
 
 The ERD is a **derived view of the catalog** — it stores no extra data. Every node and edge is computed at view time from `Schema`, `Table`, `Column`, and the FK relationship records captured during sync. When the source schema changes and a re-sync runs, the diagram updates automatically.
 
-This pairs naturally with the queries app: a user exploring "what's in this database?" can flip between the ERD (structural view) and the natural-language query box (analytical view) on the same source.
-
+This pairs naturally with the queries app: a user exploring "what's in this database?" can flip between the ERD (structural view) and the natural-language query box (analytical view) on the same source. 
+Look at this for inspiration: https://github.com/royalbhati/sqltoerdiagram
 ---
 
 ### Where It Lives in the UI

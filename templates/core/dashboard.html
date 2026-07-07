@@ -30,6 +30,11 @@
                 <h1 class="text-3xl font-bold text-flint-text">{{ insight_count }}</h1>
                 <a href="{% url 'insights:list' %}" class="text-flint-orange hover:underline">View all</a>
             </div>
+            <div class="bg-flint-card rounded-lg border border-flint-border p-6">
+                <h3 class="text-sm text-flint-muted">Cross Source Use Cases</h3>
+                <h1 class="text-3xl font-bold text-flint-text">{{ cross_source_insight_count }}</h1>
+                <a href="{% url 'insights:discovery' %}" class="text-flint-orange hover:underline">View All</a>
+            </div>
         </div>
     </div>
     <div>

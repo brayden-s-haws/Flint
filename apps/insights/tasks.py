@@ -6,6 +6,7 @@ from celery import shared_task
 from django.contrib.contenttypes.models import ContentType
 
 from apps.catalog.models import Table
+from apps.insights.cross_source_pipeline import run_discovery_for_pair
 from apps.insights.models import Insight, InsightTarget
 from apps.insights.services.provider import get_service
 from apps.sources.models import Source
@@ -45,3 +46,13 @@ def generate_source_overview_task(insight_id: int) -> None:
         logger.exception("Failed to generate source overview for insight %s", insight_id)
         insight.status = 'failed'
         insight.save()
+
+@shared_task
+def run_cross_source_discovery_task(account_id: int, source_a_id: int, source_b_id: int) -> None:
+    try:
+        source_a = Source.objects.get(pk=source_a_id, account_id=account_id)
+        source_b = Source.objects.get(pk=source_b_id, account_id=account_id)
+        created = run_discovery_for_pair(source_a, source_b)
+        logger.info("Cross-source discovery for sources %s+%s (account %s) created %s insights", source_a, source_b, account_id, created)
+    except Exception:
+        logger.exception("Cross-source discovery failed for sources %s+%s (account %s)", source_a_id, source_b_id, account_id)

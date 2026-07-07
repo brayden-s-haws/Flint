@@ -18,8 +18,12 @@ from apps.catalog.models import Table
 from apps.core.mixins import TenantQuerysetMixin
 from apps.insights.models import Insight, InsightTarget
 from apps.insights.services.provider import get_service
-from apps.insights.tasks import generate_table_description_task
+from apps.insights.tasks import generate_table_description_task, run_cross_source_discovery_task
 from apps.sources.models import Source
+
+# ---------------------------------------------------------------------------
+# Intra-Source Insights
+# ---------------------------------------------------------------------------
 
 class InsightListView(TenantQuerysetMixin, LoginRequiredMixin, ListView):
     model = Insight
@@ -46,7 +50,7 @@ class InsightListView(TenantQuerysetMixin, LoginRequiredMixin, ListView):
                 Q(insighttarget__content_type=source_ct, insighttarget__object_id=source_pk) |
                 Q(insighttarget__content_type=table_ct, insighttarget__object_id__in=table_pks)
             )
-        return qs
+        return qs # type: ignore[return-value]
 
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         context = super().get_context_data(**kwargs)
@@ -197,3 +201,95 @@ def insight_retry(request, insight_id: int) -> HttpResponse:
     insight.save()
     generate_table_description_task.delay(insight.id)
     return render(request, 'insights/_insight_pending.html', {'insight': insight})
+
+# ---------------------------------------------------------------------------
+# Cross-Source Insights
+# ---------------------------------------------------------------------------
+
+class CrossSourceDiscoveryView(TenantQuerysetMixin, LoginRequiredMixin, ListView):
+    model = Insight
+    template_name = 'insights/cross_source_discovery.html'
+    context_object_name = 'insights'
+
+    def get_queryset(self) -> QuerySet[Insight]:
+        q = self.request.GET.get('q')
+        source_pk = self.request.GET.get('source')
+        qs = super().get_queryset().filter(insight_type='cross_source_use_case').exclude(status='dismissed').prefetch_related('insighttarget_set').order_by('-created_at')
+        if q:
+            qs = qs.filter(text__icontains=q)
+        if source_pk:
+            source_ct = ContentType.objects.get_for_model(Source)
+            qs = qs.filter(insighttarget__content_type=source_ct, insighttarget__object_id=source_pk).distinct()
+        return qs # type: ignore[return-value]
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        context['sources'] = Source.objects.filter(account=self.request.account, first_synced_at__isnull=False) # type: ignore[attr-defined]
+        context['q'] = self.request.GET.get('q')
+        context['selected_source'] = self.request.GET.get('source')
+        return context
+
+def build_cross_source_results_context(request, *, task_id: str = '', running: bool = False) -> dict[str, Any]:
+    insights = (
+        Insight.objects
+            .filter(account=request.account, insight_type='cross_source_use_case')
+            .exclude(status='dismissed')
+            .prefetch_related('insighttarget_set')
+            .order_by('-created_at')
+    )
+    return {'insights': insights, 'task_id': task_id, 'running': running}
+
+@login_required
+@require_POST
+def run_cross_source_discovery(request) -> HttpResponse:
+    source_a_id = request.POST.get('source_a')
+    source_b_id = request.POST.get('source_b')
+    if source_a_id == source_b_id:
+        return HttpResponse("Cannot pair a source with itself", status=400)
+    source_a = get_object_or_404(Source, pk=source_a_id, account=request.account)
+    source_b = get_object_or_404(Source, pk=source_b_id, account=request.account)
+    if source_a.first_synced_at is None or source_b.first_synced_at is None:
+        return HttpResponse("Sources must be synced before running discovery", status=400)
+    source_ct = ContentType.objects.get_for_model(Source)
+    cutoff = timezone.now() - timedelta(hours=24)
+    recent_pair_run = (
+        Insight.objects.filter(
+            account=request.account,
+            insight_type='cross_source_use_case',
+            created_at__gte=cutoff,
+            insighttarget__content_type=source_ct,
+            insighttarget__object_id=source_a_id,
+        )
+        .filter(insighttarget__object_id=source_b_id)
+        .exists()
+    )
+    if recent_pair_run:
+        return HttpResponse("Cross-source discovery is rate-limited to once per 24h for this pair", status=400)
+    result = run_cross_source_discovery_task.delay(request.account.id, source_a.id, source_b.id)
+    return render(request, 'insights/_cross_source_discovery_results.html', build_cross_source_results_context(request, task_id=result.id, running=True))
+
+@login_required
+def cross_source_discovery_status(request) -> HttpResponse:
+    task_id = request.GET.get('task_id', '')
+    running = bool(task_id) and not run_cross_source_discovery_task.AsyncResult(task_id).ready()
+    return render(request, 'insights/_cross_source_discovery_results.html', build_cross_source_results_context(request, task_id=task_id, running=running))
+
+@login_required
+@require_POST
+def accept_agent_insight(request, insight_id: int) -> HttpResponse:
+    insight = get_object_or_404(Insight, pk=insight_id, account=request.account, insight_type='cross_source_use_case',)
+    if insight.status != 'pending_review':
+        return HttpResponse("Only pending insights can be accepted", status=400)
+    insight.status = 'active'
+    insight.save()
+    return render(request, 'insights/_agent_insight_card.html', {'insight': insight})
+
+@login_required
+@require_POST
+def dismiss_agent_insight(request, insight_id: int) -> HttpResponse:
+    insight = get_object_or_404(Insight, pk=insight_id, account=request.account, insight_type='cross_source_use_case',)
+    if insight.status != 'pending_review':
+        return HttpResponse("Only pending insights can be dismissed", status=400)
+    insight.status = 'dismissed'
+    insight.save()
+    return HttpResponse('')

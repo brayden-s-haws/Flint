@@ -12,11 +12,14 @@ class Insight(TenantAwareModel):
         ('table_description', 'Table Description'),
         ('source_overview', 'Source Overview'),
         ('use_case_suggestion', 'Use Case Suggestion'),
+        ('cross_source_use_case', 'Cross Source Use Case'),
         ('manual', 'Manual'),
     ])
     status = models.CharField(max_length=255, choices=[
         ('pending', 'Pending'),
+        ('pending_review', 'Pending Review'),
         ('active', 'Active'),
+        ('dismissed', 'Dismissed'),
         ('failed', 'Failed'),
         ('archived', 'Archived'),
         ('deleted', 'Deleted'),

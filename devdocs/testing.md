@@ -88,6 +88,35 @@ _(fill in once insights views are built)_
 - Insight generation triggers LLM call (mock the LLM in tests)
 - Insight list and detail views return 200
 
+**Cross-Source Discovery** (see `devdocs/featuredocs/agentic-cross-source-discovery.md` — Phase 1: manual pair trigger + accept/dismiss)
+
+Mock the LLM service everywhere — patch `apps.insights.services.provider.get_service` (or the three `discover_cross_source_relationships` / `generate_cross_source_hypotheses` / `generate_cross_source_use_case` methods) so no network calls happen. Use `CELERY_TASK_ALWAYS_EAGER=True` for the task/view tests.
+
+_Pipeline + storage_
+- **Unit:** `run_discovery_for_pair(source_a, source_b)` with a mocked service creates one `Insight(insight_type='cross_source_use_case', status='pending_review')` per surviving hypothesis, each with exactly **two** `InsightTarget` rows (one GenericFK per source), all scoped to `source.account`; returns the count persisted.
+- **Unit:** `_flatten_and_rank_relationships` — join opportunities rank above semantic overlaps; confidence high/medium/low → 3/2/1; unknown/missing confidence → 0; the `_rank` scratch key is stripped from both inputs and outputs; a missing `join_opportunities` or `semantic_overlaps` key does not raise.
+- **Unit:** Fan-out caps — Step 4 runs on at most the top 5 ranked relationships; at most 5 hypotheses survive to Step 6, sorted by `specificity_score` (missing/None coerced to `0.0`, does not crash the sort).
+- **Unit:** Per-item isolation — an exception in Step 4 or Step 6 for one item is logged and skipped (`continue`) without sinking the run; the returned count reflects only insights actually persisted.
+- **Unit:** Non-destructive regeneration — running the pipeline again for the same pair **appends** new insights and never deletes prior `cross_source_use_case` rows (no delete step).
+- **Unit:** `_store_cross_source_use_case` is atomic — a failure mid-store never leaves an `Insight` with fewer than its two `InsightTarget`s (`transaction.atomic`).
+
+_Celery task_
+- **Unit:** `run_cross_source_discovery_task(account_id, a_id, b_id)` loads both sources scoped to `account_id` and calls `run_discovery_for_pair`. A source id belonging to another account raises `Source.DoesNotExist`; the task logs and bails **without creating insights** (tenancy guard — last line of defense behind the view).
+
+_Views_
+- **Integration:** `run_cross_source_discovery` happy path — POST enqueues the task and returns the results partial with `running=True`.
+- **Integration:** `run_cross_source_discovery` rejections — **400** for a self-pair (`source_a == source_b`) and for either source not synced (`first_synced_at is None`); **404** for a source belonging to another account (via `get_object_or_404` tenancy scope — cross-account is 404, *not* 400).
+- **Integration:** Per-pair rate limit — a `cross_source_use_case` insight linked to **both** sources created in the last 24h → **400**; assert it does **not** trip when only one of the two sources matches a recent run; assert a **dismissed** insight for the pair still rate-limits (the guard deliberately counts dismissed — "a run happened").
+- **Integration:** `accept_agent_insight` — flips `pending_review` → `active` and returns the card partial; **400** when status is not `pending_review` (double-click / already-dismissed); **404** for another account's insight and for a non-`cross_source_use_case` insight (the `insight_type` scope on the lookup).
+- **Integration:** `dismiss_agent_insight` — flips → `dismissed` and returns an **empty body** (HTMX swaps the card away); same `pending_review` / account / `insight_type` guards as accept.
+- **Integration:** `CrossSourceDiscoveryView.get_queryset` — lists only `cross_source_use_case`, **excludes** `dismissed`, newest-first; `?source=<id>` filters to insights linked to that source; `?q=` searches `text`; account-scoped (account B's insights never appear).
+- **Integration:** `cross_source_discovery_status` — `running=True` while the task is unfinished, flips to `False` once `AsyncResult(task_id).ready()`; account-scoped queryset.
+- **Integration:** Dashboard `cross_source_insight_count` counts `cross_source_use_case` **excluding** `dismissed`, account-scoped.
+
+_Tenancy boundary (required)_
+- Account A cannot accept or dismiss account B's cross-source insight (404).
+- Account A's discovery list and dashboard count never include account B's insights.
+
 ---
 
 ## Notes

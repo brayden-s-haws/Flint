@@ -1,0 +1,46 @@
+<div id="agent-insight-{{ insight.pk }}"
+     hx-target="closest [id^=agent-insight]"
+     hx-swap="outerHTML"
+     class="bg-flint-card rounded-md border border-flint-border p-4 mb-4">
+
+    <h3 class="text-lg font-semibold text-flint-text">{{ insight.structured_data.title }}</h3>
+    <p class="text-sm text-flint-muted mt-1">{{ insight.structured_data.description }}</p>
+
+    {% if insight.structured_data.business_value %}
+        <div class="mt-3">
+            <span class="block text-xs font-medium text-flint-muted uppercase tracking-wide mb-1">Business value</span>
+            <p class="text-sm text-flint-text">{{ insight.structured_data.business_value }}</p>
+        </div>
+    {% endif %}
+
+    <div class="mt-3">
+        <span class="text-flint-muted text-sm mr-2">Sources:</span>
+        {% for target in insight.insighttarget_set.all %}
+            <span class="bg-flint-border text-flint-muted text-xs px-2 py-0.5 rounded mr-1">{{ target.target.name }}</span>
+        {% endfor %}
+    </div>
+
+    {% if insight.structured_data.starter_sql %}
+        <details class="mt-3">
+            <summary class="text-sm text-flint-orange cursor-pointer">View starter SQL</summary>
+            <pre class="whitespace-pre-wrap text-xs mt-2 bg-flint-bg border border-flint-border rounded-md p-3 overflow-x-auto"><code>{{ insight.structured_data.starter_sql }}</code></pre>
+        </details>
+    {% endif %}
+
+    <p class="text-xs text-flint-muted mt-3">Created {{ insight.created_at|date:"M j, Y" }}</p>
+
+    <div class="mt-4 flex items-center gap-2">
+        {% if insight.status == 'pending_review' %}
+            <form hx-post="{% url 'insights:accept_agent_insight' insight.pk %}" hx-disabled-elt="find button">
+                {% csrf_token %}
+                <button type="submit" class="bg-flint-orange hover:bg-flint-orange-hover text-white font-semibold py-2 px-4 rounded-md">Accept</button>
+            </form>
+            <form hx-post="{% url 'insights:dismiss_agent_insight' insight.pk %}" hx-disabled-elt="find button">
+                {% csrf_token %}
+                <button type="submit" class="border border-flint-border text-flint-muted hover:bg-flint-card px-4 py-2 rounded-md">Dismiss</button>
+            </form>
+        {% elif insight.status == 'active' %}
+            <span class="inline-flex items-center gap-1 bg-flint-border text-flint-text text-xs font-medium px-2 py-1 rounded">Accepted</span>
+        {% endif %}
+    </div>
+</div>

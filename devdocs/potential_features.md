@@ -41,6 +41,8 @@ This document tracks potential future features and capabilities beyond the MVP. 
 - **Automated data relationship discovery** - Detect foreign keys and joins
 - **Cross-account benchmarking** - Compare patterns across organizations
 - **Usage recommendation engine** - Suggest relevant tables for use cases
+- **Agentic discovery email digest** - Weekly plain-text email summarizing new cross-source insights ("We found N new opportunities across your connected sources"). Deferred from the agentic cross-source discovery feature scope; see `devdocs/featuredocs/agentic-cross-source-discovery.md`
+- **Agentic discovery quality iteration** - Use accumulated accept/dismiss feedback signals to tune cross-source pair-scoring weights and model/prompt selection over time. Deferred from the agentic cross-source discovery feature scope
 
 ---
 

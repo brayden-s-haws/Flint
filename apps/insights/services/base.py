@@ -20,3 +20,15 @@ class BaseService(ABC):
     @abstractmethod
     def generate_intra_source_use_case(self, source: Source) -> list[dict]:
         ...
+
+    @abstractmethod
+    def discover_cross_source_relationships(self, source_a: Source, source_b: Source) -> dict:
+        ...
+
+    @abstractmethod
+    def generate_cross_source_hypotheses(self, relationship: dict, source_a: Source, source_b: Source) -> list[dict]:
+        ...
+
+    @abstractmethod
+    def generate_cross_source_use_case(self, hypothesis: dict, source_a: Source, source_b: Source) -> dict:
+        ...
