@@ -5,47 +5,51 @@
 {% block content %}
 <main class="max-w-7xl mx-auto px-4 py-8">
 
-    <!-- TODO(stub): PAGE HEADER — an <h1> "Cross-Source Discovery" (text-2xl font-bold
-         text-flint-text), matching insight_list.html line 9. Optional one-line muted
-         subtitle explaining the feature ("Find join opportunities across two connected
-         sources."). -->
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-flint-text">Cross-Source Discovery</h1>
+        <p class="text-sm text-flint-muted mt-1">Find join opportunities and cross-source insights between two connected sources.</p>
+    </div>
 
-    <!-- TODO(stub): RUN-DISCOVERY CONTROL — the pair selector + trigger. A form that
-         hx-post="{% url 'insights:run_cross_source_discovery' %}",
-         hx-target="#discovery-results", hx-swap="outerHTML",
-         hx-disabled-elt="find button", hx-indicator="find .spinner". Include {% csrf_token %}.
-         Two <select>s of synced sources — context var `sources` (already filtered to
-         first_synced_at__isnull=False in the view):
-           - name="source_a" and name="source_b", each a {% for source in sources %}
-             option loop ({{ source.pk }} / {{ source.name }}), styled like the list-page
-             selects (w-full bg-flint-card border border-flint-border-em rounded-md px-3
-             py-2 ... — see insight_list.html lines 20-25). Add appearance-none if native
-             select styling bleeds through.
-         Then a submit button "Run discovery" (bg-flint-orange text-white ...) and
-         {% include 'components/_spinner.html' with label="Discovering…" %}.
-         NOTE: the view rejects a self-pair (source_a == source_b) with a 400 — consider a
-         tiny helper note under the selects, and/or leave client-side validation for later.
-         The 400 body is plain text; HTMX won't swap it into #discovery-results by default,
-         so a same-source pick just no-ops visibly. Fine for the stub; polish later. -->
+    <div class="bg-flint-card rounded-lg border border-flint-border p-6 mb-6">
+        <h2 class="text-lg font-semibold text-flint-text mb-4">Run discovery</h2>
+        <form hx-post="{% url 'insights:run_cross_source_discovery' %}"
+              hx-target="#discovery-results" hx-swap="outerHTML"
+              hx-disabled-elt="find button" hx-indicator="find .spinner"
+              hx-on::before-request="document.getElementById('discovery-error').textContent = ''"
+              hx-on::response-error="document.getElementById('discovery-error').textContent = event.detail.xhr.responseText"
+              class="flex flex-wrap gap-3 items-center">
+            {% csrf_token %}
+            <select name="source_a" required class="flex-1 min-w-48 appearance-none bg-flint-card border border-flint-border-em rounded-md px-3 py-2 text-sm text-flint-text focus:outline-none focus:ring-2 focus:ring-flint-orange">
+                <option value="">Select first source…</option>
+                {% for source in sources %}
+                    <option value="{{ source.pk }}">{{ source.name }}</option>
+                {% endfor %}
+            </select>
+            <select name="source_b" required class="flex-1 min-w-48 appearance-none bg-flint-card border border-flint-border-em rounded-md px-3 py-2 text-sm text-flint-text focus:outline-none focus:ring-2 focus:ring-flint-orange">
+                <option value="">Select second source…</option>
+                {% for source in sources %}
+                    <option value="{{ source.pk }}">{{ source.name }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="bg-flint-orange hover:bg-flint-orange-hover text-white font-semibold py-2 px-4 rounded-md whitespace-nowrap">Run discovery</button>
+            {% include 'components/_spinner.html' with label="Discovering…" %}
+        </form>
+        <p id="discovery-error" role="alert" aria-live="polite" class="text-sm text-red-400 mt-3 empty:hidden"></p>
+    </div>
 
-    <!-- TODO(stub): FILTER / SEARCH CONTROLS — a SEPARATE GET <form> (method defaults to GET,
-         no HTMX) that reloads the page with query params, exactly like insight_list.html
-         lines 11-28. Context vars: `sources`, `q`, `selected_source`.
-           - text <input name="q" value="{{ q|default:'' }}"> placeholder "Search insights"
-           - <select name="source"> with an "All Sources" option then the {% for source in
-             sources %} loop; mark selected with
-             {% if selected_source == source.pk|stringformat:"s" %}selected{% endif %}
-           - a "Search" submit button and a "Clear" link back to
-             {% url 'insights:discovery' %}.
-         Keep this visually distinct from / below the Run-discovery control so the two
-         forms aren't confused. -->
+    <form class="flex gap-3 items-center mb-6">
+        <input type="text" name="q" value="{{ q|default:'' }}" placeholder="Search cross-source insights" class="w-full bg-flint-card border border-flint-border-em rounded-md px-3 py-2 text-sm text-flint-text focus:outline-none focus:ring-2 focus:ring-flint-orange">
+        <select name="source" class="w-full bg-flint-card border border-flint-border-em rounded-md px-3 py-2 text-sm text-flint-text focus:outline-none focus:ring-2 focus:ring-flint-orange">
+            <option value="">All Sources</option>
+            {% for source in sources %}
+                <option value="{{ source.pk }}" {% if selected_source == source.pk|stringformat:"s" %}selected{% endif %}>{{ source.name }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="bg-flint-orange hover:bg-flint-orange-hover text-white font-semibold py-2 px-4 rounded-md">Search</button>
+        <a href="{% url 'insights:discovery' %}" class="border border-flint-border-em rounded-md text-flint-muted hover:text-flint-text px-4 py-2 whitespace-nowrap">Clear</a>
+    </form>
 
-    <!-- TODO(stub): RESULTS SECTION — embed the results partial for the initial page load:
-         {% include 'insights/_cross_source_discovery_results.html' %}
-         The view's get_context_data does NOT set `running`/`since`, so on first load those
-         are falsy — the partial renders the current card list with no polling, which is
-         correct. After a run, the POST response swaps this #discovery-results element and
-         polling kicks in from there. -->
+    {% include 'insights/_cross_source_discovery_results.html' %}
 
 </main>
 {% endblock content %}

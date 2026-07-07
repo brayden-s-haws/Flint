@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from typing import Any
-from datetime import timedelta, datetime
+from datetime import timedelta
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -229,7 +229,7 @@ class CrossSourceDiscoveryView(TenantQuerysetMixin, LoginRequiredMixin, ListView
         context['selected_source'] = self.request.GET.get('source')
         return context
 
-def build_cross_source_results_context(request, *, since: datetime | None) -> dict[str, Any]:
+def build_cross_source_results_context(request, *, task_id: str = '', running: bool = False) -> dict[str, Any]:
     insights = (
         Insight.objects
             .filter(account=request.account, insight_type='cross_source_use_case')
@@ -237,8 +237,7 @@ def build_cross_source_results_context(request, *, since: datetime | None) -> di
             .prefetch_related('insighttarget_set')
             .order_by('-created_at')
     )
-    running = since is not None and not insights.filter(created_at__gt=since).exists()
-    return {'insights': insights, 'since': since.isoformat() if since else '', 'running': running}
+    return {'insights': insights, 'task_id': task_id, 'running': running}
 
 @login_required
 @require_POST
@@ -266,14 +265,14 @@ def run_cross_source_discovery(request) -> HttpResponse:
     )
     if recent_pair_run:
         return HttpResponse("Cross-source discovery is rate-limited to once per 24h for this pair", status=400)
-    run_cross_source_discovery_task.delay(request.account.id, source_a.id, source_b.id)
-    return render(request, 'insights/_cross_source_discovery_results.html', build_cross_source_results_context(request, since=timezone.now()))
+    result = run_cross_source_discovery_task.delay(request.account.id, source_a.id, source_b.id)
+    return render(request, 'insights/_cross_source_discovery_results.html', build_cross_source_results_context(request, task_id=result.id, running=True))
 
 @login_required
 def cross_source_discovery_status(request) -> HttpResponse:
-    since_raw = request.GET.get('since')
-    since = datetime.fromisoformat(since_raw) if since_raw else None
-    return render(request, 'insights/_cross_source_discovery_results.html', build_cross_source_results_context(request, since=since))
+    task_id = request.GET.get('task_id', '')
+    running = bool(task_id) and not run_cross_source_discovery_task.AsyncResult(task_id).ready()
+    return render(request, 'insights/_cross_source_discovery_results.html', build_cross_source_results_context(request, task_id=task_id, running=running))
 
 @login_required
 @require_POST

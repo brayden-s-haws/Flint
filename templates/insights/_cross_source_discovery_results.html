@@ -1,38 +1,27 @@
-<!-- TODO(stub): Cross-Source Discovery results section partial.
-     Returned by BOTH run_cross_source_discovery (after enqueue) and
-     cross_source_discovery_status (the poll). Also embedded in the page shell
-     cross_source_discovery.html for the initial render.
-     Context from build_cross_source_results_context(request, since=...):
-       - insights: newest-first queryset of cross_source_use_case insights (dismissed excluded)
-       - since:    ISO string to echo back into the poll (or '' when not running)
-       - running:  True while a run is in flight (no insight newer than `since` yet) -->
+<div id="discovery-results"
+    {% if running %}
+     hx-get="{% url 'insights:cross_source_discovery_status' %}?task_id={{ task_id }}"
+     hx-trigger="every 2s"
+     hx-swap="outerHTML"
+    {% endif %}>
 
-<!-- TODO(stub): ROOT ELEMENT — the poll swap unit. Give it a stable id, e.g.
-     id="discovery-results". This is the element run/status swap via hx-swap="outerHTML".
-     POLLING: only poll while a run is in flight — wrap the hx-* attrs in
-     {% if running %}:
-       hx-get="{% url 'insights:cross_source_discovery_status' %}?since={{ since }}"
-       hx-trigger="every 2s"
-       hx-swap="outerHTML"
-     Mirror the pattern in templates/sources/_use_cases_section.html lines 1-6
-     (that one keys off status == 'pending'; here the flag is `running`). When `running`
-     is False the attrs are absent, so polling stops once insights land. -->
+    {% if running %}
+        <div class="bg-flint-card rounded-lg border border-flint-border p-6 mb-4 flex items-center gap-2">
+            <svg class="animate-spin h-4 w-4 text-flint-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true">
+                <circle class="opacity-25" cx="12" cy="12" r="10" />
+                <path class="opacity-75" d="M4 12a8 8 0 018-8" />
+            </svg>
+            <span class="text-sm text-flint-muted">Discovering cross-source insights, this can take a minute…</span>
+        </div>
+    {% endif %}
 
-<!-- TODO(stub): SPINNER STATE — {% if running %} show the in-flight message + spinner
-     ({% include 'components/_spinner.html' with label="Discovering cross-source insights…" %}).
-     Because the pipeline is Sonnet-heavy and can take a while, make this a clear
-     "this is working, hang on" block, not just a tiny spinner. Below the spinner you can
-     STILL render the existing insight cards (a run appends, so prior insights should stay
-     visible while the new ones generate) — i.e. the spinner and the list are not mutually
-     exclusive; only the top-of-section status message is gated on `running`. -->
-
-<!-- TODO(stub): CARD LIST — {% for insight in insights %} render
-     {% include 'insights/_agent_insight_card.html' with insight=insight %} in a
-     vertical stack (grid grid-cols-1 gap-4, like _use_cases_section.html line 23).
-     Newest-first is already handled by the queryset ordering, so a re-run's new cards
-     appear at the top. -->
-
-<!-- TODO(stub): EMPTY STATE — {% empty %} (or an {% if not running %} guard so it doesn't
-     show mid-run): a muted message like "No cross-source insights yet — pick two sources
-     above and run discovery." (text-flint-muted), matching the insight_list.html empty
-     state on line 41. -->
+    <div class="grid grid-cols-1 gap-4">
+        {% for insight in insights %}
+            {% include 'insights/_agent_insight_card.html' with insight=insight %}
+        {% empty %}
+            {% if not running %}
+                <p class="text-flint-muted">No cross-source insights yet, pick two sources above and run discovery.</p>
+            {% endif %}
+        {% endfor %}
+    </div>
+</div>

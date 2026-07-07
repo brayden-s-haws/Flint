@@ -22,6 +22,9 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         context['source_count'] = Source.objects.filter(account=account).count()
         context['table_count'] = Table.objects.filter(account=account).count()
         context['insight_count'] = Insight.objects.filter(account=account, status='active').count()
+        context['cross_source_insight_count'] = Insight.objects.filter(
+            account=account, insight_type='cross_source_use_case'
+        ).exclude(status='dismissed').count()
         context['recent_sources'] = Source.objects.filter(account=account).order_by('-created_at')[:5]
         context['recent_tables'] = Table.objects.filter(account=account).order_by('-created_at')[:5]
         insights = Insight.objects.filter(account=account, status='active').order_by('-created_at')[:5]
