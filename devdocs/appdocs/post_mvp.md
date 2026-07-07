@@ -32,7 +32,7 @@ For speculative or longer-horizon ideas, see `devdocs/potential_features.md`.
     - **Scrollable card.** Because the intra-source use cases live in a **card** on the source detail page (space-constrained, unlike the cross-source dedicated page), wrap the now-growing list in a fixed-height **scroll container** — same pattern as the Sync History card (`max-h-*` + `overflow-y-auto`) — so the card doesn't grow unbounded as suggestions accumulate.
     - **Rate-limit interaction:** keep the existing 24h regenerate guard, but its purpose shifts from "avoid overwriting" to "avoid runaway LLM cost."
     - Suggested branch: `feature/async-use-cases`.
-12. Demo Mode Phase 2 (product scenario + auto-trigger insights after load)
+12. ~~Demo Mode Phase 2 (product scenario + auto-trigger insights after load)~~ **DESCOPED (2026-07-06)** — retiring the remaining Demo Mode phases. Cross-source discovery (#11) already works on demo sources via its manual trigger (demo sources sync into the catalog like any other source), which covers the demo value we were chasing; the product-scenario dataset and auto-triggering insights on load aren't worth the build. See the Demo Mode section's Phased Build below (Phase 2 & 3 both marked descoped).
 
 **Phase 4 — New apps and connector expansion, depend on Phase 2 & 3**
 13. PyAirbyte integration — `sources` — adapter that lets us register PyAirbyte sources (300+) via the same `BaseConnector` interface used today, so catalog/insights/agentic discovery work uniformly across native and Airbyte-backed sources
@@ -617,9 +617,9 @@ A banner on demo sources makes clear this is demo data. A "Clear Demo Data" butt
 
 ### Phased Build
 
-1. **Phase 1** — `DemoConnector` + JSON data files for sales scenario only; manual "Load Demo" button; catalog populates correctly
-2. **Phase 2** — product scenario data; auto-trigger insight generation (Source Overview + use case suggestions) after demo load
-3. **Phase 3** — cross-source discovery runs automatically on demo data; showcase the full agentic pipeline
+1. **Phase 1** — `DemoConnector` + JSON data files for sales scenario only; manual "Load Demo" button; catalog populates correctly — **COMPLETE**
+2. ~~**Phase 2** — product scenario data; auto-trigger insight generation (Source Overview + use case suggestions) after demo load~~ **DESCOPED (2026-07-06)** — the Phase 1 Sales scenario is enough to demo on; a second dataset and load-time auto-triggering of intra-source insights aren't worth the build. (Build-order item #12.)
+3. ~~**Phase 3** — cross-source discovery runs automatically on demo data; showcase the full agentic pipeline~~ **DESCOPED (2026-07-06)** — cross-source discovery (#11) already runs on demo sources via its manual trigger, so there's nothing extra to build here to demo it. If automatic runs on demo data are ever wanted, they fall out of the general cross-source automation work (build item 22b), not a demo-specific phase.
 
 ---
 
