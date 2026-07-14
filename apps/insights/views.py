@@ -17,8 +17,7 @@ from django.views.generic import ListView, DetailView
 from apps.catalog.models import Table
 from apps.core.mixins import TenantQuerysetMixin
 from apps.insights.models import Insight, InsightTarget
-from apps.insights.services.provider import get_service
-from apps.insights.tasks import generate_table_description_task, run_cross_source_discovery_task
+from apps.insights.tasks import generate_table_description_task, run_cross_source_discovery_task, generate_intra_source_use_cases_task
 from apps.sources.models import Source
 
 # ---------------------------------------------------------------------------
@@ -133,30 +132,16 @@ def generate_intra_use_case_suggestions(request, source_id: int) -> HttpResponse
 
     recent_suggestion = InsightTarget.objects.filter(
         content_type=source_ct, object_id=source.pk, account=source.account,
-        insight__insight_type='use_case_suggestion'
+        insight__insight_type='use_case_suggestion',
+        insight__status='active',
     ).select_related('insight').order_by('-insight__created_at').first()
     if recent_suggestion and recent_suggestion.insight.created_at > timezone.now() - timedelta(hours=24):
         return HttpResponse("Use case suggestions were generated recently. Try again in 24 hours.", status=400)
 
-    existing_targets = InsightTarget.objects.filter(
-        content_type=source_ct, object_id=source.pk, account=source.account,
-        insight__insight_type='use_case_suggestion'
-    )
-    insight_ids = list(existing_targets.values_list('insight_id', flat=True))
-    existing_targets.delete()
-    Insight.objects.filter(pk__in=insight_ids).delete()
-
-    try:
-        use_cases = get_service('anthropic').generate_intra_source_use_case(source)
-    except Exception as exc:
-        return HttpResponse(f"Failed to generate use cases: {exc}", status=500)
-
-    for use_case in use_cases:
-        insight = Insight.objects.create(account=source.account, text=use_case['title'],
-            insight_type='use_case_suggestion', status='active',
-            insight_prompt=None, structured_data=use_case)
-        InsightTarget.objects.create(account=source.account, insight=insight,
-            content_type=source_ct, object_id=source.pk)
+    placeholder = Insight.objects.create(account=source.account, text='', insight_type='use_case_suggestion', status='pending', structured_data=None)
+    InsightTarget.objects.create(account=source.account, insight=placeholder,
+        content_type=source_ct, object_id=source.pk)
+    generate_intra_source_use_cases_task.delay(source.id, placeholder.pk)
 
     return render(request, 'sources/_use_cases_section.html', build_use_cases_context(source))
 

@@ -4,6 +4,7 @@ import logging
 
 from celery import shared_task
 from django.contrib.contenttypes.models import ContentType
+from django.db import transaction
 
 from apps.catalog.models import Table
 from apps.insights.cross_source_pipeline import run_discovery_for_pair
@@ -56,3 +57,20 @@ def run_cross_source_discovery_task(account_id: int, source_a_id: int, source_b_
         logger.info("Cross-source discovery for sources %s+%s (account %s) created %s insights", source_a, source_b, account_id, created)
     except Exception:
         logger.exception("Cross-source discovery failed for sources %s+%s (account %s)", source_a_id, source_b_id, account_id)
+
+@shared_task
+def generate_intra_source_use_cases_task(source_id: int, placeholder_id: int) -> None:
+    source = Source.objects.get(pk=source_id)
+    placeholder = Insight.objects.get(pk=placeholder_id)
+    source_ct = ContentType.objects.get_for_model(Source)
+    try:
+        use_cases = get_service('anthropic').generate_intra_source_use_case(source)
+        with transaction.atomic():
+            for uc in use_cases:
+                insight = Insight.objects.create(account=source.account, text=uc['title'], insight_type='use_case_suggestion', status='active', structured_data=uc)
+                InsightTarget.objects.create(account=source.account, insight=insight, content_type=source_ct, object_id=source.pk)
+            placeholder.delete()
+    except Exception:
+        logger.exception("Failed to generate intra-source use cases for source %s", source_id)
+        placeholder.status = 'failed'
+        placeholder.save()
