@@ -88,9 +88,19 @@ def build_use_cases_context(source: Source) -> dict[str, Any]:
 
     use_case_targets = InsightTarget.objects.filter(
         content_type=source_ct, object_id=source.pk, account=source.account,
-        insight__insight_type='use_case_suggestion'
+        insight__insight_type='use_case_suggestion', insight__status='active',
     ).select_related('insight').order_by('-insight__created_at')
     use_cases = [uct.insight for uct in use_case_targets]
+
+    use_cases_generating = InsightTarget.objects.filter(
+        content_type=source_ct, object_id=source.pk, account=source.account,
+        insight__insight_type='use_case_suggestion', insight__status='pending',
+    ).exists()
+
+    use_cases_failed = InsightTarget.objects.filter(
+        content_type=source_ct, object_id=source.pk, account=source.account,
+        insight__insight_type='use_case_suggestion', insight__status='failed',
+    ).exists()
 
     rate_limited = False
     hours_remaining = 0
@@ -108,6 +118,8 @@ def build_use_cases_context(source: Source) -> dict[str, Any]:
         'use_cases': use_cases,
         'use_case_rate_limited': rate_limited,
         'use_case_hours_remaining': hours_remaining,
+        'use_cases_generating': use_cases_generating,
+        'use_cases_failed': use_cases_failed,
     }
 
 
