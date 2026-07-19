@@ -32,7 +32,8 @@ For speculative or longer-horizon ideas, see `devdocs/potential_features.md`.
 
 **Phase 4 — New apps and connector expansion, depend on Phase 2 & 3**
 13. PyAirbyte integration — `sources` — adapter that lets us register PyAirbyte sources (300+) via the same `BaseConnector` interface used today, so catalog/insights/agentic discovery work uniformly across native and Airbyte-backed sources
-14. First SaaS connector batch via PyAirbyte — HubSpot, Salesforce, Stripe — `sources` — chosen to match the existing Sales demo scenario (HubSpot) and the most common enterprise CRM/payments use cases. Native connectors only where deep metadata extraction is needed; everything else routes through the PyAirbyte adapter from #13.
+14. First SaaS connector batch via PyAirbyte — HubSpot, Salesforce, Stripe — `sources` — chosen to match the existing Sales demYouo scenario (HubSpot) and the most common enterprise CRM/payments use 
+    cases. Native connectors only where deep metadata extraction is needed; everything else routes through the PyAirbyte adapter from #13.
 15. Queries app (natural language to SQL) — `queries`
 16. Query client — `queries` — a UI to run queries against a source and view results: the LLM-generated SQL from the queries app, the starter SQL on generated use case suggestions, and ad-hoc 
     queries the user writes themselves. Results are displayed only, never persisted (Flint does not store source data). Two separate implementations:
