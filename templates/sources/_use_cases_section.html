@@ -1,5 +1,5 @@
 <div id="use-cases-section"
-    {% if source_overview_insight.status == 'pending' %}
+    {% if source_overview_insight.status == 'pending' or use_cases_generating %}
     hx-get="{% url 'insights:use_cases_status' source.pk %}"
     hx-trigger="every 2s"
     hx-swap="outerHTML"
@@ -12,44 +12,66 @@
             <p class="text-sm text-flint-muted">Use cases will be available once the Source Overview finishes generating…</p>
         {% elif source_overview_insight.status == 'failed' %}
             <p class="text-sm text-flint-muted">The Source Overview didn't generate, so use cases can't be created yet. Click Sync Now to try again.</p>
-        {% elif not use_cases %}
-            <p class="text-sm text-flint-muted mb-4">No suggestions yet, click to generate.</p>
-            <form hx-post="{% url 'insights:generate_use_cases' source.pk %}" hx-target="#use-cases-section" hx-swap="outerHTML" hx-disabled-elt="find button" hx-indicator="find .spinner">
-                {% csrf_token %}
-                <button type="submit" class="bg-flint-orange text-white px-4 py-2 rounded-md hover:bg-flint-orange-hover">Generate Use Cases</button>
-                {% include 'components/_spinner.html' with label="Generating…" %}
-            </form>
         {% else %}
-            <div class="grid grid-cols-1 gap-4">
-                {% for use_case in use_cases %}
-                    <div class="bg-flint-card rounded-md border border-flint-border p-4">
-                        <h3 class="text-lg font-semibold text-flint-text">{{ use_case.structured_data.title }}</h3>
-                        <p class="text-sm text-flint-muted">{{ use_case.structured_data.description }}</p>
-                        <div class="mt-2">
-                            <span class="text-flint-muted mr-2">Tables:</span>
-                            {% for table in use_case.structured_data.tables %}
-                                <span class="bg-flint-border text-flint-muted text-xs px-2 py-0.5 rounded mr-1">{{ table }}</span>
-                            {% endfor %}
-                        </div>
-                        <details class="mt-3">
-                            <summary class="text-sm text-flint-orange cursor-pointer">View starter SQL</summary>
-                            <pre class="whitespace-pre-wrap text-xs mt-2 bg-flint-bg border border-flint-border rounded-md p-3 overflow-x-auto"><code>{{ use_case.structured_data.starter_sql }}</code></pre>
-                        </details>
-                        <div class="mt-2">{% include 'insights/_rating_buttons.html' with insight=use_case %}</div>
+            {% if use_cases_generating %}
+                <div class="flex items-center gap-2 mb-4">
+                    <svg class="animate-spin h-4 w-4 text-flint-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" />
+                        <path class="opacity-75" d="M4 12a8 8 0 018-8" />
+                    </svg>
+                    <span class="text-sm text-flint-muted">Generating use case suggestions…</span>
+                </div>
+            {% elif use_cases_failed %}
+                <p class="text-sm text-red-400 mb-4" role="alert">Use case generation failed. Try again below.</p>
+            {% endif %}
+
+            {% if use_cases %}
+                <div class="max-h-96 overflow-y-auto">
+                    <div class="grid grid-cols-1 gap-4">
+                        {% for use_case in use_cases %}
+                            <div class="bg-flint-card rounded-md border border-flint-border p-4">
+                                <h3 class="text-lg font-semibold text-flint-text">{{ use_case.structured_data.title }}</h3>
+                                <p class="text-sm text-flint-muted">{{ use_case.structured_data.description }}</p>
+                                <div class="mt-2">
+                                    <span class="text-flint-muted mr-2">Tables:</span>
+                                    {% for table in use_case.structured_data.tables %}
+                                        <span class="bg-flint-border text-flint-muted text-xs px-2 py-0.5 rounded mr-1">{{ table }}</span>
+                                    {% endfor %}
+                                </div>
+                                <details class="mt-3">
+                                    <summary class="text-sm text-flint-orange cursor-pointer">View starter SQL</summary>
+                                    <pre class="whitespace-pre-wrap text-xs mt-2 bg-flint-bg border border-flint-border rounded-md p-3 overflow-x-auto"><code>{{ use_case.structured_data.starter_sql }}</code></pre>
+                                </details>
+                                <div class="mt-2">{% include 'insights/_rating_buttons.html' with insight=use_case %}</div>
+                            </div>
+                        {% endfor %}
                     </div>
-                {% endfor %}
-            </div>
-            <div class="mt-4">
-                {% if use_case_rate_limited %}
-                    <p class="text-sm text-flint-muted">(Regenerating use cases available in {{ use_case_hours_remaining }} hours)</p>
-                {% else %}
-                <form hx-post="{% url 'insights:generate_use_cases' source.pk %}" hx-target="#use-cases-section" hx-swap="outerHTML" hx-disabled-elt="find button" hx-indicator="find .spinner">
-                    {% csrf_token %}
-                    <button type="submit" class="border border-flint-border text-flint-muted hover:bg-flint-card px-4 py-2 rounded-md">Regenerate</button>
-                    {% include 'components/_spinner.html' with label="Regenerating…" %}
-                </form>
-                {% endif %}
-            </div>
+                </div>
+            {% elif not use_cases_generating and not use_cases_failed %}
+                <p class="text-sm text-flint-muted mb-4">No suggestions yet, click to generate.</p>
+            {% endif %}
+
+            {% if not use_cases_generating %}
+                <div class="mt-4">
+                    {% if use_case_rate_limited %}
+                        <p class="text-sm text-flint-muted">(Regenerating use cases available in {{ use_case_hours_remaining }} hours)</p>
+                    {% else %}
+                        <form hx-post="{% url 'insights:generate_use_cases' source.pk %}"
+                              hx-target="#use-cases-section" hx-swap="outerHTML"
+                              hx-disabled-elt="find button"
+                              hx-on::before-request="document.getElementById('use-cases-error').textContent = ''"
+                              hx-on::response-error="document.getElementById('use-cases-error').textContent = event.detail.xhr.responseText">
+                            {% csrf_token %}
+                            {% if use_cases %}
+                                <button type="submit" class="border border-flint-border text-flint-muted hover:bg-flint-card px-4 py-2 rounded-md">Regenerate</button>
+                            {% else %}
+                                <button type="submit" class="bg-flint-orange text-white px-4 py-2 rounded-md hover:bg-flint-orange-hover">Generate Use Cases</button>
+                            {% endif %}
+                        </form>
+                        <p id="use-cases-error" role="alert" aria-live="polite" class="text-sm text-red-400 mt-2 empty:hidden"></p>
+                    {% endif %}
+                </div>
+            {% endif %}
         {% endif %}
     </div>
 </div>

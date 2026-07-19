@@ -1,7 +1,7 @@
 # Feature: Async Intra-Source Use-Case Generation + Non-Destructive Regeneration
 
 **Source:** `devdocs/appdocs/post_mvp.md` — build order item **11b** ("Convert intra-source use-case generation to async + make regeneration non-destructive — `insights`"), plus the `sources — Intra-Source Suggested Use Cases` section (the feature being modified).
-**Status:** Not started
+**Status:** Implementation complete (verified end-to-end 2026-07-19); automated tests deferred to Phase 6 testing pass #24
 **Target phase:** Post-MVP Phase 3 (build order item 11b — scheduled immediately after cross-source discovery #11, which is complete).
 **Suggested branch:** `feature/async-use-cases` — already checked out.
 
@@ -41,12 +41,12 @@ Single phase — this is one focused conversion, not a multi-phase build.
 - [x] All touched views remain `@login_required` and account-scoped; the POST generator keeps `@require_POST`.
 
 #### Templates
-- [ ] **`templates/sources/_use_cases_section.html` — self-poll while generating.** The root `#use-cases-section` div currently adds `hx-get`/`hx-trigger="every 2s"`/`hx-swap="outerHTML"` only when `source_overview_insight.status == 'pending'`. Extend the condition so it **also** polls when `use_cases_generating` is true (poll target stays `use_cases_status`). Follow the persistent-spinner lesson from cross-source discovery: render an always-visible `animate-spin` SVG for the generating state, **not** the `htmx-indicator` component (which flashes on each poll).
-- [ ] **Spinner / generating state** — when `use_cases_generating`, show a "Generating use case suggestions…" spinner block at the top of the card (existing suggestions, if any, still render below since regeneration is non-destructive).
-- [ ] **Failed state** — when `use_cases_failed`, show an error message + a Generate/Regenerate (or Retry) control per the retry decision above.
-- [ ] **Scrollable card (space-constrained, unlike the cross-source dedicated page).** Wrap the now-growing `use_cases` list in a fixed-height scroll container — `max-h-*` + `overflow-y-auto` — same pattern as the Sync History card, so the card doesn't grow unbounded as suggestions accumulate across regenerations.
-- [ ] **Non-destructive, newest-first render** — the list iterates the `active` `use_cases` (already ordered newest-first), so a regenerate appends new cards to the top with prior suggestions preserved below.
-- [ ] **(Optional) Surface generator 400s** — the generate/regenerate form posts via HTMX; if the rate-limit/overview-missing 400s should be visible (htmx doesn't swap non-2xx by default), mirror the `hx-on::response-error` → error-line pattern from `templates/insights/cross_source_discovery.html`.
+- [x] **`templates/sources/_use_cases_section.html` — self-poll while generating.** The root `#use-cases-section` div currently adds `hx-get`/`hx-trigger="every 2s"`/`hx-swap="outerHTML"` only when `source_overview_insight.status == 'pending'`. Extend the condition so it **also** polls when `use_cases_generating` is true (poll target stays `use_cases_status`). Follow the persistent-spinner lesson from cross-source discovery: render an always-visible `animate-spin` SVG for the generating state, **not** the `htmx-indicator` component (which flashes on each poll).
+- [x] **Spinner / generating state** — when `use_cases_generating`, show a "Generating use case suggestions…" spinner block at the top of the card (existing suggestions, if any, still render below since regeneration is non-destructive).
+- [x] **Failed state** — when `use_cases_failed`, show an error message + a Generate/Regenerate (or Retry) control per the retry decision above.
+- [x] **Scrollable card (space-constrained, unlike the cross-source dedicated page).** Wrap the now-growing `use_cases` list in a fixed-height scroll container — `max-h-*` + `overflow-y-auto` — same pattern as the Sync History card, so the card doesn't grow unbounded as suggestions accumulate across regenerations.
+- [x] **Non-destructive, newest-first render** — the list iterates the `active` `use_cases` (already ordered newest-first), so a regenerate appends new cards to the top with prior suggestions preserved below.
+- [x] **(Optional) Surface generator 400s** — the generate/regenerate form posts via HTMX; if the rate-limit/overview-missing 400s should be visible (htmx doesn't swap non-2xx by default), mirror the `hx-on::response-error` → error-line pattern from `templates/insights/cross_source_discovery.html`.
 
 #### Wiring
 - [x] No new URLs required (reuses `generate_use_cases` + `use_cases_status`); `apps/insights/urls.py` already has `app_name = 'insights'`. Retry decision (a) confirms no dedicated route is needed.
