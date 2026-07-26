@@ -25,3 +25,6 @@ markdown==3.10.2
 celery[redis]==5.4.0
 django-celery-beat==2.9.0
 croniter==6.2.2
+
+# Connectors / data sources
+airbyte==0.53.2           # PyAirbyte adapter for 300+ sources; requires Python 3.12 (no 3.13 wheels), pulls pyarrow 21 + a large transitive tree

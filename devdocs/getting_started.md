@@ -8,7 +8,7 @@ This guide walks you through building the Flint MVP step by step. Think of this 
 
 ~~Before writing any code, make sure you have:~~
 
-- [x] ~~Python 3.13+ installed~~
+- [x] ~~Python 3.12 installed~~
 - [x] ~~Virtual environment created and activated (`.venv/`)~~
 - [x] ~~`.env` file created from `.env.example`~~
 - [x] ~~Django installed (`pip install django`)~~

@@ -1,7 +1,7 @@
 # Feature: PyAirbyte Connector Adapter
 
 **Source:** `devdocs/appdocs/post_mvp.md` — build order item **13** ("PyAirbyte integration — `sources`"). Precursor to item **14** (remaining SaaS connector batch: HubSpot, Salesforce). **Stripe is pulled forward into #13** as the first real Airbyte source, for end-to-end validation against a live dev account.
-**Status:** Draft — not started
+**Status:** Phase 1 complete (2026-07-26) — spike done, dependency pinned, environment moved to Python 3.12. Phase 2 (`AirbyteConnector`) is next. See **Phase 1 Spike — Findings** below.
 **Target phase:** Post-MVP Phase 3 (build order item 13 — first item after cross-source discovery #11 and async use-cases #11b, both complete; #12 descoped).
 **Suggested branch:** `feature/airbyte-adapter` — already checked out.
 
@@ -23,11 +23,44 @@ The core design challenge is an **impedance mismatch**: `BaseConnector` is datab
 
 ## Dependencies
 
-- [ ] **PyAirbyte library** — not yet installed (`pip show airbyte` → not found; no pin in `requirements.txt`). Listed as a planned dep in `architecture.md` (`airbyte  # PyAirbyte`). Needs installing + pinning. Note PyAirbyte itself pulls in a fair dependency tree and manages per-connector installs into isolated venvs on first use.
+- [x] **PyAirbyte library** — installed and pinned: `airbyte==0.53.2` in `requirements.txt` (new "Connectors / data sources" section). **Requires Python 3.12** (see the Python 3.12 finding below). Pulls a large transitive tree (pyarrow 21, pandas, grpc, cryptography, etc.) and installs each connector into an isolated venv on first use (via `uv`); first-run install adds latency + needs network egress, and PyAirbyte writes connector logs under `/tmp/airbyte/logs/` — both relevant to the Celery worker environment in Phase 5.
 - [x] **`BaseConnector` interface + registry** — `apps/sources/connectors/base.py` (3 abstract methods), `registry.py` (`_REGISTRY` name→class map + `get_connector`). Reused unchanged in shape; the registry gains Airbyte routing.
 - [x] **Sync pipeline is connector-agnostic** — `apps/sources/tasks.py::sync_source_task` already consumes `discover_catalog()` / `get_table_metadata()` generically and upserts into `catalog` models. If the adapter honors the return shapes, **the sync task needs no changes.**
 - [x] **`DemoConnector` precedent** — `demo/connectors/demo_connector.py` shows a non-DB `BaseConnector`: single synthesized schema, a `TYPE_MAP` from Python/JSON types to Flint `data_type` strings, and `get_table_metadata` returning `{'row_count': None/len, 'column_stats': {}}`. The Airbyte adapter is structurally the same idea.
 - [x] **Fernet credential encryption** — `apps/sources/encryption.py` (`encrypt_credentials` / `decrypt_credentials`) stores a JSON dict in `Source.credentials`. Airbyte config is just a (larger, per-connector-shaped) JSON dict, so this storage works as-is.
+
+---
+
+## Phase 1 Spike — Findings (2026-07-26)
+
+Validated live against `source-faker` (credential-free) **and** `source-stripe` (real dev account). Everything the Phase 2 mapping depends on is now confirmed against real data.
+
+### Environment — the project moved to Python 3.12
+- **PyAirbyte does not install on Python 3.13.** Latest `airbyte` (0.53.2) pins `pyarrow<18`, and pyarrow only ships 3.13 wheels from v18+, so pip falls back to a source build that fails. Worse, even when PyAirbyte itself is force-installed on 3.13 (via a `uv --override pyarrow>=18`), the **connectors** build into their own venvs on the same interpreter and their deps (e.g. `pendulum` for `source-faker`) have no 3.13 wheels either. `source-faker` is the simplest connector Airbyte ships and it already fails on 3.13. **The `--no-deps`/override family of hacks does not work — it produces a PyAirbyte that imports but can't run a single connector.**
+- **On Python 3.12 everything installs from wheels, no hacks.** `pip install airbyte` → 0.53.2 + pyarrow 21; `source-faker` and `source-stripe` both install and run.
+- **Action taken:** the project `.venv` was rebuilt on Python 3.12.0; `requirements.txt` migrate + Django system check pass clean. `3.13` references updated in `CLAUDE.md`, `README.md`, and `devdocs/getting_started.md`. **Do not "upgrade" the project to 3.13 until PyAirbyte supports it** — it will silently re-break connector installs.
+
+### `check()` semantics (matters for `test_connection`)
+- PyAirbyte's `source.check()` **returns `None` on success and raises on failure** (`AirbyteConnectorCheckFailedError`). So `test_connection()` **cannot** `return source.check()` — it must `try: source.check(); return True except Exception: return False` (matches the mirror-`PostgreSQLConnector` guidance in Phase 2).
+
+### Known issue — Stripe `check()` fails on the Connect `accounts` stream *(deferred)*
+- `source-stripe` requires **two** config fields, both `required`: `client_secret` (the `sk_test_...` key) **and** `account_id` (`acct_...`). `start_date` is optional. `account_id` is fetchable from `GET /v1/account` with the key.
+- On a plain test account, `check()` **fails with a 401 on the `accounts` stream** (Stripe Connect's connected-accounts endpoint) even though the key is valid and every other stream works. Two fixes, **not yet applied** (user deferred): (a) enable Stripe Connect in the test dashboard so `/v1/accounts` returns 200; and/or (b) make the adapter's `test_connection()` **tolerant** — don't fail the whole check because one of 47 streams is unauthorized (arguably the more correct design; a user's key legitimately may not cover every stream). Revisit in Phase 5. **Discovery is unaffected** — `discovered_catalog` returns static schemas without needing every stream to authorize, so Phase 1 completed despite this.
+- *(Spike-only, not an adapter concern: the throwaway script's manual `GET /v1/account` call hit `CERTIFICATE_VERIFY_FAILED` because the python.org macOS Python has no system CA store — fixed with `ssl.create_default_context(cafile=certifi.where())`. The connector itself bundles certifi and is unaffected.)*
+
+### Confirmed Airbyte→Flint mapping (from real Stripe + faker catalogs)
+- **`stream.name`** → Flint table name. `source-stripe` discovered **47 streams** (`customers`, `charges`, `invoices`, `payment_intents`, …), some wide — `invoices` has **90 columns**.
+- **`stream.source_defined_primary_key`** is a **list of lists**, e.g. `[['id']]` → flatten to a set of PK column names, set `primary_key=True` on matches.
+- **`json_schema['properties']`** → columns. Each property's `type` is **usually a nullable union**, e.g. `['null', 'string']`, `['null', 'integer']`, `['null', 'object']`, `['null', 'array']`, `['null', 'number']`. So the adapter must:
+  - derive **`nullable`** = `'null' in type_list`;
+  - take the **real type** = the non-`'null'` element;
+  - **handle both forms** — `type` can be a plain `str` (faker had some) *or* a `list`.
+- **`TYPE_MAP` keys actually observed:** `string`, `integer`, `number`, `boolean`, `object`, `array` (map `object`/`array` → a JSON-ish Flint type). Include a sane fallback for unknowns.
+- **`airbyte_type` is an optional refinement, not the primary signal.** Stripe returned `airbyte_type=None` on every field; faker returned `airbyte_type='timestamp_with_timezone'` on its `created_at`. **Prefer `airbyte_type` when present, else fall back to the union `type`.** (Testing both connectors is what surfaced this — Stripe alone would have hidden it.)
+- **Stripe quirk (faithful, not a bug):** timestamps like `created`/`updated` come through as **`integer`** (Unix epoch), so they map to an integer type, not a date.
+
+### Throwaway spike script
+The spike lived at `$SCRATCHPAD/stripe_spike.py` (session-scratch, not committed). Reproducible from the notes above if needed again.
 
 ---
 
@@ -49,9 +82,9 @@ get_table_metadata(schema_name: str, table_name: str) -> dict
 test_connection() -> bool
 ```
 
-**Airbyte → Flint mapping the adapter performs:**
+**Airbyte → Flint mapping the adapter performs** *(confirmed against real catalogs — see Phase 1 Spike Findings for the exact shapes):*
 - Airbyte **stream** → Flint **table** (`table_type='BASE TABLE'`, matching DemoConnector).
-- Stream's JSON-schema `properties` → **columns**; each property's `type`/`airbyte_type` → `data_type` via a `TYPE_MAP`; `nullable` from whether the type union includes `"null"`; `primary_key` from the stream's `source_defined_primary_key`.
+- Stream's JSON-schema `properties` → **columns**; `data_type` via `TYPE_MAP` preferring `airbyte_type` when present, else the union `type`; `nullable` = `'null'` in the (list-or-str) `type`; `primary_key` from `source_defined_primary_key` (a **list of lists**, flatten it).
 - No Airbyte schema namespace → **synthesize one schema** named after the connector/source (DemoConnector returns `[{'name': source, 'tables': [...]}]`).
 - `get_table_metadata` → **metadata-only** `{'row_count': None, 'column_stats': {}}` (discovery doesn't read records; see Key Design Decisions).
 
@@ -61,16 +94,16 @@ test_connection() -> bool
 
 Multi-phase — this is a larger surface than the recent async conversions. Phases are ordered to de-risk the library first and keep each step independently verifiable.
 
-### Phase 1 — Spike & pin the dependency
-- [ ] `pip install airbyte`, pin in `requirements.txt`.
-- [ ] **Add a Stripe dev API key to `.env`** (e.g. `STRIPE_API_KEY=sk_test_...`) and document it in `.env.example` — required to run `source-stripe` in the spike and see the real stream shapes. Without it the spike can only use `source-faker`, which won't reveal Stripe's actual catalog.
-- [ ] Throwaway spike (shell or `$CLAUDE_JOB_DIR/tmp` script). Start credential-free to prove the mechanics: `import airbyte as ab; s = ab.get_source("source-faker", config={"count": 1000}, install_if_missing=True); s.check(); s.get_available_streams(); s.discovered_catalog`. Then repeat with `source-stripe`, reading the key from `.env` (config likely `{"account_id": ..., "client_secret": "sk_test_...", "start_date": ...}` — confirm from `s.config_spec`) to see the **real target's** stream JSON schemas. Confirm the shapes the mapping depends on: field names, `type`, `airbyte_type`, `source_defined_primary_key`. **De-risk before writing the adapter.**
-- [ ] Note the first-run install latency and where PyAirbyte puts connector venvs (affects the Celery worker environment).
+### Phase 1 — Spike & pin the dependency — ✅ COMPLETE (2026-07-26)
+- [x] `pip install airbyte`, pin in `requirements.txt` → `airbyte==0.53.2`. **Required moving the project to Python 3.12** (3.13 is incompatible — see Findings).
+- [x] **Added `STRIPE_API_KEY` to `.env`** and documented it in `.env.example` (new "Source Connector Credentials" section). Confirmed `source-stripe` also needs `account_id` (`acct_...`), fetchable from `GET /v1/account`.
+- [x] Throwaway spike run against **both** `source-faker` (mechanics) and `source-stripe` (real target). Confirmed the shapes the mapping depends on — field names, `type`, `airbyte_type`, `source_defined_primary_key` — all captured in **Phase 1 Spike — Findings** above.
+- [x] Noted first-run install latency + logs at `/tmp/airbyte/logs/`; connectors install into isolated venvs via `uv` (Celery-env implication flagged for Phase 5).
 
 ### Phase 2 — `AirbyteConnector(BaseConnector)`
 - [ ] New `apps/sources/connectors/airbyte.py` — `class AirbyteConnector(BaseConnector)`. `__init__` receives the decrypted credentials dict; it must know **which** Airbyte connector to launch (e.g. `source-faker`) and the connector **config** (see Phase 3 for where the connector *name* comes from).
-- [ ] `test_connection()` → wrap `ab_source.check()`; return bool, log + return False on failure (mirror `PostgreSQLConnector.test_connection`'s try/except style).
-- [ ] `discover_catalog()` → build the Airbyte source, read `discovered_catalog`, translate each stream → the table dict shape above. Add a `TYPE_MAP` (Airbyte JSON-schema types → Flint `data_type` strings) like DemoConnector's. Return a single synthesized schema.
+- [ ] `test_connection()` → wrap `ab_source.check()` in try/except returning `True`/`False`. **Note (spike-confirmed): `check()` returns `None` on success and *raises* on failure — do not `return check()`.** Also decide the tolerance behavior for the Stripe Connect `accounts`-stream 401 (see Findings → Known issue): a single unauthorized stream should probably not fail the whole connection test.
+- [ ] `discover_catalog()` → build the Airbyte source, read `discovered_catalog`; each element of `discovered_catalog.streams` **is** an `AirbyteStream` (no `.stream` wrapper). Translate each: `stream.name` → table; `stream.json_schema['properties']` → columns; `stream.source_defined_primary_key` (list-of-lists) → PK set. `TYPE_MAP`: prefer `airbyte_type`, else the non-`null` element of the union `type` (handle `type` being `str` *or* `list`; keys seen: `string`/`integer`/`number`/`boolean`/`object`/`array`). Return a single synthesized schema.
 - [ ] `get_table_metadata()` → return `{'row_count': None, 'column_stats': {}}` (metadata-only). Keep the signature; the stream name is `table_name`.
 - [ ] Type hints throughout; `from __future__ import annotations` (project standard).
 
@@ -125,6 +158,7 @@ Multi-phase — this is a larger surface than the recent async conversions. Phas
 
 ## Notes
 
+- **Python 3.12 is now required (was 3.13).** PyAirbyte + its connectors have no Python 3.13 wheels; the project `.venv` was rebuilt on 3.12.0 during the Phase 1 spike and the `3.13` references in `CLAUDE.md` / `README.md` / `devdocs/getting_started.md` were updated. Don't bump back to 3.13 until PyAirbyte supports it. Full rationale in **Phase 1 Spike — Findings**.
 - **First-run connector install latency.** PyAirbyte installs each connector into an isolated venv on first use. The first sync of a new Airbyte type will be slow and needs network egress; subsequent runs reuse the install. Because sync already runs in a Celery task, this doesn't block the request — but the worker environment must permit the install. Worth watching in Phase 5.
 - **Metadata depth vs. native.** Airbyte discovery is shallower than the Postgres connector (no constraints/indexes/stats). That's expected and documented in `architecture.md`'s "Native vs Airbyte Decision Criteria" — use native when deep introspection matters, Airbyte for breadth. This adapter is the breadth path.
 - **`test_connection` cost.** `source.check()` may spin up the connector; it's heavier than a Postgres TCP connect. Fine for a manual button, but note it isn't free.

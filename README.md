@@ -184,7 +184,7 @@ All tenant-scoped models (`Source`, `Schema`, `Table`, `Column`, `TableStatistic
 
 | Layer | Choice |
 |---|---|
-| Backend | Django 6.0.2, Python 3.13 |
+| Backend | Django 6.0.2, Python 3.12 |
 | Frontend | Django templates + HTMX, Tailwind CSS (production build, not CDN) |
 | Database | SQLite (dev), PostgreSQL (prod) |
 | Background tasks | Celery 5.4 + Redis |
@@ -232,7 +232,7 @@ Flint/
 
 ### Prerequisites
 
-- Python 3.13+
+- Python 3.12 (not 3.13 — the PyAirbyte connector stack has no Python 3.13 wheels yet)
 - Node.js 18+ (for the Tailwind build)
 - Redis (for Celery). On macOS: `brew install redis && brew services start redis`
 

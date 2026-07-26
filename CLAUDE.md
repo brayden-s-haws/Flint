@@ -23,7 +23,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Flint is a data intelligence platform that inspects databases and APIs to generate metadata insights without storing actual data. It's in the data catalog/observability space but focused on **intelligence generation** rather than just cataloging.
 
-- **Framework**: Django 6.0.2, Python 3.13.5
+- **Framework**: Django 6.0.2, Python 3.12 (pinned to 3.12 — PyAirbyte's connector stack has no Python 3.13 wheels yet)
 - **Frontend**: Django templates + HTMX (server-rendered)
 - **LLM**: OpenAI + Anthropic with provider abstraction
 - **Team**: Solo developer (keep architecture simple)
