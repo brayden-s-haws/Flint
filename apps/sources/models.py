@@ -13,6 +13,7 @@ FREQUENCY_CHOICES = [
 
 class SourceType(TimeStampedModel):
     name = models.CharField(max_length=255)
+    airbyte_connector_name = models.CharField(max_length=255, blank=True)
     is_demo = models.BooleanField(default=False)
 
     def __str__(self) -> str:
