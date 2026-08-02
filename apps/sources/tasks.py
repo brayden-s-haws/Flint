@@ -6,7 +6,7 @@ from celery import shared_task
 from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
 
-from .connectors.registry import get_connector
+from .connectors.registry import build_connector
 from .encryption import decrypt_credentials
 from .models import Source, SourceSyncLog, SourceSchedule
 from apps.catalog.models import Schema, Table, Column, TableStatistics
@@ -22,8 +22,7 @@ def sync_source_task(source_id: int, sync_log_id: int) -> None:
     sync_log = SourceSyncLog.objects.get(pk=sync_log_id)
     try:
         credentials = decrypt_credentials(source.credentials)
-        connector_class = get_connector(source.source_type.name)
-        connector = connector_class(credentials)
+        connector = build_connector(source.source_type, credentials)
         catalog = connector.discover_catalog()
         records_synced = 0
         for schema_data in catalog:

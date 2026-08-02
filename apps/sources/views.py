@@ -19,7 +19,7 @@ from django.forms import BaseModelForm
 from django.utils import timezone
 
 from apps.core.mixins import TenantQuerysetMixin
-from .connectors.registry import get_connector
+from .connectors.registry import build_connector
 from apps.insights.models import InsightTarget
 from .models import Source, SourceType, SourceSchedule
 from .forms import SourceForm, ScheduleForm
@@ -166,8 +166,7 @@ def test_connection(request: HttpRequest, pk: int) -> HttpResponse:
         return HttpResponse('Method not allowed', status=405)
     source = get_object_or_404(Source, pk=pk, account=request.account) # type: ignore[attr-defined]
     credentials = decrypt_credentials(source.credentials)
-    connector_class = get_connector(source.source_type.name)
-    connector = connector_class(credentials)
+    connector = build_connector(source.source_type, credentials)
     success = connector.test_connection()
     if success:
         messages.success(request, 'Connection test successful')
