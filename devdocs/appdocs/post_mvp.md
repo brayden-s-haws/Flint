@@ -42,7 +42,7 @@ For speculative or longer-horizon ideas, see `devdocs/potential_features.md`.
 17. ERD generator/viewer — `catalog` — visual entity-relationship diagrams generated from catalog FK metadata, with optional LLM-inferred relationships and ontology-aware labelling
 18. Ontology app Phase 1 (manual object type definitions) — `ontology`
 19. SaaS connector batch 2 via PyAirbyte — Google Analytics, Intercom, Shopify, Zendesk, Mixpanel, Amplitude, Segment — `sources` — broadens go-to-market coverage; aligns with the Product demo scenario (Intercom) and common e-commerce/support stacks
-20. Data warehouse + storage connectors — Snowflake, BigQuery, Redshift, S3/GCS — `sources` — opens the warehouse path; PyAirbyte adapter for most, with native connectors only where deep metadata extraction (FK constraints, column statistics) justifies the work
+20. Data warehouse + storage connectors — Snowflake, BigQuery, Redshift, S3/GCS — `sources` — opens the warehouse path. **Prefer native connectors for warehouses/databases** so we capture row counts, column statistics, and FK constraints from their stats catalogs (the Airbyte adapter is schema-only and can't); use the PyAirbyte adapter as a **fallback** for low-priority or long-tail engines. S3/GCS file storage has no stats catalog, so the Airbyte adapter is fine there. See the "Native vs Airbyte Decision Criteria" in `devdocs/architecture.md`
 
 **Phase 5 — Advanced / long-horizon**
 21. Multi-account switching, role-based permissions — `accounts`

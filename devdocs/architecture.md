@@ -314,14 +314,18 @@ With PyAirbyte integration, we get immediate access to 300+ sources:
 
 ### Native vs Airbyte Decision Criteria
 
+**Default rule (decided 2026-08):** **databases and data warehouses default to a native connector; SaaS/APIs go through the Airbyte adapter.** Databases and warehouses maintain their own statistics catalogs — Postgres `pg_class`/`pg_stats`, MySQL `information_schema.TABLES`/histograms, Snowflake & BigQuery `INFORMATION_SCHEMA` row counts, Redshift `svv_table_info`, etc. — so a native connector can pull **row counts, column statistics, and FK constraints cheaply by reading metadata** (no data read). The Airbyte adapter exposes **stream schema only** and cannot get these, even for a database source. Those stats + constraints feed insights and the future queries app (JOIN generation, filter context), so they're worth the per-source native build for anything we'll actually query against. **Airbyte remains an acceptable *fallback*** for low-priority or long-tail database engines so they aren't blocked on a native build. (File/object storage like S3/GCS has no stats catalog — the Airbyte adapter is fine there.)
+
 Build **native** when:
+- The source is a **database or data warehouse** (the default — see rule above)
 - Need database-specific metadata (constraints, indexes, comments, stored procedures)
 - Airbyte connector lacks required introspection depth
 - Performance-critical path requiring optimization
 
 Use **Airbyte** when:
+- Source is a **SaaS API** (Airbyte handles auth, rate limits, pagination)
 - Standard schema/table/column discovery is sufficient
-- Source is a SaaS API (Airbyte handles auth, rate limits, pagination)
+- A database/warehouse is low-priority or long-tail and a native build isn't yet justified (**fallback**)
 - Rapid time-to-market is priority
 
 ---
