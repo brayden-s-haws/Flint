@@ -1,7 +1,7 @@
 # Feature: PyAirbyte Connector Adapter
 
 **Source:** `devdocs/appdocs/post_mvp.md` — build order item **13** ("PyAirbyte integration — `sources`"). Precursor to item **14** (remaining SaaS connector batch: HubSpot, Salesforce). **Stripe is pulled forward into #13** as the first real Airbyte source, for end-to-end validation against a live dev account.
-**Status:** Phases 1–3 complete — spike + dependency (Python 3.12), `AirbyteConnector` (verified against live Stripe), and registry/`SourceType` routing (`airbyte_connector_name` field, `build_connector` factory, Postgres casing fixed). Phase 4 (dynamic connect-source form + seed the Stripe SourceType) is next. See **Phase 1 Spike — Findings** below.
+**Status:** Phases 1–3 complete; **Phase 4 in progress** — Stripe SourceType seeded and `SourceForm` made conditional (Steps 1–2 done); remaining: the connect-source views + templates (Steps 3–4, detailed in the Phase 4 checklist). See **Phase 1 Spike — Findings** below.
 **Target phase:** Post-MVP Phase 3 (build order item 13 — first item after cross-source discovery #11 and async use-cases #11b, both complete; #12 descoped).
 **Suggested branch:** `feature/airbyte-adapter` — already checked out.
 
@@ -117,11 +117,17 @@ Migrations `0006` (field) + `0007` (Postgres rename) applied cleanly; existing P
 - [x] Updated both call sites (`tasks.py`, `views.py`) to `build_connector(source.source_type, credentials)`; `sync_source_task`'s body otherwise unchanged.
 
 ### Phase 4 — Dynamic connect-source form + register an Airbyte source *(credential capture generalization — the biggest UX surface)*
-- [ ] **Make the connect-source form dynamic: the user picks a supported source by name, and we render the fields that source needs.** The native-vs-Airbyte split stays *invisible* — no category toggle, just a flat list of SourceTypes by display name. `SourceForm` is currently hardcoded to Postgres fields. On selection: a **native** type (Postgres) renders the structured `host/port/dbname/user/password` fields; an **Airbyte-backed** type (`airbyte_connector_name` set) renders a single **JSON config `Textarea`**. Recommended interaction: select the SourceType, then swap the field set via **HTMX** (`hx-get` a partial keyed on the chosen type) — or a two-step page (pick type → form).
-- [ ] JSON textarea is validated as parseable JSON, then encrypted via `encrypt_credentials` exactly like Postgres creds. Defer spec-driven dynamic forms (from PyAirbyte's `config_spec`) to a later item.
-- [ ] `SourceCreateView.form_valid` / `SourceUpdateView` build the credentials dict from the JSON config for Airbyte types (branch on the SourceType's backing) instead of the fixed host/port/... dict.
-- [ ] Styled widgets on any new form field per `CLAUDE.md` (Tailwind input classes + `__init__` `attrs.update`); the `Textarea` gets the same input classes.
-- [ ] Seed the **Stripe** SourceType (`airbyte_connector_name='source-stripe'`) via a data migration mirroring `0003_seed_demo_source_types`. Optionally also seed `source-faker` for credential-free testing.
+**In progress (2026-08-02):** Steps 1–2 done (Stripe seeded + `SourceForm` made conditional); Steps 3–4 remain (views + templates). The user picks a supported source by name; the native-vs-Airbyte split stays *invisible* — Postgres renders structured `host/port/...` fields, Airbyte-backed types render a single JSON-config `Textarea`, swapped via HTMX.
+
+- [x] **Step 1 — Seed the Stripe SourceType.** `0008_seed_stripe_source_type` (`get_or_create(name='Stripe', defaults={'airbyte_connector_name': 'source-stripe'})`, reversible). Applied + verified.
+- [x] **Step 2 — `SourceForm` made conditional** (`apps/sources/forms.py`). Postgres fields now `required=False`; added a `config` `Textarea` (`required=False`) for the Airbyte JSON; `clean()` branches on `source_type.airbyte_connector_name` (Airbyte → require + `json.loads`-validate `config`; native → require the five Postgres fields); `source_type` dropdown filtered to `is_demo=False`; the existing `__init__` widget-styling loop already covers the new `config` field. *(Spec-driven forms from PyAirbyte `config_spec` stay deferred to a later item.)*
+- [ ] **Step 3 — Views: branch credential handling** (`apps/sources/views.py`; add `import json`).
+    - [ ] `SourceCreateView.form_valid` **and** `SourceUpdateView.form_valid`: build the credentials dict from `json.loads(form.cleaned_data['config'])` when `source_type.airbyte_connector_name` is set, else the fixed `host/port/dbname/user/password` dict. (`clean()` already guarantees the JSON parses.)
+    - [ ] `SourceUpdateView.get_initial`: for Airbyte types, pre-fill `config` with `json.dumps(decrypted_creds, indent=2)`; for native, the existing host/port/... population.
+    - [ ] New `connect_fields` view + URL (`sources:connect_fields`): reads `?source_type=<id>`, looks up the `SourceType`, renders the `_connection_fields.html` partial for that type (backs the HTMX swap in Step 4).
+- [ ] **Step 4 — Templates: the dynamic form** *(frontend)*.
+    - [ ] `source_form.html`: give the `source_type` `<select>` `hx-get="{% url 'sources:connect_fields' %}"`, `hx-target="#connection-fields"`, `hx-trigger="change"`; wrap the connection fields in `<div id="connection-fields">` that includes the partial for the currently-selected type (so validation re-renders and edit-view pre-fill keep the right field set).
+    - [ ] New `_connection_fields.html` partial: `{% if selected_source_type.airbyte_connector_name %}` → the `config` textarea (label + JSON help text); `{% else %}` → the five Postgres fields. Reuse the existing label/input Tailwind classes.
 
 ### Phase 5 — End-to-end validation via Stripe
 - [ ] Register a **Stripe** source through the UI (dev-account API key in the JSON config), run a manual sync, confirm the catalog populates (synthesized schema → Stripe stream-tables like `charges`, `customers`, `invoices` → typed columns) and the existing Source Overview insight generates as usual (proves the whole pipe works unchanged past the connector).
