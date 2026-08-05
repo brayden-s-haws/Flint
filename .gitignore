@@ -115,6 +115,7 @@ cython_debug/
 # IDE
 .idea/
 .vscode/
+.junie/
 *.swp
 *.swo
 *~

@@ -15,5 +15,6 @@ urlpatterns = [
     path('<int:pk>/schedule/', views.schedule_create, name='schedule_create'),
     path('<int:pk>/schedule/toggle/', views.schedule_toggle, name='schedule_toggle'),
     path('<int:pk>/schedule/delete/', views.schedule_delete, name='schedule_delete'),
+    path('connect-fields/', views.connect_fields, name='connect_fields'),
     path('demo/load/', views.load_demo_data, name='load_demo'),
 ]

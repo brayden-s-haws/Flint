@@ -5,6 +5,7 @@ from typing import Any
 from datetime import timedelta, datetime
 from croniter import croniter
 from cron_descriptor import ExpressionDescriptor
+import json
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -61,13 +62,16 @@ class SourceCreateView(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form: BaseModelForm) -> HttpResponse:
         source_instance = form.save(commit=False)
-        credentials_dict = {
-            'host': form.cleaned_data['host'],
-            'port': form.cleaned_data['port'],
-            'dbname': form.cleaned_data['dbname'],
-            'user': form.cleaned_data['user'],
-            'password': form.cleaned_data['password'],
-        }
+        if source_instance.source_type.airbyte_connector_name:
+            credentials_dict = json.loads(form.cleaned_data['config'])
+        else:
+            credentials_dict = {
+                'host': form.cleaned_data['host'],
+                'port': form.cleaned_data['port'],
+                'dbname': form.cleaned_data['dbname'],
+                'user': form.cleaned_data['user'],
+                'password': form.cleaned_data['password'],
+            }
         source_instance.credentials = encrypt_credentials(credentials_dict)
         source_instance.account = self.request.account  # type: ignore[attr-defined]
         source_instance.save()
@@ -83,22 +87,28 @@ class SourceUpdateView(LoginRequiredMixin, TenantQuerysetMixin, UpdateView):
         initial = super().get_initial()
         source = self.object
         credentials_dict = decrypt_credentials(source.credentials)
-        initial['host'] = credentials_dict['host']
-        initial['port'] = credentials_dict['port']
-        initial['dbname'] = credentials_dict['dbname']
-        initial['user'] = credentials_dict['user']
-        initial['password'] = credentials_dict['password']
+        if source.source_type.airbyte_connector_name:
+            initial['config'] = json.dumps(credentials_dict, indent=2)
+        else:
+            initial['host'] = credentials_dict['host']
+            initial['port'] = credentials_dict['port']
+            initial['dbname'] = credentials_dict['dbname']
+            initial['user'] = credentials_dict['user']
+            initial['password'] = credentials_dict['password']
         return initial
 
     def form_valid(self, form: BaseModelForm) -> HttpResponse:
         source_instance = form.save(commit=False)
-        credentials_dict = {
-            'host': form.cleaned_data['host'],
-            'port': form.cleaned_data['port'],
-            'dbname': form.cleaned_data['dbname'],
-            'user': form.cleaned_data['user'],
-            'password': form.cleaned_data['password'],
-        }
+        if source_instance.source_type.airbyte_connector_name:
+            credentials_dict = json.loads(form.cleaned_data['config'])
+        else:
+            credentials_dict = {
+                'host': form.cleaned_data['host'],
+                'port': form.cleaned_data['port'],
+                'dbname': form.cleaned_data['dbname'],
+                'user': form.cleaned_data['user'],
+                'password': form.cleaned_data['password'],
+            }
         source_instance.credentials = encrypt_credentials(credentials_dict)
         source_instance.save()
         self.object = source_instance
@@ -266,4 +276,9 @@ def load_demo_data(request: HttpRequest) -> HttpResponse:
 
     messages.success(request, 'Demo sources loaded. Sync each one to populate the catalog.')
     return redirect('sources:list')
+
+@login_required
+def connect_fields(request: HttpRequest) -> HttpResponse:
+    source_type = get_object_or_404(SourceType, pk=request.GET.get('source_type'))
+    return render(request, 'sources/_connection_fields.html', {'form': SourceForm(), 'selected_source_type': source_type})
 
