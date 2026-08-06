@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 
 from django.forms import ModelForm, CharField, IntegerField, PasswordInput, Form, RadioSelect, ChoiceField, Textarea
+from django.urls import reverse
 
 from .models import Source, FREQUENCY_CHOICES, SourceType
 
@@ -23,6 +24,8 @@ class SourceForm(ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['source_type'].queryset = SourceType.objects.filter(is_demo=False)
+        self.fields['source_type'].empty_label = 'Select a source type...'
+        self.fields['source_type'].widget.attrs.update({'hx-get': reverse('sources:connect_fields'), 'hx-target': '#connection-fields', 'hx-trigger': 'change',})
         for field in self.fields.values():
             field.widget.attrs.update({'class': 'w-full bg-flint-card border border-flint-border-em rounded-md px-3 py-2 text-sm text-flint-text focus:outline-none focus:ring-2 focus:ring-flint-orange'})
 

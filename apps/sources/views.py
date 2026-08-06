@@ -78,6 +78,12 @@ class SourceCreateView(LoginRequiredMixin, CreateView):
         self.object = source_instance
         return super().form_valid(form)
 
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        raw = context['form']['source_type'].value()
+        context['selected_source_type'] = SourceType.objects.filter(pk=raw).first() if raw else None
+        return context
+
 class SourceUpdateView(LoginRequiredMixin, TenantQuerysetMixin, UpdateView):
     model = Source
     form_class = SourceForm
@@ -116,6 +122,12 @@ class SourceUpdateView(LoginRequiredMixin, TenantQuerysetMixin, UpdateView):
 
     def get_success_url(self) -> str:
         return reverse('sources:detail', kwargs={'pk': self.object.pk})
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        raw = context['form']['source_type'].value()
+        context['selected_source_type'] = SourceType.objects.filter(pk=raw).first() if raw else None
+        return context
 
 class SourceDeleteView(LoginRequiredMixin, TenantQuerysetMixin, DeleteView):
     model = Source
@@ -279,6 +291,7 @@ def load_demo_data(request: HttpRequest) -> HttpResponse:
 
 @login_required
 def connect_fields(request: HttpRequest) -> HttpResponse:
-    source_type = get_object_or_404(SourceType, pk=request.GET.get('source_type'))
+    raw = request.GET.get('source_type')
+    source_type = SourceType.objects.filter(pk=raw).first() if raw else None
     return render(request, 'sources/_connection_fields.html', {'form': SourceForm(), 'selected_source_type': source_type})
 

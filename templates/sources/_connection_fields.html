@@ -1,0 +1,44 @@
+{% if selected_source_type %}
+    {% if selected_source_type.airbyte_connector_name %}
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-flint-muted mb-1" for="{{ form.config.id_for_label }}">Configuration (JSON)</label>
+            {{ form.config }}
+            {% if form.config.errors %}
+            <div class="text-sm text-red-400 mt-1">{{ form.config.errors }}</div>
+            {% endif %}
+            {% if selected_source_type.config_example %}
+            <p class="text-xs text-flint-muted mt-2 mb-1">Example format:</p>
+            <pre class="text-xs bg-flint-card border border-flint-border rounded-md p-3 overflow-x-auto text-flint-text">{{ selected_source_type.config_example }}</pre>
+            {% endif %}
+        </div>
+    {% else %}
+        <p class="text-flint-text font-semibold mb-4 mt-6">Connection Details</p>
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-flint-muted mb-1" for="{{ form.host.id_for_label }}">{{ form.host.label }}</label>
+            {{ form.host }}
+            {% if form.host.errors %}<div class="text-sm text-red-400 mt-1">{{ form.host.errors }}</div>{% endif %}
+        </div>
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-flint-muted mb-1" for="{{ form.port.id_for_label }}">{{ form.port.label }}</label>
+            {{ form.port }}
+            {% if form.port.errors %}<div class="text-sm text-red-400 mt-1">{{ form.port.errors }}</div>{% endif %}
+        </div>
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-flint-muted mb-1" for="{{ form.dbname.id_for_label }}">Database Name</label>
+            {{ form.dbname }}
+            {% if form.dbname.errors %}<div class="text-sm text-red-400 mt-1">{{ form.dbname.errors }}</div>{% endif %}
+        </div>
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-flint-muted mb-1" for="{{ form.user.id_for_label }}">Database User</label>
+            {{ form.user }}
+            {% if form.user.errors %}<div class="text-sm text-red-400 mt-1">{{ form.user.errors }}</div>{% endif %}
+        </div>
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-flint-muted mb-1" for="{{ form.password.id_for_label }}">Database Password</label>
+            {{ form.password }}
+            {% if form.password.errors %}<div class="text-sm text-red-400 mt-1">{{ form.password.errors }}</div>{% endif %}
+        </div>
+    {% endif %}
+{% else %}
+    <p class="text-sm text-flint-muted">Select a source type to see its connection fields.</p>
+{% endif %}

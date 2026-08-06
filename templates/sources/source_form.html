@@ -17,26 +17,8 @@
                 <label class="block text-sm font-medium text-flint-muted mb-1" for="{{ form.source_type.id_for_label }}">{{ form.source_type.label }}</label>
                 {{ form.source_type }}
             </div>
-            <p class="text-flint-text font-semibold mb-4 mt-6">Connection Details</p>
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-flint-muted mb-1" for="{{ form.host.id_for_label }}">{{ form.host.label }}</label>
-                {{ form.host }}
-            </div>
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-flint-muted mb-1" for="{{ form.port.id_for_label }}">{{ form.port.label }}</label>
-                {{ form.port }}
-            </div>
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-flint-muted mb-1" for="{{ form.dbname.id_for_label }}">Database Name</label>
-                {{ form.dbname }}
-            </div>
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-flint-muted mb-1" for="{{ form.user.id_for_label }}">Database User</label>
-                {{ form.user }}
-            </div>
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-flint-muted mb-1" for="{{ form.password.id_for_label }}">Database Password</label>
-                {{ form.password }}
+            <div id="connection-fields">
+                {% include 'sources/_connection_fields.html' %}
             </div>
             {% if form.non_field_errors %}
             <div class="text-sm text-red-400 mt-1">
