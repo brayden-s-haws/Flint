@@ -35,11 +35,15 @@ class AirbyteConnector(BaseConnector):
 
     def test_connection(self) -> bool:
         try:
-            self._get_source().check()
+            source = self._get_source()
+            source.check()
             return True
         except Exception as e:
-            logger.error(f"AirbyteConnector test_connection failed: {e}")
-            return False
+            try:
+                return bool(source.discovered_catalog.streams) # Since we do not pull actual records we treat catalog being discoverable as a successful connection
+            except Exception:
+                logger.error(f"AirbyteConnector test_connection failed: {e}")
+                return False
 
     def discover_catalog(self) -> list[dict[str, Any]]:
         try:

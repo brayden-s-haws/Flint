@@ -1,7 +1,7 @@
 # Feature: PyAirbyte Connector Adapter
 
 **Source:** `devdocs/appdocs/post_mvp.md` — build order item **13** ("PyAirbyte integration — `sources`"). Precursor to item **14** (remaining SaaS connector batch: HubSpot, Salesforce). **Stripe is pulled forward into #13** as the first real Airbyte source, for end-to-end validation against a live dev account.
-**Status:** Phases 1–4 complete (build) — the dynamic connect-source form works end to end in the UI (native `host/port/...` fields ↔ Airbyte JSON config, HTMX-swapped by selected type). **Phase 5 — end-to-end Stripe validation via the UI (register + sync a real Stripe source)** is the remaining step. See **Phase 1 Spike — Findings** below.
+**Status:** ✅ **COMPLETE (all phases 1–5, 2026-08-05)** — the PyAirbyte adapter ships: `AirbyteConnector`, registry routing (`build_connector` + `SourceType.airbyte_connector_name`), the dynamic connect-source form (HTMX field-swap), and **Stripe validated end-to-end through the UI** (connect, sync, catalog, Source Overview, use cases). Automated tests deferred to the Phase 6 testing pass (#24, `devdocs/testing.md` → `apps.sources`). See **Phase 1 Spike — Findings** below.
 **Target phase:** Post-MVP Phase 3 (build order item 13 — first item after cross-source discovery #11 and async use-cases #11b, both complete; #12 descoped).
 **Suggested branch:** `feature/airbyte-adapter` — already checked out.
 
@@ -43,9 +43,10 @@ Validated live against `source-faker` (credential-free) **and** `source-stripe` 
 ### `check()` semantics (matters for `test_connection`)
 - PyAirbyte's `source.check()` **returns `None` on success and raises on failure** (`AirbyteConnectorCheckFailedError`). So `test_connection()` **cannot** `return source.check()` — it must `try: source.check(); return True except Exception: return False` (matches the mirror-`PostgreSQLConnector` guidance in Phase 2).
 
-### Known issue — Stripe `check()` fails on the Connect `accounts` stream *(deferred)*
+### Stripe `check()` fails on the Connect `accounts` stream — RESOLVED (2026-08-05, tolerant `test_connection`)
 - `source-stripe` requires **two** config fields, both `required`: `client_secret` (the `sk_test_...` key) **and** `account_id` (`acct_...`). `start_date` is optional. `account_id` is fetchable from `GET /v1/account` with the key.
-- On a plain test account, `check()` **fails with a 401 on the `accounts` stream** (Stripe Connect's connected-accounts endpoint) even though the key is valid and every other stream works. Two fixes, **not yet applied** (user deferred): (a) enable Stripe Connect in the test dashboard so `/v1/accounts` returns 200; and/or (b) make the adapter's `test_connection()` **tolerant** — don't fail the whole check because one of 47 streams is unauthorized (arguably the more correct design; a user's key legitimately may not cover every stream). Revisit in Phase 5. **Discovery is unaffected** — `discovered_catalog` returns static schemas without needing every stream to authorize, so Phase 1 completed despite this.
+- On a plain test account, `check()` **fails with a 401 on the `accounts` stream** (Stripe Connect's connected-accounts endpoint) even though the key is valid and every other stream works. `check()` is per-connector and a single pass/fail — `source-faker`'s passes; PyAirbyte gives no per-stream result to selectively tolerate.
+- **Decision (Phase 5):** chose tolerance over enabling Connect. `AirbyteConnector.test_connection` now does `check()` **then falls back to discovery** — `try: source.check(); return True except: return bool(source.discovered_catalog.streams)`. So a source Flint can actually use (catalog discoverable) reports green even when the connector's own `check()` trips on one unauthorized stream. **Tradeoff (accepted):** discovery is a *weaker* signal than `check()` — for connectors whose `discover` returns static schemas (Stripe among them), green means "config well-formed + catalog discoverable," not "credentials fully verified." This is fine for Flint because **Airbyte sync is metadata-only** (`discover_catalog` + `get_table_metadata`→`None`, never reads records), so the catalog is identical regardless and creds aren't otherwise exercised. *(Enabling Stripe Connect remains an option if true `check()` validation is ever wanted.)*
 - *(Spike-only, not an adapter concern: the throwaway script's manual `GET /v1/account` call hit `CERTIFICATE_VERIFY_FAILED` because the python.org macOS Python has no system CA store — fixed with `ssl.create_default_context(cafile=certifi.where())`. The connector itself bundles certifi and is unaffected.)*
 
 ### Confirmed Airbyte→Flint mapping (from real Stripe + faker catalogs)
@@ -103,7 +104,7 @@ Multi-phase — this is a larger surface than the recent async conversions. Phas
 ### Phase 2 — `AirbyteConnector(BaseConnector)` — ✅ COMPLETE (2026-08-02)
 Implemented in `apps/sources/connectors/airbyte.py`; verified end-to-end against live Stripe via a throwaway script (`AirbyteConnector(config, "source-stripe").discover_catalog()` → 1 synthesized `stripe` schema, 47 tables, `id` PK, correct type mapping; `get_table_metadata` metadata-only; `test_connection()` returns `False` gracefully on the deferred Connect 401).
 - [x] `AirbyteConnector(BaseConnector)` with a **two-arg `__init__(credentials, connector_name)`** (the connector name is passed in, not read from credentials) and a private `_get_source()` helper wrapping `ab.get_source(name, config=credentials, install_if_missing=True)`.
-- [x] `test_connection()` → try/except around `source.check()`, returns `True`/`False` (respects the `check()`-returns-`None`/raises finding). **Connect-tolerance deferred to Phase 5** — currently returns `False` for the non-Connect Stripe account.
+- [x] `test_connection()` → try/except around `source.check()`, returns `True`/`False` (respects the `check()`-returns-`None`/raises finding). **Made stream-tolerant in Phase 5** — on `check()` failure it falls back to `bool(source.discovered_catalog.streams)`, so Stripe reports green despite the Connect 401 (see the resolved "Stripe check()" note above).
 - [x] `discover_catalog()` → translates `discovered_catalog.streams` → one synthesized schema of tables/typed columns. `TYPE_MAP` (11 keys, full Airbyte vocabulary) + `_resolve_data_type` (airbyte_type → union-`type` → `format` refinement, per the CDK's own resolution order) + `_is_nullable` (nullable-union) + list-of-lists PK flatten. Logs + returns `[]` on failure.
 - [x] `get_table_metadata()` → `{'row_count': None, 'column_stats': {}}` (metadata-only).
 - [x] Type hints throughout; `from __future__ import annotations`.
@@ -143,11 +144,12 @@ Migrations `0006` (field) + `0007` (Postgres rename) applied cleanly; existing P
     - [x] **Part 4 — `source_form.html`:** hardcoded "Connection Details" + five field blocks replaced with `<div id="connection-fields">{% include 'sources/_connection_fields.html' %}</div>`; `name`/`source_type`/buttons untouched.
     - [x] **Part 5 — `connect_fields` empty guard:** `get_object_or_404` replaced with `raw = request.GET.get('source_type'); source_type = SourceType.objects.filter(pk=raw).first() if raw else None` — blank option renders the prompt, no 404.
 
-### Phase 5 — End-to-end validation via Stripe
-- [ ] Register a **Stripe** source through the UI (dev-account API key in the JSON config), run a manual sync, confirm the catalog populates (synthesized schema → Stripe stream-tables like `charges`, `customers`, `invoices` → typed columns) and the existing Source Overview insight generates as usual (proves the whole pipe works unchanged past the connector).
-- [ ] `test_connection` view works for the Stripe source (green/red as today, via `source.check()`).
-- [ ] Confirm the sync runs inside the Celery worker with `source-stripe` installed on first use (watch worker logs for the PyAirbyte install step).
-- [ ] *(Optional)* repeat the smoke test with `source-faker` to confirm the adapter is genuinely connector-agnostic and not accidentally Stripe-specific.
+### Phase 5 — End-to-end validation via Stripe — ✅ COMPLETE (2026-08-05)
+Registered a real Stripe source through the UI and validated the whole pipe end to end: Test Connection (green via the tolerant fallback), sync (catalog populated — `stripe` schema → stream-tables → typed columns), Source Overview insight, and intra-source use-case generation all work with results that look right. **Nothing downstream of the connector needed changes** — the adapter conforming to `BaseConnector` carried the feature through unchanged.
+- [x] Registered a **Stripe** source through the UI, synced, confirmed the catalog populates and the Source Overview insight generates.
+- [x] `test_connection` view works for the Stripe source (green via the stream-tolerant fallback — see the resolved "Stripe check()" note).
+- [x] Sync runs inside the Celery worker with `source-stripe` installed on first use.
+- [x] Use-case generation and other downstream insights work on the Stripe source.
 
 ### Tests *(deferred to the Phase 6 testing pass #24 — write up in `devdocs/testing.md` under `apps.sources`)*
 - [ ] `AirbyteConnector.discover_catalog` maps a known stream JSON schema → the expected table/column dicts (mock the PyAirbyte source object; no network).
