@@ -1,6 +1,7 @@
 # Testing Plan
 
 Write tests after the MVP is functionally complete. Focus on the flows that would break silently — auth, form validation, redirects, and anything touching the database.
+Note: We need to inspect all feature docs and ensure that any tests listed there get added to this document before we start
 
 Use Django's `TestCase` and `Client` throughout. No external testing libraries needed for MVP.
 

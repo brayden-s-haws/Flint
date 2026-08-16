@@ -31,7 +31,12 @@ class AirbyteConnector(BaseConnector):
         self.connector_name = connector_name
 
     def _get_source(self) -> Any:
-        return ab.get_source(self.connector_name, config=self.credentials, install_if_missing=True)
+        source = ab.get_source(self.connector_name, config=self.credentials, install_if_missing=True)
+        # Needed based on how PyAirbyte handles connectors with custom components, this may be a bug in the PyAirbyte project but has not been fixed over several versions
+        executor = getattr(source, "executor", None)
+        if executor is not None and hasattr(executor, "_config_dict"):
+            executor._config_dict = {**executor._config_dict, **self.credentials}
+        return source
 
     def test_connection(self) -> bool:
         try:
