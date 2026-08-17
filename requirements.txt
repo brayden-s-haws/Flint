@@ -27,4 +27,5 @@ django-celery-beat==2.9.0
 croniter==6.2.2
 
 # Connectors / data sources
-airbyte==0.53.2           # PyAirbyte adapter for 300+ sources; requires Python 3.12 (no 3.13 wheels), pulls pyarrow 21 + a large transitive tree
+airbyte==0.53.2     # PyAirbyte adapter for 300+ sources; requires Python 3.12 (no 3.13 wheels), pulls pyarrow 21 + a large transitive tree
+uv==0.8.24      # Required to install venv-based connectors (ex. source-salesforce), enabled by AIRBYTE_NO_UV=1 in settings.py

@@ -40,7 +40,9 @@ For speculative or longer-horizon ideas, see `devdocs/potential_features.md`.
     queries the user writes themselves. Results are displayed only, never persisted (Flint does not store source data). Two separate implementations:
     - A "run query" button on the source detail page,
     - A dedicated query page with a query editor and results viewer for the new queries app for natural language to sql queries
-17. ERD generator/viewer — `catalog` — visual entity-relationship diagrams generated from catalog FK metadata, with optional LLM-inferred relationships and ontology-aware labelling
+    - Should only apply to native connectors (databases, warehouses, etc) as AirByte integrations are SaaS connectors, we are not actually pulling details from a database so we cannot query them
+17. ERD generator/viewer — `catalog` — visual entity-relationship diagrams generated from catalog FK metadata, with optional LLM-inferred relationships and ontology-aware labelling (NOTE: AFTER 
+    THIS, MOVE EVERYTHING BELOW TO A PHASE AFTER PHASE 6, we should work on clean up phase after we get to here)
 18. Ontology app Phase 1 (manual object type definitions) — `ontology`
 19. SaaS connector batch 2 via PyAirbyte — Google Analytics, Intercom, Shopify, Zendesk, Mixpanel, Amplitude, Segment — `sources` — broadens go-to-market coverage; aligns with the Product demo scenario (Intercom) and common e-commerce/support stacks
 20. Data warehouse + storage connectors — MySQL, Snowflake, BigQuery, Redshift, S3/GCS — `sources` — opens the warehouse path. **Prefer native connectors for warehouses/databases** so we capture row 

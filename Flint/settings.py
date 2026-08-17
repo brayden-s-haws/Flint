@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 import os
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -23,6 +24,8 @@ load_dotenv(BASE_DIR / '.env')
 
 # Allow for Airbyte connectors with custom code to run
 os.environ.setdefault('AIRBYTE_ENABLE_UNSAFE_CODE', 'true')
+# Add uv support for Airbyte connectors that pip cannot build. The parameters here is confusing because 1 means use UV
+os.environ.setdefault('AIRBYTE_NO_UV', '1')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
@@ -156,4 +159,10 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+# macOS dev only: Celery's default prefork pool forks children that SIGSEGV when libpq's
+# Kerberos/GSSAPI init touches non-fork-safe Apple frameworks (CoreFoundation/GCD) — hit
+# after a worker child has loaded PyAirbyte's native stack. The threads pool avoids fork
+# while keeping concurrency (all tasks here are I/O-bound). Linux/prod keeps prefork.
+if sys.platform == "darwin":
+    CELERY_WORKER_POOL = "threads"
 
