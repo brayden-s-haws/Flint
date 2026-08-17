@@ -45,7 +45,7 @@ class AirbyteConnector(BaseConnector):
             return True
         except Exception as e:
             try:
-                return bool(source.discovered_catalog.streams) # Since we do not pull actual records we treat catalog being discoverable as a successful connection
+                return bool(source.discovered_catalog.streams) # Since we do not pull actual records, we treat catalog being discoverable as a successful connection
             except Exception:
                 logger.error(f"AirbyteConnector test_connection failed: {e}")
                 return False
