@@ -30,45 +30,51 @@ For speculative or longer-horizon ideas, see `devdocs/potential_features.md`.
 11b. ~~Convert intra-source use-case generation to async + make regeneration non-destructive — `insights`~~ **COMPLETE (2026-07-19)** — see `devdocs/featuredocs/async-use-cases.md`. Shipped the async-on-first-view conversion (`generate_intra_source_use_cases_task` in `apps/insights/tasks.py`, `pending` placeholder + poll via the existing `use_cases_status` endpoint), non-destructive newest-first regeneration (removed the delete-before-LLM block), a fixed-height scrollable card, and an `active`-only rate-limit guard so a pending/failed placeholder doesn't skew the 24h window. Retry reuses the Generate/Regenerate control (no dedicated route). Verified end-to-end on `feature/async-use-cases` (merged); automated tests deferred to the Phase 6 testing pass (#24).
 12. ~~Demo Mode Phase 2 (product scenario + auto-trigger insights after load)~~ **DESCOPED (2026-07-06)** — retiring the remaining Demo Mode phases. Cross-source discovery (#11) already works on demo sources via its manual trigger (demo sources sync into the catalog like any other source), which covers the demo value we were chasing; the product-scenario dataset and auto-triggering insights on load aren't worth the build. See the Demo Mode section's Phased Build below (Phase 2 & 3 both marked descoped).
 
-**Phase 4 — New apps and connector expansion, depend on Phase 2 & 3**
+**Phase 4 — New apps and connector expansion (COMPLETE)**
 13. ~~PyAirbyte integration — `sources` — adapter that lets us register PyAirbyte sources (300+) via the same `BaseConnector` interface used today, so catalog/insights/agentic discovery work uniformly across native and Airbyte-backed sources~~ **COMPLETE (2026-08-05)** — see `devdocs/featuredocs/airbyte-adapter.md`. Shipped `AirbyteConnector`, `build_connector` registry routing + `SourceType.airbyte_connector_name`, the dynamic connect-source form (HTMX field-swap: native fields ↔ Airbyte JSON config), and **Stripe** validated end-to-end through the UI (connect, sync, catalog, insights, use cases). Moved the project to **Python 3.12** (PyAirbyte has no 3.13 wheels). Automated tests deferred to the Phase 6 testing pass (#24).
 14. ~~First SaaS connector batch via PyAirbyte — HubSpot and Salesforce — `sources`~~ **COMPLETE (2026-08-17)** — see `devdocs/featuredocs/hubspot-salesforce-connectors.md`. Both connectors registered via data migrations (`0011` HubSpot, `0012` Salesforce) routing through the #13 `AirbyteConnector` — no new connector code, as intended. Validated end-to-end via the Celery worker (catalog, Source Overview, use cases); Stripe regression confirmed. **Reality vs plan:** the data work was trivial, but PyAirbyte/connector/macOS environment friction was the real cost — each connector needed a shared-layer accommodation (all connector-agnostic): HubSpot → `AIRBYTE_ENABLE_UNSAFE_CODE` + an adapter `_config_dict` fix for `DeclarativeExecutor` custom-components connectors; Salesforce → `uv` + `AIRBYTE_NO_UV=1` (pip can't build its `pendulum<3` on py3.12) + a `streams_criteria` filter to dodge system-object discovery failures. Two Salesforce caveats documented: refresh-token rotation (now SF's default) makes tokens single-use, incompatible with the stateless-connector model (users must disable rotation); and a macOS-only Celery `threads`-pool fix for a fork-safety SIGSEGV. Takeaway for #19: spikes must include an install + `check` + `discover` smoke test, not just `config_spec`. Automated routing tests deferred to the Phase 6 testing pass (#24).
+
+---
+## Phase 6 — General (cleanup) — CURRENT ACTIVE PHASE
+
+**Resequenced 2026-08-17:** Phase 6 (cleanup) was pulled ahead of the remaining feature work — build items #15–#22b, now grouped under Phases 7–8b below. Build-item numbers (13–28) are **stable identifiers** referenced across the featuredocs and commit history (e.g. "Phase 6 testing pass (#24)"), so they are **not** renumbered; item numbers are therefore intentionally non-contiguous across phases (Phase 6 = #23–#28 runs before Phase 7 = #15–#20). Read the phase headings top-to-bottom for execution order. Each item still gets its own branch. *(Former Phase 5 → Phase 8, former Phase 5b → Phase 8b; there is no Phase 5 heading after this resequence.)*
+
+23. **Add docstrings to all files** — sweep every module and add module- and function-level docstrings. Task Claude to find all files currently missing them.
+24. **Address `devdocs/testing.md` in full** — fill in the stubbed test sections for each app (`apps.sources`, `apps.catalog`, `apps.insights`), write the tests, and run the full suite (`python 
+manage.py test`) until it passes. Multi-tenancy boundary tests (account A cannot see account B's data) are required for every tenant-scoped app. Before we start, make sure to review the existing 
+    tests and ensure they cover all necessary scenarios. Before we start make sure testing.md is comprehensive of the entire project and apps in the project
+25. **Address `devdocs/logging.md` in full** — add the `LOGGING` config to `settings.py` and instrument every app per the logging plan (tenant middleware, auth events, sync lifecycle, LLM calls). Never log credentials, tokens, or LLM prompt/response content.
+26. **Run the bug bash** — broad sweep for bugs, dead code, and rough edges across the codebase; produce a single triaged punch list (see the "bug bash" section below). Find, don't fix — fixes happen in follow-up sessions. **Items already found during feature work are accumulating in `devdocs/bug_bash.md`** — start there, then sweep for the rest.
+27. **Add AI evals** — build an evaluation harness for the LLM-generated outputs (table descriptions, source overviews, use case suggestions, cross-source insights) so quality regressions are caught as prompts and models change.
+28. **Update the README** — revise the README drafted in build order item #9 so it reflects the final feature set.
+
+> **Ordering note (within Phase 6):** docstrings (#23) go first — pure additions, no behaviour change. Do testing (#24) and logging (#25) once the code they cover is stable, then the bug bash (#26) after the codebase settles. The earlier "do not start cleanup until all feature work is complete" rule is **superseded** by the 2026-08-17 resequence — cleanup runs first now.
+
+---
+**Phase 7 — New apps & connector expansion** *(deferred until Phase 6 complete; was the Phase 4 remainder)*
 15. Queries app (natural language to SQL) — `queries`
 16. Query client — `queries` — a UI to run queries against a source and view results: the LLM-generated SQL from the queries app, the starter SQL on generated use case suggestions, and ad-hoc 
     queries the user writes themselves. Results are displayed only, never persisted (Flint does not store source data). Two separate implementations:
     - A "run query" button on the source detail page,
     - A dedicated query page with a query editor and results viewer for the new queries app for natural language to sql queries
     - Should only apply to native connectors (databases, warehouses, etc) as AirByte integrations are SaaS connectors, we are not actually pulling details from a database so we cannot query them
-17. ERD generator/viewer — `catalog` — visual entity-relationship diagrams generated from catalog FK metadata, with optional LLM-inferred relationships and ontology-aware labelling (NOTE: AFTER 
-    THIS, MOVE EVERYTHING BELOW TO A PHASE AFTER PHASE 6, we should work on clean up phase after we get to here)
+17. ERD generator/viewer — `catalog` — visual entity-relationship diagrams generated from catalog FK metadata, with optional LLM-inferred relationships and ontology-aware labelling 
 18. Ontology app Phase 1 (manual object type definitions) — `ontology`
 19. SaaS connector batch 2 via PyAirbyte — Google Analytics, Intercom, Shopify, Zendesk, Mixpanel, Amplitude, Segment — `sources` — broadens go-to-market coverage; aligns with the Product demo scenario (Intercom) and common e-commerce/support stacks
 20. Data warehouse + storage connectors — MySQL, Snowflake, BigQuery, Redshift, S3/GCS — `sources` — opens the warehouse path. **Prefer native connectors for warehouses/databases** so we capture row 
     counts, column statistics, and FK constraints from their stats catalogs (the Airbyte adapter is schema-only and can't); use the PyAirbyte adapter as a **fallback** for low-priority or long-tail engines. S3/GCS file storage has no stats catalog, so the Airbyte adapter is fine there. See the "Native vs Airbyte Decision Criteria" in `devdocs/architecture.md`
 
-**Phase 5 — Advanced / long-horizon**
+**Phase 8 — Advanced / long-horizon** *(was Phase 5)*
 21. Multi-account switching, role-based permissions — `accounts`
 22. Ontology Phases 2–6 (LLM suggestions, graph view, agent integration)
 
-**Phase 5b — Cross-Source Discovery Automation** (deferred until the Phase 1 manual feature — build item #11 — has proven out)
+**Phase 8b — Cross-Source Discovery Automation** (deferred until the Phase 1 manual feature — build item #11 — has proven out) *(was Phase 5b)*
 22b. Agentic cross-source discovery — **Phases 2 & 3** — `insights` — the automation layer built on top of the shipped Phase 1 manual feature (#11). Deferred deliberately: Phase 1 (manual single-pair trigger + accept/dismiss review) ships and gets validated first, so we don't build scheduling/scoring/dedup before knowing the core discovery is worth automating.
     - **Phase 2 — multi-pair, scored, event-triggered.** Add the `AgentInsightRun` and `CrossSourceRelationship` models (fields per the Data Model in the detailed section; `CrossSourceRelationship` doubles as a reuse cache so Step 3 only re-runs for pairs with new catalog rows). Add Step 1 `gather_source_inventory(account)` and Step 2 `score_source_pair` — a deterministic, **structural-only** ranker (shared column-name fingerprints + temporal overlap, **no** `SourceType.category` matrix — see the "no source-type bias" decision in the detailed section) that *orders* which pairs spend the per-run LLM-call cap rather than hard-gating. Event trigger: when a source finishes its **first** successful sync (`apps/sources/tasks.py::sync_source_task` completion path or a signal), enqueue the full-account pipeline if the account now has 2+ synced sources (`triggered_by='new_source'`). Extend the Phase 1 button to also offer a full-account run (`triggered_by='manual'`).
     - **Phase 3 — scheduled + deduped.** Celery-beat weekly run for every eligible account (2+ synced sources, last `AgentInsightRun` > 6 days ago; `triggered_by='schedule'`). Embedding-based dedup (Step 5): requires the **Postgres + pgvector** move (also a queries-app prerequisite) and a new embeddings call path on `BaseService` (does not exist today) — cosine similarity > ~0.85 against existing account insights → skip as already-known. Quality filter (can land earlier): drop `specificity_score < 0.6`, vapid-phrase titles, and `required_data` columns absent from `catalog.Column`. Persist a dismissed-hypothesis fingerprint so near-matches aren't resurfaced.
     - **Full spec** — pipeline Steps 1–7, exact model fields, triggering strategy, and cost/quality controls — lives in the "insights — Agentic Cross-Source Discovery" detailed section below (the Phased Build there labels these Phases 2–3, with the descoped email-digest/multi-source items as 4–5). Tests for this work are listed in the featuredoc's (now-removed) Phase 2/3 blocks — re-derive them from the detailed section when this is picked up.
 
 ---
-## Phase 6 — General
-
-Cross-cutting cleanup items addressed after all feature work in this doc is complete. Numbers match the build order above.
-
-23. **Add docstrings to all files** — sweep every module and add module- and function-level docstrings. Task Claude to find all files currently missing them.
-24. **Address `devdocs/testing.md` in full** — fill in the stubbed test sections for each app (`apps.sources`, `apps.catalog`, `apps.insights`), write the tests, and run the full suite (`python manage.py test`) until it passes. Multi-tenancy boundary tests (account A cannot see account B's data) are required for every tenant-scoped app.
-25. **Address `devdocs/logging.md` in full** — add the `LOGGING` config to `settings.py` and instrument every app per the logging plan (tenant middleware, auth events, sync lifecycle, LLM calls). Never log credentials, tokens, or LLM prompt/response content.
-26. **Run the bug bash** — broad sweep for bugs, dead code, and rough edges across the codebase; produce a single triaged punch list (see the "bug bash" section below). Find, don't fix — fixes happen in follow-up sessions. **Items already found during feature work are accumulating in `devdocs/bug_bash.md`** — start there, then sweep for the rest.
-27. **Add AI evals** — build an evaluation harness for the LLM-generated outputs (table descriptions, source overviews, use case suggestions, cross-source insights) so quality regressions are caught as prompts and models change.
-28. **Update the README** — revise the README drafted in build order item #9 so it reflects the final feature set.
-
-> **Ordering note:** Do not start testing, logging, or the bug bash until all feature work in this doc is complete.
 
 
 ---

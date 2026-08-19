@@ -26,6 +26,11 @@ class AccountSettingsView(LoginRequiredMixin, UpdateView):
     success_url = reverse_lazy('accounts:settings')
 
     def get_object(self, queryset=None) -> Account:
+        """
+        Returns the account object associated with the request user (not a URL-pk lookup); scoped to owner users only.
+        :param queryset: The queryset to filter the account object from
+        :return: Account: The account object associated with the request user
+        """
         if not self.request.user.is_authenticated or not self.request.account.owner == self.request.user:
             raise PermissionDenied
         return self.request.account
@@ -48,6 +53,13 @@ class SendInviteView(LoginRequiredMixin, CreateView):
     success_url = reverse_lazy('accounts:settings')
 
     def dispatch(self, request, *args, **kwargs):
+        """
+        Owner-only guard for being able to send invites.
+        :param request: The HTTP request object.
+        :param args: Positional arguments.
+        :param kwargs: Keyword arguments.
+        :return: The response object.
+        """
         if request.user != request.account.owner:
             raise PermissionDenied
         return super().dispatch(request, *args, **kwargs)
@@ -79,6 +91,15 @@ class SendInviteView(LoginRequiredMixin, CreateView):
         return redirect(self.success_url)
 
 def accept_invite_view(request: HttpRequest, token: str) -> HttpResponse:
+    """
+    - Validates the invite token and checks if the token has not expired, based on comparison of creation time to the 7-day limit.
+    - Users accepting an invitation will always be associated with the account that the invite was sent for, so we skip account creation (handled in signals.py).
+    - User inputs their password while accepting the invitation, so we check that the inputs match. User is logged into the backend since the user was just created, so it has not been logged in yet.
+    :param request: An HttpRequest object representing the HTTP request.
+    :param token: A string representing the unique invitation token.
+    :return: An HttpResponse object with the rendered form, a redirect to the dashboard,
+        or an error message depending on the request and token state.
+    """
     invitation = get_object_or_404(AccountInvitation, token=token, accepted=False)
     if timedelta(days=7) < timezone.now() - invitation.created_at:
         return HttpResponse("Invitation has expired", status=400)
