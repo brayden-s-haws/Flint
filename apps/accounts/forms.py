@@ -25,8 +25,7 @@ class AccountInviteForm(ModelForm):
 
     def clean_email(self):
         """
-        Clean email used for two important checks, does the email already belong to an existing account member or an existing invitation.
-        :return:
+        Clean email used for two important checks, whether the email already belongs to an existing account member or an existing invitation.
         """
         email = self.cleaned_data['email']
         if AccountMembership.objects.filter(account=self.account, user__email=email).exists():

@@ -1,5 +1,5 @@
 """ Defines an account and manages the relationship between users and accounts. AccountInvitation extends TenantAwareModel, unlike Account and AccountMembership. This is needed because Account and
-Membership define the tenant boundary. """
+Membership define the tenant boundary, so Invitation which belongs to one account is tenant-scoped. """
 from __future__ import annotations
 
 import secrets
