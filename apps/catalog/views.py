@@ -1,9 +1,7 @@
+""" Provides users with the ability to view the tables in the catalog. Also triggers LLM-powered table descriptions when a user views a table. """
 from __future__ import annotations
 
-import logging
 from typing import Any
-
-logger = logging.getLogger(__name__)
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.contenttypes.models import ContentType
@@ -17,7 +15,11 @@ from apps.sources.models import Source
 
 from .models import Table, TableStatistics
 
+
 class TableListView(TenantQuerysetMixin, LoginRequiredMixin, ListView):
+    """
+    Displays a list of tables in the catalog. Users are able to filter by source and search by table name.
+    """
     model = Table
     template_name = 'catalog/table_list.html'
     context_object_name = 'tables'
@@ -41,10 +43,17 @@ class TableListView(TenantQuerysetMixin, LoginRequiredMixin, ListView):
 
 
 class TableDetailView(TenantQuerysetMixin, LoginRequiredMixin, DetailView):
+    """
+    Displays a table in the catalog. Users are able to view the table's columns and statistics.
+    """
     model = Table
     template_name = 'catalog/table_detail.html'
 
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        """
+        The first time a user views a table, a pending Insight and InsightTarget are created. An async task is triggered to generate a table description. Later views of this table display the
+        stored table description.
+        """
         context = super().get_context_data(**kwargs)
         context['columns'] = self.object.column_set.all().order_by('name')
         insight_targets = InsightTarget.objects.filter(account=self.request.account, content_type=ContentType.objects.get_for_model(self.object), object_id=self.object.pk) # type: ignore[attr-defined]
