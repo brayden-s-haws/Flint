@@ -1,3 +1,5 @@
+""" Provides users with the ability to view their dashboard, including information about their account, sources, tables, and insights. Requires the user to be logged in and enforces tenant scoping
+so users only see objects belonging to their account. """
 from __future__ import annotations
 
 from typing import Any
@@ -12,6 +14,10 @@ from apps.insights.models import Insight, InsightTarget
 
 
 class DashboardView(LoginRequiredMixin, TemplateView):
+    """
+    - Aggregates information about a user's account, including counts of sources, tables, and insights, as well as recently accessed objects.
+    - Does not use TenantQuerysetMixin by design. Since this view uses many querysets, it manually filters them by the user's account.
+    """
     template_name = 'core/dashboard.html'
     login_url = reverse_lazy('users:login')
 

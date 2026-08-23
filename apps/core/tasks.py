@@ -2,7 +2,4 @@ from __future__ import annotations
 
 from celery import shared_task
 
-
-@shared_task
-def ping() -> str:
-    return 'pong'
+# Shared/cross-app Celery tasks go here. App-specific tasks live in that app's tasks.py.

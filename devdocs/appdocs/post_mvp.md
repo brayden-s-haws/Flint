@@ -40,6 +40,7 @@ For speculative or longer-horizon ideas, see `devdocs/potential_features.md`.
 **Resequenced 2026-08-17:** Phase 6 (cleanup) was pulled ahead of the remaining feature work — build items #15–#22b, now grouped under Phases 7–8b below. Build-item numbers (13–28) are **stable identifiers** referenced across the featuredocs and commit history (e.g. "Phase 6 testing pass (#24)"), so they are **not** renumbered; item numbers are therefore intentionally non-contiguous across phases (Phase 6 = #23–#28 runs before Phase 7 = #15–#20). Read the phase headings top-to-bottom for execution order. Each item still gets its own branch. *(Former Phase 5 → Phase 8, former Phase 5b → Phase 8b; there is no Phase 5 heading after this resequence.)*
 
 23. **Add docstrings to all files** — sweep every module and add module- and function-level docstrings. Task Claude to find all files currently missing them.
+    23a. Should we comment templates?
 24. **Address `devdocs/testing.md` in full** — fill in the stubbed test sections for each app (`apps.sources`, `apps.catalog`, `apps.insights`), write the tests, and run the full suite (`python 
 manage.py test`) until it passes. Multi-tenancy boundary tests (account A cannot see account B's data) are required for every tenant-scoped app. Before we start, make sure to review the existing 
     tests and ensure they cover all necessary scenarios. Before we start make sure testing.md is comprehensive of the entire project and apps in the project
