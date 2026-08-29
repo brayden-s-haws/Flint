@@ -1,3 +1,5 @@
+""" Constructs prompts and LLM config needed to run the three-stage cross-source insights pipeline: relationship discovery > hypothesis generation > cross-source insights. Different stages of the
+pipeline rely on different tiers of models. The first two stages rely on a fast cheap model, while the final stage relies on a more expensive model to ensure the final output is high-quality. """
 from __future__ import annotations
 
 import json
@@ -9,6 +11,10 @@ from apps.insights.models import InsightTarget
 
 
 def _build_ddl_summary(source: Source) -> str:
+    """
+    Reconstructs pseudo-DDL for a source, needed because we do not have the actual DDL for sources, so it must be inferred. DDL is used as context in all stages of the pipeline to ensure the LLM
+    provides valid recommendations and SQL.
+    """
     ddl: list[str] = []
     for schema in source.schema_set.all():
         for table in schema.table_set.prefetch_related('column_set').all():
@@ -19,6 +25,10 @@ def _build_ddl_summary(source: Source) -> str:
     return "\n\n".join(ddl)
 
 def _get_source_overview_text(source: Source) -> str | None:
+    """
+    - Retrieves the overview text for a source that will be included as context in the LLM's relationship discovery process.
+    - Returns None if a given source does not have an overview insight, or if that overview insight's status is not active.
+    """
     content_type = ContentType.objects.get_for_model(Source)
     target = InsightTarget.objects.filter(
         content_type=content_type,
@@ -52,7 +62,14 @@ ANTHROPIC_RELATIONSHIP_DISCOVERY_MODEL: str = "claude-haiku-4-5"
 RELATIONSHIP_DISCOVERY_MAX_TOKENS: int = 4000
 
 
-def build_relationship_discovery_prompt(source_a: "Source", source_b: "Source", join_key_candidates: list[dict] | None = None) -> str:
+def build_relationship_discovery_prompt(source_a: Source, source_b: Source, join_key_candidates: list[dict] | None = None) -> str:
+    """
+    - The LLM reviews the provided sources and identifies potential joins between them. Relies on having the derived DDL and previously generated overviews.
+    - The LLM returns details on why it makes sense to join the sources and a confidence score for each join.
+    - The score is used downstream to select which relationships to explore further.
+    - Relies on the LLM returning only valid JSON and nothing else.
+    - Note: does not follow standard formatting conventions (no indentation) to avoid adding unnecessary whitespace when text is sent to the LLM.
+    """
     source_a_ddl = _build_ddl_summary(source_a)
     source_b_ddl = _build_ddl_summary(source_b)
     source_a_overview = _get_source_overview_text(source_a)
