@@ -1,3 +1,5 @@
+""" Constructs prompt and LLM config needed to generate a description for a table for a given source. Outputs a description of the table that details what the table contains and how it could be used
+for business use cases. """
 from __future__ import annotations
 
 from apps.catalog.models import Table
@@ -14,6 +16,9 @@ TABLE_DESCRIPTION_MAX_TOKENS: int = 600
 
 
 def build_table_description_prompt(table: Table) -> str:
+    """
+    LLM reviews the provided table details and generates a description for that table based on the provided data.
+    """
     table_details = f"""
     Table: {table.name}
     Schema: {table.schema.name}

@@ -1,5 +1,6 @@
-""" Constructs prompts and LLM config needed to run the three-stage cross-source insights pipeline: relationship discovery > hypothesis generation > cross-source insights. Different stages of the
-pipeline rely on different tiers of models. The first two stages rely on a fast cheap model, while the final stage relies on a more expensive model to ensure the final output is high-quality. """
+""" Constructs prompts and LLM config needed to run the three-stage cross-source insights pipeline: relationship discovery > hypothesis generation > cross-source insights. Outputs use cases with
+business case and starter SQL query. Different stages of the pipeline rely on different tiers of models. The first two stages rely on a fast, inexpensive model, while the final stage relies on a
+more expensive model to ensure the final output is high-quality. """
 from __future__ import annotations
 
 import json
@@ -164,7 +165,13 @@ ANTHROPIC_HYPOTHESIS_MODEL: str = "claude-haiku-4-5"
 HYPOTHESIS_MAX_TOKENS: int = 4000
 
 
-def build_hypothesis_prompt(relationship: dict, source_a: "Source", source_b: "Source") -> str:
+def build_hypothesis_prompt(relationship: dict, source_a: Source, source_b: Source) -> str:
+    """
+    - The LLM reviews sources that have previously been confirmed to have a joinable relationship in the previous step of the pipeline.
+    - Returns a set of hypotheses on various ways the sources could be combined with a business case and specificity score for each hypothesis. The specificity score is used downstream in the pipeline to filter out weak hypotheses.
+    - Relies on the LLM returning only valid JSON and nothing else.
+    - Note: does not follow standard formatting conventions (no indentation) to avoid adding unnecessary whitespace when text is sent to the LLM.
+    """
     relationship_json = json.dumps(relationship, indent=2)
     source_a_ddl = _build_ddl_summary(source_a)
     source_b_ddl = _build_ddl_summary(source_b)
@@ -232,7 +239,13 @@ OPENAI_CROSS_SOURCE_USE_CASE_MODEL: str = "gpt-5.4"
 ANTHROPIC_CROSS_SOURCE_USE_CASE_MODEL: str = "claude-sonnet-4-6"
 CROSS_SOURCE_USE_CASE_MAX_TOKENS: int = 4000
 
-def build_cross_source_use_case_prompt(hypothesis: dict, source_a: "Source", source_b: "Source") -> str:
+def build_cross_source_use_case_prompt(hypothesis: dict, source_a: Source, source_b: Source) -> str:
+    """
+    - The LLM generates insights for how to use two different sources in unique ways based on the strength of previously generated hypotheses.
+    - Is required to generate a valid SQL query based on the provided DDL. If sources cannot be joined directly, provides two separate queries instead.
+    - Relies on the LLM returning only valid JSON and nothing else.
+    - Note: does not follow standard formatting conventions (no indentation) to avoid adding unnecessary whitespace when text is sent to the LLM.
+    """
     hypothesis_json = json.dumps(hypothesis, indent=2)
     source_a_ddl = _build_ddl_summary(source_a)
     source_b_ddl = _build_ddl_summary(source_b)

@@ -1,3 +1,5 @@
+""" Constructs prompt and LLM config needed to generate overview for a single source. Outputs a description of the source that details what the source is and how it could be used for business use
+cases. """
 from __future__ import annotations
 
 from apps.sources.models import Source
@@ -12,6 +14,9 @@ ANTHROPIC_SOURCE_OVERVIEW_MODEL: str = "claude-haiku-4-5"
 SOURCE_OVERVIEW_MAX_TOKENS: int = 1000
 
 def build_source_overview_prompt(source: Source) -> str:
+    """
+    LLM reviews the provided source details and generates a description for that source based on the provided data.
+    """
     source_details = f"""
     Source: {source.name}
     Type: {source.source_type}

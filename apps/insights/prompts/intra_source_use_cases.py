@@ -1,3 +1,4 @@
+""" Constructs prompt and LLM config needed to generate use cases for a single source. Outputs multiple use cases with a description, tables details, and starter SQL query. """
 from __future__ import annotations
 
 from django.contrib.contenttypes.models import ContentType
@@ -19,6 +20,12 @@ USE_CASE_MAX_TOKENS: int = 4000
 
 
 def build_use_case_suggestions_prompt(source: Source) -> str:
+    """
+    - LLM reviews the provided DDL-like data and existing source description to generate use cases based on the data available in the source.
+    - Each use case must include a genuine, runnable SQL query using the actual table and column names provided.
+    - Relies on the LLM returning only valid JSON and nothing else.
+    - Note: does not follow standard formatting conventions (no indentation) to avoid adding unnecessary whitespace when text is sent to the LLM.
+    """
     # Build DDL-style summary from catalog
     ddl_lines: list[str] = []
     for schema in source.schema_set.all():
