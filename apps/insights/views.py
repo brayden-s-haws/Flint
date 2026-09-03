@@ -1,3 +1,5 @@
+""" Provides users with the ability to view, generate, and manage Insights for the various sources and tables within their organization. Covers both intra-source and cross-source insights. The
+majority of the functionality here is focused on HTMX partial endpoints, allowing users to interact with insights in a more dynamic and responsive manner."""
 from __future__ import annotations
 
 from typing import Any
@@ -25,6 +27,10 @@ from apps.sources.models import Source
 # ---------------------------------------------------------------------------
 
 class InsightListView(TenantQuerysetMixin, LoginRequiredMixin, ListView):
+    """
+    - Aggregates all insights for the current user's account including descriptions, intra-source use cases, and cross-source use cases.
+    - Filtering works on a union basis so that users can search across a source and all of its tables.
+    """
     model = Insight
     template_name = 'insights/insight_list.html'
     context_object_name = 'insights'

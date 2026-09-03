@@ -1,3 +1,5 @@
+""" All insight generations are handled through async tasks. This is done because they are handled by third-party APIs and can take varying amounts of time. Using tasks ensures the user is not
+blocked while they wait for the insight to be generated. For system-managed insights, Anthropic is the default model provider. """
 from __future__ import annotations
 
 import logging
@@ -17,6 +19,10 @@ logger = logging.getLogger(__name__)
 
 @shared_task
 def generate_table_description_task(insight_id: int) -> None:
+    """
+    - When a user views a table for the first time, we generate a description of the table.
+    - On later views, we use the stored description, and the task is not executed.
+    """
     insight = Insight.objects.get(pk=insight_id)
     table_ct = ContentType.objects.get_for_model(Table)
     target = InsightTarget.objects.get(insight=insight, content_type=table_ct)
@@ -34,6 +40,9 @@ def generate_table_description_task(insight_id: int) -> None:
 
 @shared_task
 def generate_source_overview_task(insight_id: int) -> None:
+    """
+    Runs during source sync. Generates an overview only when the source has no overview yet (or the prior attempt failed); an existing active overview is reused on later syncs.
+    """
     insight = Insight.objects.get(pk=insight_id)
     source_ct = ContentType.objects.get_for_model(Source)
     target = InsightTarget.objects.get(insight=insight, content_type=source_ct)
@@ -50,6 +59,11 @@ def generate_source_overview_task(insight_id: int) -> None:
 
 @shared_task
 def run_cross_source_discovery_task(account_id: int, source_a_id: int, source_b_id: int) -> None:
+    """
+    - When the user invokes the cross-source discovery feature, we generate potential use cases for combining the two sources.
+    - This is currently the longest-running task and can take several minutes to complete. The UI has handling to assure the user that generation is running.
+    - This task can be invoked multiple times for the same pair of sources. The outputs of each run are stored and displayed to the user.
+    """
     try:
         source_a = Source.objects.get(pk=source_a_id, account_id=account_id)
         source_b = Source.objects.get(pk=source_b_id, account_id=account_id)
@@ -60,6 +74,11 @@ def run_cross_source_discovery_task(account_id: int, source_a_id: int, source_b_
 
 @shared_task
 def generate_intra_source_use_cases_task(source_id: int, placeholder_id: int) -> None:
+    """
+    - When the user invokes the intra-source discovery feature, we generate potential use cases for using the data from that source.
+    - When invoked, a placeholder insight is created upstream and passed to the task with a status of 'pending'. Status is tracked and updated when the task fails or deleted in successful runs.
+    - This task can be invoked multiple times for a source. The outputs of each run are stored and displayed to the user.
+    """
     source = Source.objects.get(pk=source_id)
     placeholder = Insight.objects.get(pk=placeholder_id)
     source_ct = ContentType.objects.get_for_model(Source)

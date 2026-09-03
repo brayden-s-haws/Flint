@@ -10,6 +10,16 @@ Triaged by severity: **blocker** / **should-fix** / **nice-to-have**. Each item 
 
 ---
 
+## should-fix
+
+### 1. `insight_retry` always runs the table-description generator, ignoring insight type
+
+`apps/insights/views.py:197-204` (`insight_retry`) unconditionally dispatches `generate_table_description_task` for any failed insight, regardless of its `insight_type`. If a failed `source_overview` or `use_case_suggestion` insight is retried through this endpoint, it would run the **table-description** generator against the wrong target (and the `InsightTarget` lookup inside that task filters on the `Table` content type, so it would likely error or misbehave rather than regenerate the right content).
+
+**Verify first:** confirm whether the retry control is only ever rendered for table-description insights (`insights/_insight_failed.html` and where it's included). If so, this is latent — fix by either (a) branching on `insight.insight_type` to dispatch the correct task, or (b) documenting/enforcing that the endpoint is table-description-only. Found during the docstring pass (post_mvp item #23).
+
+---
+
 ## nice-to-have
 
 ### 1. Source-overview lookup is duplicated across three call sites
