@@ -1,3 +1,4 @@
+""" Anthropic implementation of the BaseService insight-generation interface. Each method maps its stage to an Anthropic Messages call using that stage's prompt builder, system message, model, and token cap from apps/insights/prompts/. """
 from __future__ import annotations
 
 import anthropic
@@ -16,6 +17,10 @@ from apps.insights.prompts.cross_source_discovery import ANTHROPIC_RELATIONSHIP_
 
 
 class AnthropicService(BaseService):
+    """
+    - BaseService backed by Anthropic's Messages API; see BaseService for the per-method input/return contract.
+    - Builds an Anthropic client from the api_key. Prose methods return the message text; structured methods parse the model's JSON (stripping ```-fenced wrappers where present) and return the relevant slice.
+    """
     def __init__(self, api_key: str) -> None:
         super().__init__(api_key)
         self.client = anthropic.Anthropic(api_key=self.api_key)

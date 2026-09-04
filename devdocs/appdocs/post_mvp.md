@@ -45,7 +45,6 @@ For speculative or longer-horizon ideas, see `devdocs/potential_features.md`.
 manage.py test`) until it passes. Multi-tenancy boundary tests (account A cannot see account B's data) are required for every tenant-scoped app. Before we start, make sure to review the existing 
     tests and ensure they cover all necessary scenarios. Before we start make sure testing.md is comprehensive of the entire project and apps in the project
 25. **Address `devdocs/logging.md` in full** — add the `LOGGING` config to `settings.py` and instrument every app per the logging plan (tenant middleware, auth events, sync lifecycle, LLM calls). Never log credentials, tokens, or LLM prompt/response content.
-26. **Run the bug bash** — broad sweep for bugs, dead code, and rough edges across the codebase; produce a single triaged punch list (see the "bug bash" section below). Find, don't fix — fixes happen in follow-up sessions. **Items already found during feature work are accumulating in `devdocs/bug_bash.md`** — start there, then sweep for the rest.
 28. **Update the README** — revise the README drafted in build order item #9 so it reflects the final feature set.
 
 > **Ordering note (within Phase 6):** docstrings (#23) go first — pure additions, no behaviour change. Do testing (#24) and logging (#25) once the code they cover is stable, then the bug bash (#26) after the codebase settles. The earlier "do not start cleanup until all feature work is complete" rule is **superseded** by the 2026-08-17 resequence — cleanup runs first now.
@@ -64,6 +63,7 @@ manage.py test`) until it passes. Multi-tenancy boundary tests (account A cannot
 20. Data warehouse + storage connectors — MySQL, Snowflake, BigQuery, Redshift, S3/GCS — `sources` — opens the warehouse path. **Prefer native connectors for warehouses/databases** so we capture row 
     counts, column statistics, and FK constraints from their stats catalogs (the Airbyte adapter is schema-only and can't); use the PyAirbyte adapter as a **fallback** for low-priority or long-tail engines. S3/GCS file storage has no stats catalog, so the Airbyte adapter is fine there. See the "Native vs Airbyte Decision Criteria" in `devdocs/architecture.md`
 27. **Add AI evals** — build an evaluation harness for the LLM-generated outputs (table descriptions, source overviews, use case suggestions, cross-source insights) so quality regressions are caught as prompts and models change.
+26. **Run the bug bash** — broad sweep for bugs, dead code, and rough edges across the codebase; produce a single triaged punch list (see the "bug bash" section below). Find, don't fix — fixes happen in follow-up sessions. **Items already found during feature work are accumulating in `devdocs/bug_bash.md`** — start there, then sweep for the rest.
 
 **Phase 8 — Advanced / long-horizon** *(was Phase 5)*
 21. Multi-account switching, role-based permissions — `accounts`

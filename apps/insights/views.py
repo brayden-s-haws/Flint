@@ -67,6 +67,10 @@ class InsightListView(TenantQuerysetMixin, LoginRequiredMixin, ListView):
         return context
 
 class InsightDetailView(TenantQuerysetMixin, LoginRequiredMixin, DetailView):
+    """
+    - Displays a single insight and a link back to the object it describes.
+    - Resolves the target's URL by type: Tables link to the catalog detail page, Sources to the source detail page.
+    """
     model = Insight
     template_name = 'insights/insight_detail.html'
     context_object_name = 'insight'
@@ -84,6 +88,11 @@ class InsightDetailView(TenantQuerysetMixin, LoginRequiredMixin, DetailView):
         return context
 
 def build_use_cases_context(source: Source) -> dict[str, Any]:
+    """
+    - Assembles the full render state for a source's "Suggested Uses" section, shared by the poll endpoint and the generate endpoint so both render an identical section.
+    - Gathers the active source overview text, the active use-case suggestions (newest first), and boolean flags for whether a generation is currently pending or has failed.
+    - Computes the 24h regeneration rate limit from the most recent use case: sets `use_case_rate_limited` and the whole `use_case_hours_remaining` countdown used to disable the Regenerate control.
+    """
     source_ct = ContentType.objects.get_for_model(Source)
     overview_target = InsightTarget.objects.filter(
         content_type=source_ct, object_id=source.pk, account=source.account,
@@ -131,6 +140,9 @@ def build_use_cases_context(source: Source) -> dict[str, Any]:
 
 @login_required
 def use_cases_status(request, source_id: int) -> HttpResponse:
+    """
+    - HTMX poll target for the Suggested Uses section; re-renders the section partial so a pending generation swaps to its results (or a failure) without a page reload.
+    """
     source = get_object_or_404(Source, pk=source_id, account=request.account)
     return render(request, 'sources/_use_cases_section.html', build_use_cases_context(source))
 
@@ -138,6 +150,11 @@ def use_cases_status(request, source_id: int) -> HttpResponse:
 @login_required
 @require_POST
 def generate_intra_use_case_suggestions(request, source_id: int) -> HttpResponse:
+    """
+    - Kicks off async intra-source use-case generation for a source, then returns the Suggested Uses partial so the user immediately sees the pending state.
+    - Enforces two preconditions, each returning a 400 the HTMX layer surfaces inline: the source must already have a Source Overview, and generation is rate-limited to once per 24h.
+    - Creates a `pending` placeholder insight (and its target) up front and passes its id to the task, which fills it in or marks it failed. See `generate_intra_source_use_cases_task`.
+    """
     source = get_object_or_404(Source, pk=source_id, account=request.account)
     source_ct = ContentType.objects.get_for_model(Source)
 
@@ -166,6 +183,10 @@ def generate_intra_use_case_suggestions(request, source_id: int) -> HttpResponse
 @login_required
 @require_POST
 def rate_insight(request, insight_id: int) -> HttpResponse:
+    """
+    - Records the user's thumbs up/down feedback on an insight and re-renders the rating buttons partial.
+    - Acts as a toggle: submitting the rating an insight already has clears it back to 'none'; any value other than 'approved'/'rejected' is a 400.
+    """
     insight = get_object_or_404(Insight, pk=insight_id, account=request.account)
     rating = request.POST.get('rating')
 
@@ -182,6 +203,10 @@ def rate_insight(request, insight_id: int) -> HttpResponse:
 
 @login_required
 def insight_status(request, insight_id: int) -> HttpResponse:
+    """
+    - HTMX poll target for async-generated insights; returns a different partial depending on the insight's status (active content, pending spinner, or failed state).
+    - An unrecognized status is a 400.
+    """
     insight = get_object_or_404(Insight, pk=insight_id, account=request.account)
     status = insight.status
 
@@ -197,6 +222,10 @@ def insight_status(request, insight_id: int) -> HttpResponse:
 @login_required
 @require_POST
 def insight_retry(request, insight_id: int) -> HttpResponse:
+    """
+    - Re-dispatches generation for a failed insight, resets it to 'pending', and returns the pending partial so the spinner resumes.
+    - Only a 'failed' insight can be retried (otherwise a 400).
+    """
     insight = get_object_or_404(Insight, pk=insight_id, account=request.account)
     if insight.status != 'failed':
         return HttpResponse("Cannot retry an insight that has not failed", status=400)
@@ -210,6 +239,10 @@ def insight_retry(request, insight_id: int) -> HttpResponse:
 # ---------------------------------------------------------------------------
 
 class CrossSourceDiscoveryView(TenantQuerysetMixin, LoginRequiredMixin, ListView):
+    """
+    - Lists the account's cross-source use-case insights (excluding dismissed ones) and the synced sources available to pair for a new run.
+    - Supports text search and filtering by a participating source.
+    """
     model = Insight
     template_name = 'insights/cross_source_discovery.html'
     context_object_name = 'insights'
@@ -233,6 +266,10 @@ class CrossSourceDiscoveryView(TenantQuerysetMixin, LoginRequiredMixin, ListView
         return context
 
 def build_cross_source_results_context(request, *, task_id: str = '', running: bool = False) -> dict[str, Any]:
+    """
+    - Builds the render state for the cross-source results partial: the account's non-dismissed cross-source insights plus the polling state.
+    - `task_id` and `running` drive the poll loop — while `running` is True the template keeps polling `cross_source_discovery_status` until the task finishes.
+    """
     insights = (
         Insight.objects
             .filter(account=request.account, insight_type='cross_source_use_case')
@@ -245,6 +282,11 @@ def build_cross_source_results_context(request, *, task_id: str = '', running: b
 @login_required
 @require_POST
 def run_cross_source_discovery(request) -> HttpResponse:
+    """
+    - Kicks off async cross-source discovery for a user-selected pair of sources, then returns the results partial seeded with the task id so the UI begins polling.
+    - Validates the pair before dispatching, each failure returning a 400 surfaced inline: the two sources must differ, both must belong to the account, and both must have been synced.
+    - Rate-limited to once per 24h per pair (distinct from the per-source limit on intra-source generation): skips if a cross-source insight already exists for this exact source pair within the window.
+    """
     source_a_id = request.POST.get('source_a')
     source_b_id = request.POST.get('source_b')
     if source_a_id == source_b_id:
@@ -273,6 +315,9 @@ def run_cross_source_discovery(request) -> HttpResponse:
 
 @login_required
 def cross_source_discovery_status(request) -> HttpResponse:
+    """
+    - HTMX poll target for a running discovery task; checks the Celery `AsyncResult` and re-renders the results partial, which stops polling once the task is no longer running.
+    """
     task_id = request.GET.get('task_id', '')
     running = bool(task_id) and not run_cross_source_discovery_task.AsyncResult(task_id).ready()
     return render(request, 'insights/_cross_source_discovery_results.html', build_cross_source_results_context(request, task_id=task_id, running=running))
@@ -280,6 +325,10 @@ def cross_source_discovery_status(request) -> HttpResponse:
 @login_required
 @require_POST
 def accept_agent_insight(request, insight_id: int) -> HttpResponse:
+    """
+    - Review-queue action: promotes a cross-source insight from 'pending_review' to 'active' and re-renders its card.
+    - Only a 'pending_review' insight can be accepted (otherwise a 400).
+    """
     insight = get_object_or_404(Insight, pk=insight_id, account=request.account, insight_type='cross_source_use_case',)
     if insight.status != 'pending_review':
         return HttpResponse("Only pending insights can be accepted", status=400)
@@ -290,6 +339,10 @@ def accept_agent_insight(request, insight_id: int) -> HttpResponse:
 @login_required
 @require_POST
 def dismiss_agent_insight(request, insight_id: int) -> HttpResponse:
+    """
+    - Review-queue action: marks a cross-source insight 'dismissed' (which drops it from the list) and returns an empty response so HTMX removes the card.
+    - Only a 'pending_review' insight can be dismissed (otherwise a 400).
+    """
     insight = get_object_or_404(Insight, pk=insight_id, account=request.account, insight_type='cross_source_use_case',)
     if insight.status != 'pending_review':
         return HttpResponse("Only pending insights can be dismissed", status=400)
