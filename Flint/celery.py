@@ -1,3 +1,4 @@
+""" Celery application for the Flint project. Configured from Django settings (CELERY_* namespace) and auto-discovers each app's tasks.py. """
 from __future__ import annotations
 
 import os
