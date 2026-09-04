@@ -1,3 +1,4 @@
+""" Celery tasks that run source syncs off the request cycle: the main sync pipeline and the scheduled-sync entry point invoked by celery-beat. """
 from __future__ import annotations
 
 import logging
@@ -18,6 +19,12 @@ logger = logging.getLogger(__name__)
 
 @shared_task
 def sync_source_task(source_id: int, sync_log_id: int) -> None:
+    """
+    - The core sync pipeline: decrypt credentials, build the connector, discover the catalog, and upsert Schema/Table/Column plus a TableStatistics snapshot for the account.
+    - On success marks the sync log, sets first_synced_at on the first-ever sync, then ensures a source-overview insight exists and dispatches its async generation (regenerating only if the prior one failed).
+    - Any failure is caught: the sync log is marked failed with the error message, and the exception is logged. Runs under the macOS threads pool (see settings.py) to avoid fork-safety crashes for 
+    local development.
+    """
     source = Source.objects.get(pk=source_id)
     sync_log = SourceSyncLog.objects.get(pk=sync_log_id)
     try:
@@ -78,6 +85,10 @@ def sync_source_task(source_id: int, sync_log_id: int) -> None:
 
 @shared_task
 def run_scheduled_sync(source_id: int) -> None:
+    """
+    - celery-beat entry point for automated syncs: the task a source's PeriodicTask fires on its cron schedule.
+    - Bails out (logging a warning, no error) if the source is gone, has no schedule, or the schedule is disabled; otherwise opens a running sync log and hands off to sync_source_task.
+    """
     try:
         source = Source.objects.get(pk=source_id)
     except Source.DoesNotExist:

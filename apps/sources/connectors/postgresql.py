@@ -1,3 +1,4 @@
+""" Native PostgreSQL connector. Reads schema structure from information_schema and per-table statistics from the pg_stats/pg_class catalogs — metadata only, never row data. """
 from __future__ import annotations
 
 import logging
@@ -12,6 +13,10 @@ logger = logging.getLogger(__name__)
 
 
 class PostgreSQLConnector(BaseConnector):
+    """
+    - BaseConnector for PostgreSQL; credentials are the psycopg2 connection kwargs (host, port, dbname, user, password).
+    - Each method opens its own short-lived connection and swallows errors into a safe fallback so a bad source never crashes the sync task.
+    """
 
     def test_connection(self) -> bool:
         try:
@@ -26,6 +31,7 @@ class PostgreSQLConnector(BaseConnector):
             return False
 
     def discover_catalog(self) -> list[dict[str, Any]]:
+        """Walk information_schema to build the schema→table→column tree, skipping the system schemas (information_schema, pg_catalog, pg_toast) and flagging primary-key columns."""
         try:
             with psycopg2.connect(**self.credentials) as conn:
                 with conn.cursor(cursor_factory=RealDictCursor) as cursor:
@@ -63,6 +69,10 @@ class PostgreSQLConnector(BaseConnector):
             return []
 
     def get_table_metadata(self, schema_name: str, table_name: str) -> dict[str, Any]:
+        """
+        - Return row count and per-column stats from the planner catalogs (pg_class.reltuples, pg_stats) — an estimate, not a COUNT(*), so it's cheap and reads no rows.
+        - For each column: null fraction, distinct count (pg_stats reports n_distinct as a negative ratio when proportional to row count, so it's converted back to an absolute count), and most-common values.
+        """
         try:
             with psycopg2.connect(**self.credentials) as conn:
                 with conn.cursor(cursor_factory=RealDictCursor) as cursor:

@@ -1,3 +1,4 @@
+""" Helpers that keep a source's SourceSchedule in sync with its underlying django_celery_beat PeriodicTask/CrontabSchedule. All schedule mutations go through here so the two stay consistent. """
 from __future__ import annotations
 import json
 
@@ -6,6 +7,7 @@ from django_celery_beat.models import CrontabSchedule, PeriodicTask
 
 from .models import Source, SourceSchedule
 
+# Translates the user-facing frequency choices into concrete crontab fields (daily/weekly/monthly run at 06:00 in the project timezone).
 FREQUENCY_TO_CRONTAB: dict[str, dict[str, str]] = {
     'hourly': {'minute': '0', 'hour': '*', 'day_of_month': '*', 'month_of_year': '*', 'day_of_week': '*'},
     'daily': {'minute': '0', 'hour': '6', 'day_of_month': '*', 'month_of_year': '*', 'day_of_week': '*'},
@@ -14,6 +16,10 @@ FREQUENCY_TO_CRONTAB: dict[str, dict[str, str]] = {
 }
 
 def create_or_update_source_schedule(source: Source, frequency: str) -> tuple[SourceSchedule, bool]:
+    """
+    - Create or update a source's schedule at the given frequency, creating/repointing the backing PeriodicTask (which runs run_scheduled_sync for this source) and re-enabling it.
+    - Returns (schedule, created) where created is True only when a new schedule was made. Raises ValueError for an unknown frequency.
+    """
     fields = FREQUENCY_TO_CRONTAB.get(frequency)
     if fields is None:
         raise ValueError(f"Invalid frequency: {frequency}")
@@ -37,6 +43,7 @@ def create_or_update_source_schedule(source: Source, frequency: str) -> tuple[So
         return schedule, True
 
 def disable_source_schedule(source: Source) -> None:
+    """Pause a source's schedule without deleting it — disables both the SourceSchedule and its PeriodicTask. No-op if the source has no schedule."""
     try:
         schedule = source.schedule
     except SourceSchedule.DoesNotExist:
@@ -48,6 +55,7 @@ def disable_source_schedule(source: Source) -> None:
     schedule.save()
 
 def delete_source_schedule(source: Source) -> None:
+    """Remove a source's schedule entirely, deleting its PeriodicTask first. No-op if the source has no schedule."""
     try:
         schedule = source.schedule
     except SourceSchedule.DoesNotExist:
@@ -57,6 +65,10 @@ def delete_source_schedule(source: Source) -> None:
     schedule.delete()
 
 def toggle_source_schedule(source: Source) -> tuple[SourceSchedule, bool]:
+    """
+    - Flip a source's schedule between enabled and paused (keeping the PeriodicTask in step) and return (schedule, was_paused).
+    - was_paused reflects the state before the toggle, so callers can tell a resume from a pause (e.g. to kick off an immediate sync on resume). Assumes a schedule exists.
+    """
     schedule = source.schedule
     was_paused = not schedule.is_enabled
     schedule.is_enabled = not schedule.is_enabled

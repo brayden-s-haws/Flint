@@ -1,3 +1,4 @@
+""" Adapter that exposes any PyAirbyte source (SaaS connectors) through the BaseConnector interface. Schema-only: it discovers streams and their fields but pulls no records and has no stats catalog. """
 from __future__ import annotations
 
 import logging
@@ -9,6 +10,7 @@ from .base import BaseConnector
 logger = logging.getLogger(__name__)
 
 
+# Maps Airbyte/JSON-schema types to the Postgres-style type strings the catalog stores, so Airbyte columns render consistently with native ones.
 TYPE_MAP = {
     'string': 'character varying',
     'integer': 'bigint',
@@ -25,12 +27,17 @@ TYPE_MAP = {
 
 
 class AirbyteConnector(BaseConnector):
+    """
+    - BaseConnector backed by a named PyAirbyte source; `credentials` is that connector's config dict and `connector_name` is its Airbyte name (e.g. 'source-stripe').
+    - Maps Airbyte streams → tables and stream JSON-schema properties → columns. Schema-only, so get_table_metadata always returns empty stats.
+    """
 
     def __init__(self, credentials: dict[str, Any], connector_name: str) -> None:
         super().__init__(credentials)
         self.connector_name = connector_name
 
     def _get_source(self) -> Any:
+        """Instantiate the PyAirbyte source (installing the connector on first use). Re-applies credentials onto the executor's config to work around a PyAirbyte bug with custom-components connectors."""
         source = ab.get_source(self.connector_name, config=self.credentials, install_if_missing=True)
         # Needed based on how PyAirbyte handles connectors with custom components, this may be a bug in the PyAirbyte project but has not been fixed over several versions
         executor = getattr(source, "executor", None)
@@ -51,6 +58,7 @@ class AirbyteConnector(BaseConnector):
                 return False
 
     def discover_catalog(self) -> list[dict[str, Any]]:
+        """Return a single synthetic schema (named after the connector) whose tables are the connector's streams and whose columns come from each stream's JSON schema, with primary keys flagged."""
         try:
             source = self._get_source()
             streams = source.discovered_catalog.streams
@@ -95,4 +103,5 @@ class AirbyteConnector(BaseConnector):
 
 
     def get_table_metadata(self, schema_name: str, table_name: str) -> dict[str, Any]:
+        """Always empty — Airbyte is schema-only with no stats catalog, so there are no row counts or column stats to report. Added as a stub for future use. """
         return {'row_count': None, 'column_stats': {}}

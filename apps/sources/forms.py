@@ -1,3 +1,4 @@
+""" Forms for connecting/editing a source and setting its sync schedule. SourceForm carries both native database fields and an Airbyte JSON config field and validates whichever set the chosen source type needs. """
 from __future__ import annotations
 
 import json
@@ -9,6 +10,10 @@ from .models import Source, FREQUENCY_CHOICES, SourceType
 
 
 class SourceForm(ModelForm):
+    """
+    - One form serving both connector styles: native DB fields (host/port/dbname/user/password) and an Airbyte `config` JSON blob. All are optional at the field level; clean() enforces the right set based on the chosen source type.
+    - Only non-demo source types are selectable. The source_type select carries HTMX attrs so picking a type swaps in the matching connection fields (see the connect_fields view) without a reload.
+    """
 
     host = CharField(max_length=255, required=False)
     port = IntegerField(initial=5432, required=False)
@@ -30,6 +35,7 @@ class SourceForm(ModelForm):
             field.widget.attrs.update({'class': 'w-full bg-flint-card border border-flint-border-em rounded-md px-3 py-2 text-sm text-flint-text focus:outline-none focus:ring-2 focus:ring-flint-orange'})
 
     def clean(self):
+        """Validate the field set the chosen source type needs: Airbyte types require a non-empty, parseable JSON `config`; native types require all of host/port/dbname/user/password."""
         cleaned = super().clean() or {}
         source_type = cleaned.get('source_type')
         if source_type and source_type.airbyte_connector_name:
@@ -49,5 +55,6 @@ class SourceForm(ModelForm):
 
 
 class ScheduleForm(Form):
+    """Single-field form for choosing a sync cadence (hourly/daily/weekly/monthly) as radio buttons."""
 
     frequency = ChoiceField(choices=FREQUENCY_CHOICES, widget=RadioSelect)

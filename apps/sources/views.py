@@ -1,3 +1,4 @@
+""" Views for managing sources: list/create/edit/delete/detail, connection testing, manual and scheduled syncs, demo-data loading, and the HTMX connect-form field swap. Credentials are encrypted on save and only ever decrypted server-side for connector use. """
 from __future__ import annotations
 
 import logging
@@ -32,6 +33,10 @@ logger = logging.getLogger(__name__)
 
 
 class SourceListView(LoginRequiredMixin, TenantQuerysetMixin, ListView):
+    """
+    - Lists the account's sources with each one's last-synced time (annotated from its sync logs) and schedule.
+    - Supports text search (name or source-type name) and filtering by source type.
+    """
     model = Source
     template_name = 'sources/source_list.html'
     context_object_name = 'sources'
@@ -55,6 +60,10 @@ class SourceListView(LoginRequiredMixin, TenantQuerysetMixin, ListView):
 
 
 class SourceCreateView(LoginRequiredMixin, CreateView):
+    """
+    - Connects a new source: assembles the credentials dict from the form (JSON `config` for Airbyte types, the DB fields otherwise), encrypts it, and stamps the current account before saving.
+    - get_context_data resolves the selected source type so the template can render the matching connection fields on redisplay.
+    """
     model = Source
     form_class = SourceForm
     template_name = 'sources/source_form.html'
@@ -85,6 +94,10 @@ class SourceCreateView(LoginRequiredMixin, CreateView):
         return context
 
 class SourceUpdateView(LoginRequiredMixin, TenantQuerysetMixin, UpdateView):
+    """
+    - Edits an existing source. get_initial decrypts the stored credentials to pre-fill the form (JSON config for Airbyte, individual DB fields otherwise); form_valid re-encrypts on save.
+    - Tenant-scoped, so a user can only edit sources in their own account. Redirects to the source detail page on success.
+    """
     model = Source
     form_class = SourceForm
     template_name = 'sources/source_form.html'
@@ -130,11 +143,16 @@ class SourceUpdateView(LoginRequiredMixin, TenantQuerysetMixin, UpdateView):
         return context
 
 class SourceDeleteView(LoginRequiredMixin, TenantQuerysetMixin, DeleteView):
+    """Deletes a source (tenant-scoped). Its catalog, sync logs, schedule, and insights are cleaned up by cascades and the pre_delete signal in signals.py."""
     model = Source
     template_name = 'sources/source_delete.html'
     success_url = reverse_lazy('sources:list')
 
 class SourceDetailView(LoginRequiredMixin, TenantQuerysetMixin, DetailView):
+    """
+    - The source's main page. Assembles sync history + latest/last-successful sync, the discovered schemas/tables, the source overview and use-case insights (with the same 24h rate-limit state used elsewhere), and schedule details.
+    - For a scheduled source it derives the human-readable cadence and next run time from the backing crontab (via croniter/cron_descriptor), falling back to the stored frequency label if description fails.
+    """
     model = Source
     template_name = 'sources/source_detail.html'
     context_object_name = 'source'
@@ -184,6 +202,7 @@ class SourceDetailView(LoginRequiredMixin, TenantQuerysetMixin, DetailView):
 
 @login_required
 def test_connection(request: HttpRequest, pk: int) -> HttpResponse:
+    """Decrypts the source's credentials, builds its connector, runs test_connection, and redirects to the detail page with a success/failure flash message."""
     if request.method != 'POST':
         return HttpResponse('Method not allowed', status=405)
     source = get_object_or_404(Source, pk=pk, account=request.account) # type: ignore[attr-defined]
@@ -198,6 +217,7 @@ def test_connection(request: HttpRequest, pk: int) -> HttpResponse:
 
 @login_required
 def sync_source(request: HttpRequest, pk:int) -> HttpResponse:
+    """POST-only. Opens a running sync log and dispatches sync_source_task. Returns the sync-status partial for HTMX requests (to start the poll), or redirects to detail otherwise."""
     if request.method != 'POST':
         return HttpResponse('Method not allowed', status=405)
     source = get_object_or_404(Source, pk=pk, account=request.account) # type: ignore[attr-defined]
@@ -211,6 +231,7 @@ def sync_source(request: HttpRequest, pk:int) -> HttpResponse:
 
 @login_required
 def sync_status(request: HttpRequest, pk:int) -> HttpResponse:
+    """HTMX poll target for an in-progress sync: returns the status partial while running, and once the latest sync succeeds returns an empty response with HX-Refresh so the page reloads with fresh catalog data."""
     source = get_object_or_404(Source, pk=pk, account=request.account) # type: ignore[attr-defined]
     sync_log = source.sourcesynclog_set.order_by('-started_at').first()
     if sync_log is None:
@@ -224,6 +245,7 @@ def sync_status(request: HttpRequest, pk:int) -> HttpResponse:
 
 @login_required
 def schedule_create(request: HttpRequest, pk:int) -> HttpResponse:
+    """Creates or updates the source's schedule from the submitted frequency; kicks off an immediate sync when the schedule is newly created or resumed from paused. Redirects to detail with a flash message."""
     if request.method != 'POST':
         return HttpResponse('Method not allowed', status=405)
     source = get_object_or_404(Source, pk=pk, account=request.account) # type: ignore[attr-defined]
@@ -245,6 +267,7 @@ def schedule_create(request: HttpRequest, pk:int) -> HttpResponse:
 
 @login_required
 def schedule_toggle(request: HttpRequest, pk: int) -> HttpResponse:
+    """Pauses or resumes the source's schedule; on resume, triggers an immediate sync. 404 if the source has no schedule. Redirects to detail with a flash message."""
     if request.method != 'POST':
         return HttpResponse('Method not allowed', status=405)
     source = get_object_or_404(Source, pk=pk, account=request.account) # type: ignore[attr-defined]
@@ -261,6 +284,7 @@ def schedule_toggle(request: HttpRequest, pk: int) -> HttpResponse:
 
 @login_required
 def schedule_delete(request: HttpRequest, pk: int) -> HttpResponse:
+    """Removes the source's schedule (and its backing periodic task) and redirects to detail with a flash message."""
     if request.method != 'POST':
         return HttpResponse('Method not allowed', status=405)
     source = get_object_or_404(Source, pk=pk, account=request.account) # type: ignore[attr-defined]
@@ -270,6 +294,7 @@ def schedule_delete(request: HttpRequest, pk: int) -> HttpResponse:
 
 @login_required
 def load_demo_data(request: HttpRequest) -> HttpResponse:
+    """Provisions the built-in demo sources (Sales scenario) for the account, idempotently via get_or_create, with encrypted scenario credentials. The user syncs each one afterwards to populate the catalog."""
     if request.method != 'POST':
         return HttpResponse('Method not allowed', status=405)
     demo_sources = [
@@ -291,6 +316,7 @@ def load_demo_data(request: HttpRequest) -> HttpResponse:
 
 @login_required
 def connect_fields(request: HttpRequest) -> HttpResponse:
+    """HTMX endpoint backing the connect form's field swap: given the chosen source_type, returns the connection-fields partial (Airbyte JSON config vs native DB fields) for the source_type select to load on change."""
     raw = request.GET.get('source_type')
     source_type = SourceType.objects.filter(pk=raw).first() if raw else None
     return render(request, 'sources/_connection_fields.html', {'form': SourceForm(), 'selected_source_type': source_type})
