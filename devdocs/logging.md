@@ -8,16 +8,18 @@ Use Python's standard `logging` module throughout. No external logging libraries
 
 ---
 
-## Settings Configuration
+## Settings Configuration ✅ DONE
 
-Add a `LOGGING` dict to `settings.py` (none exists today — this is a clean addition). The structure below is the target state:
+> **Done (2026-09-04):** `LOGGING` dict added at the end of `Flint/settings.py` (after the Celery block). Console handler at DEBUG gated by a `require_debug_true` filter (silent in prod); rotating file handler at WARNING → `logs/flint.log` (10 MB × 3 backups). Loggers configured for `django.request` + all six apps (`accounts`, `users`, `sources`, `insights`, `catalog`, `core`), each with `propagate: False`. `logs/` dir committed via `.gitkeep`; `.gitignore` ignores `logs/*.log` and rotated backups. Verified routing: console shows DEBUG+, file catches WARNING+, no double-logging.
 
-- **Console handler** for development (DEBUG and above)
-- **File handler** for production (WARNING and above, rotating)
-- **Django's request logger** to capture 4xx/5xx automatically
-- **App-level loggers** for each Django app in `apps/`
+~~Add a `LOGGING` dict to `settings.py` (none exists today — this is a clean addition). The structure below is the target state:~~
 
-Logger name pattern: `apps.<app_name>` (e.g., `apps.sources`, `apps.insights`)
+- ~~**Console handler** for development (DEBUG and above)~~
+- ~~**File handler** for production (WARNING and above, rotating)~~
+- ~~**Django's request logger** to capture 4xx/5xx automatically~~
+- ~~**App-level loggers** for each Django app in `apps/`~~
+
+~~Logger name pattern: `apps.<app_name>` (e.g., `apps.sources`, `apps.insights`)~~
 
 Each module should declare its logger at the top, below imports:
 ```

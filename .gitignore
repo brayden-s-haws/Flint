@@ -137,3 +137,7 @@ secret_key.txt
 
 # Node / npm
 node_modules/
+
+# Application logs (keep the logs/ dir via .gitkeep; ignore log files + rotated backups)
+logs/*.log
+logs/*.log.*

@@ -166,3 +166,75 @@ CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 if sys.platform == "darwin":
     CELERY_WORKER_POOL = "threads"
 
+# Logging configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+            'style': '%'
+        }
+    },
+
+    'filters': {
+        'require_debug_true': {
+            '()': 'django.utils.log.RequireDebugTrue'
+        },
+    },
+
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'level': 'DEBUG',
+            'formatter': 'verbose',
+            'filters': ['require_debug_true']
+        },
+        'file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'level': 'WARNING',
+            'formatter': 'verbose',
+            'filename': BASE_DIR / "logs" / "flint.log",
+            'maxBytes': 1024 * 1024 * 10,
+            'backupCount': 3
+        },
+    },
+
+    'loggers': {
+        'django.request': {
+            'handlers': ['console', 'file'],
+            'level': 'WARNING',
+            'propagate': False
+        },
+        'apps.accounts': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': False
+        },
+        'apps.catalog': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': False
+        },
+        'apps.core': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': False
+        },
+        'apps.insights': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': False
+        },
+        'apps.sources': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': False
+        },
+        'apps.users': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': False
+        },
+    },
+}
