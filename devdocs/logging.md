@@ -65,25 +65,27 @@ Everything else below needs a logger added (the module currently has none) or a 
 
 ---
 
-## apps.accounts
+## apps.accounts ✅ DONE
 
-**TenantMiddleware** (`apps/accounts/middleware.py` — no logger yet) — `__call__`
+> **Done (2026-09-05):** instrumented `middleware.py` (tenant resolve DEBUG / no-membership WARNING / unauthenticated DEBUG), `signals.py` (account creation INFO / invited-user skip DEBUG), and `views.py` (invite sent/accepted INFO, owner-only denials + expired/password-mismatch WARNING — IDs only, never invitee email/token/password). Aside logged for #26: `AccountSettingsView.get_object` guard can `AttributeError` on `request.account is None` (authenticated user with no membership) before the WARNING is reached.
 
-- DEBUG when `request.account` resolves successfully — include account ID (not name). (High frequency: fires on every authenticated request. Consider DEBUG, not INFO, to avoid noise.)
-- WARNING when an authenticated user has no `AccountMembership` (the `membership is None` branch) — include user ID; this is the silent state every downstream view depends on.
-- DEBUG when the request is unauthenticated (expected, high frequency).
+~~**TenantMiddleware** (`apps/accounts/middleware.py` — no logger yet) — `__call__`~~
 
-**Account provisioning** (`apps/accounts/signals.py` — no logger yet) — `create_account_for_new_user`
+- ~~DEBUG when `request.account` resolves successfully — include account ID (not name). (High frequency: fires on every authenticated request. Consider DEBUG, not INFO, to avoid noise.)~~
+- ~~WARNING when an authenticated user has no `AccountMembership` (the `membership is None` branch) — include user ID; this is the silent state every downstream view depends on.~~
+- ~~DEBUG when the request is unauthenticated (expected, high frequency).~~
 
-- INFO when a new account + owner membership is auto-created on registration — include account ID and owner user ID. (This is the actual creation site; the users-registration INFO below is the request-side counterpart.)
-- DEBUG when the signal skips creation because `_skip_account_creation` is set (invited user).
+~~**Account provisioning** (`apps/accounts/signals.py` — no logger yet) — `create_account_for_new_user`~~
 
-**Invitations** (`apps/accounts/views.py` — no logger yet)
+- ~~INFO when a new account + owner membership is auto-created on registration — include account ID and owner user ID. (This is the actual creation site; the users-registration INFO below is the request-side counterpart.)~~
+- ~~DEBUG when the signal skips creation because `_skip_account_creation` is set (invited user).~~
 
-- INFO when an invite is sent (`SendInviteView.form_valid`) — include account ID, inviter user ID, invitation ID; never the invitee email.
-- WARNING on owner-only permission denial (`AccountSettingsView.get_object`, `SendInviteView.dispatch`) — include user ID and account ID.
-- INFO when an invite is accepted (`accept_invite_view`, POST success path) — include account ID and the new user ID.
-- WARNING when an invite is rejected: expired (past the 7-day window) or password mismatch — include invitation ID (never the token or password).
+~~**Invitations** (`apps/accounts/views.py` — no logger yet)~~
+
+- ~~INFO when an invite is sent (`SendInviteView.form_valid`) — include account ID, inviter user ID, invitation ID; never the invitee email.~~
+- ~~WARNING on owner-only permission denial (`AccountSettingsView.get_object`, `SendInviteView.dispatch`) — include user ID and account ID.~~
+- ~~INFO when an invite is accepted (`accept_invite_view`, POST success path) — include account ID and the new user ID.~~
+- ~~WARNING when an invite is rejected: expired (past the 7-day window) or password mismatch — include invitation ID (never the token or password).~~
 
 ---
 

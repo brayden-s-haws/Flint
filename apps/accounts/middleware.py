@@ -2,10 +2,14 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+import logging
 
 from django.http import HttpRequest, HttpResponse
 
 from .models import AccountMembership
+
+
+logger = logging.getLogger(__name__)
 
 
 class TenantMiddleware:
@@ -22,8 +26,14 @@ class TenantMiddleware:
     def __call__(self, request: HttpRequest) -> HttpResponse:
         if request.user.is_authenticated:
             membership = AccountMembership.objects.filter(user=request.user).first()
-            request.account = membership.account if membership else None
+            if membership:
+                request.account = membership.account
+                logger.debug("Account resolved to %s", membership.account.id)
+            else:
+                request.account = None
+                logger.warning("No account resolved for user %s", request.user.id)
         else:
             request.account = None
+            logger.debug("No account resolved for unauthenticated user")
         response = self.get_response(request)
         return response

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
+import logging
 
 from django.contrib.auth import login, get_user_model
 from django.http import HttpResponse, HttpRequest
@@ -20,6 +21,10 @@ from .models import Account, AccountInvitation, AccountMembership
 
 User = get_user_model()
 
+
+logger = logging.getLogger(__name__)
+
+
 class AccountSettingsView(LoginRequiredMixin, UpdateView):
     model = Account
     form_class = AccountSettingsForm
@@ -31,6 +36,7 @@ class AccountSettingsView(LoginRequiredMixin, UpdateView):
         Returns the account object associated with the request user (not a URL-pk lookup); scoped to owner users only.
         """
         if not self.request.user.is_authenticated or not self.request.account.owner == self.request.user:
+            logger.warning("%s attempted to access account settings for account %s", self.request.user.id, self.request.account.id)
             raise PermissionDenied
         return self.request.account
 
@@ -56,6 +62,7 @@ class SendInviteView(LoginRequiredMixin, CreateView):
         Owner-only guard for being able to send invites.
         """
         if request.user != request.account.owner:
+            logger.warning("%s attempted to send invite for account %s", self.request.user.id, self.request.account.id)
             raise PermissionDenied
         return super().dispatch(request, *args, **kwargs)
 
@@ -83,6 +90,7 @@ class SendInviteView(LoginRequiredMixin, CreateView):
             html_message=render_to_string('accounts/invite_email.html', email_context, request=self.request)
         )
         messages.success(self.request, "Invite sent successfully.")
+        logger.info("Invite %s sent by %s for account %s", invitation.id, invitation.invited_by.id, invitation.account.id)
         return redirect(self.success_url)
 
 def accept_invite_view(request: HttpRequest, token: str) -> HttpResponse:
@@ -93,11 +101,13 @@ def accept_invite_view(request: HttpRequest, token: str) -> HttpResponse:
     """
     invitation = get_object_or_404(AccountInvitation, token=token, accepted=False)
     if timedelta(days=7) < timezone.now() - invitation.created_at:
+        logger.warning("Invitation %s expired for account %s", invitation.id, invitation.account.id)
         return HttpResponse("Invitation has expired", status=400)
     if request.method == 'POST':
         password1 = request.POST.get('password1')
         password2 = request.POST.get('password2')
         if password1 != password2:
+            logger.warning("Passwords do not match for invitation %s", invitation.id)
             return HttpResponse("Passwords do not match", status=400)
 
         user = User(email=invitation.email)
@@ -108,6 +118,7 @@ def accept_invite_view(request: HttpRequest, token: str) -> HttpResponse:
         invitation.accepted = True
         invitation.save()
         login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+        logger.info("%s accepted invite for account %s", user.id, invitation.account.id)
         return redirect('core:dashboard')
 
     else:
