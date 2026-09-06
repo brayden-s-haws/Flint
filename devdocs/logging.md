@@ -89,19 +89,21 @@ Everything else below needs a logger added (the module currently has none) or a 
 
 ---
 
-## apps.users
+## apps.users ✅ DONE
 
-**Registration** (`apps/users/views.py` — no logger yet) — `RegisterUser.form_valid`
+> **Done (2026-09-05):** `views.py::RegisterUser.form_valid` logs INFO on success (user ID + account ID, resolved via `self.object.account_set.first()` since `Account.owner` has no `related_name`; no email). `forms.py::RegistrationForm.clean_email` logs WARNING on the domain-guard block (domain only, never full email). New `apps/users/signals.py` (registered from `UsersConfig.ready()`) hooks the auth signals: `user_logged_in`/`user_logged_out` INFO (logout None-guarded), `user_login_failed` WARNING that logs **nothing** from the `credentials` dict. All receivers type-hinted; `manage.py check` clean.
 
-- INFO on successful user creation — include user ID (and account ID once the signal has run). Do not log the email address.
-- WARNING on registration blocked by the domain guard (`RegistrationForm.clean_email` raising `ValidationError` because an account already exists for the domain) — include the domain, never the full email.
+~~**Registration** (`apps/users/views.py` — no logger yet) — `RegisterUser.form_valid`~~
 
-**Login / Logout**
+- ~~INFO on successful user creation — include user ID (and account ID once the signal has run). Do not log the email address.~~
+- ~~WARNING on registration blocked by the domain guard (`RegistrationForm.clean_email` raising `ValidationError` because an account already exists for the domain) — include the domain, never the full email.~~
 
-> **Correction:** login and logout use Django's built-in `LoginView` / `LogoutView` (wired in `apps/users/urls.py`), so there is **no custom view function to instrument**. Hook Django's auth signals instead — connect receivers in `apps/users/` (e.g. a `signals.py` registered from `AppConfig.ready()`):
-- `user_logged_in` → INFO, include user ID.
-- `user_logged_out` → INFO, include user ID.
-- `user_login_failed` → WARNING, include the failure (unknown user vs. bad password) if distinguishable; never the submitted password or the raw credentials dict the signal passes.
+~~**Login / Logout**~~
+
+> ~~**Correction:** login and logout use Django's built-in `LoginView` / `LogoutView` (wired in `apps/users/urls.py`), so there is **no custom view function to instrument**. Hook Django's auth signals instead — connect receivers in `apps/users/` (e.g. a `signals.py` registered from `AppConfig.ready()`):~~
+- ~~`user_logged_in` → INFO, include user ID.~~
+- ~~`user_logged_out` → INFO, include user ID.~~
+- ~~`user_login_failed` → WARNING, include the failure (unknown user vs. bad password) if distinguishable; never the submitted password or the raw credentials dict the signal passes.~~
 
 ---
 

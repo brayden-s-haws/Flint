@@ -1,6 +1,8 @@
 """ Registration and login forms for email-based auth. Registration enforces the domain-based sign-up guard so a second person from a company's domain can't spin up a duplicate account. """
 from __future__ import annotations
 
+import logging
+
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -9,7 +11,11 @@ from django.forms import EmailField
 from apps.accounts.constants import EXCLUDED_DOMAINS
 from apps.accounts.models import Account
 
+
+logger = logging.getLogger(__name__)
+
 User = get_user_model()
+
 
 class RegistrationForm(UserCreationForm):
     """
@@ -38,7 +44,8 @@ class RegistrationForm(UserCreationForm):
 
         target_account = Account.objects.filter(owner__email__iendswith='@' + domain)
         if target_account.exists():
-            raise ValidationError(f'An account already exists for this domain. Contact your administrator to request access.')
+            logger.warning('Registration blocked: account already exists for domain %s', domain)
+            raise ValidationError('An account already exists for this domain. Contact your administrator to request access.')
         return email
 
 class LoginForm(AuthenticationForm):
