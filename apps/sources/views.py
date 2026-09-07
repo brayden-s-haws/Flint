@@ -29,6 +29,7 @@ from .tasks import sync_source_task, run_scheduled_sync
 from .encryption import encrypt_credentials, decrypt_credentials
 from .scheduling import create_or_update_source_schedule, toggle_source_schedule, delete_source_schedule
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -81,10 +82,15 @@ class SourceCreateView(LoginRequiredMixin, CreateView):
                 'user': form.cleaned_data['user'],
                 'password': form.cleaned_data['password'],
             }
-        source_instance.credentials = encrypt_credentials(credentials_dict)
+        try:
+            source_instance.credentials = encrypt_credentials(credentials_dict)
+        except Exception as exc:
+            logger.error("Error encrypting credentials for account %s: %s", self.request.account.id, type(exc).__name__)
+            raise
         source_instance.account = self.request.account  # type: ignore[attr-defined]
         source_instance.save()
         self.object = source_instance
+        logger.info("Source %s of type %s created for account %s", source_instance.id, source_instance.source_type, source_instance.account.id)
         return super().form_valid(form)
 
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
@@ -128,9 +134,14 @@ class SourceUpdateView(LoginRequiredMixin, TenantQuerysetMixin, UpdateView):
                 'user': form.cleaned_data['user'],
                 'password': form.cleaned_data['password'],
             }
-        source_instance.credentials = encrypt_credentials(credentials_dict)
+        try:
+            source_instance.credentials = encrypt_credentials(credentials_dict)
+        except Exception as exc:
+            logger.error("Error encrypting credentials for account %s: %s", self.request.account.id, type(exc).__name__)
+            raise
         source_instance.save()
         self.object = source_instance
+        logger.info("Source %s of type %s updated for account %s", source_instance.id, source_instance.source_type, source_instance.account.id)
         return super().form_valid(form)
 
     def get_success_url(self) -> str:
@@ -210,8 +221,10 @@ def test_connection(request: HttpRequest, pk: int) -> HttpResponse:
     connector = build_connector(source.source_type, credentials)
     success = connector.test_connection()
     if success:
+        logger.info("Connection test successful for source %s of type %s", source.id, source.source_type)
         messages.success(request, 'Connection test successful')
     else:
+        logger.warning("Connection test failed for source %s of type %s", source.id, source.source_type)
         messages.error(request, 'Connection test failed. Check your credentials.')
     return redirect('sources:detail', pk=pk)
 

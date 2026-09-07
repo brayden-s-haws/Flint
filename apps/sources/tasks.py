@@ -14,6 +14,7 @@ from apps.catalog.models import Schema, Table, Column, TableStatistics
 from apps.insights.models import Insight, InsightTarget
 from apps.insights.tasks import generate_source_overview_task
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -27,6 +28,7 @@ def sync_source_task(source_id: int, sync_log_id: int) -> None:
     """
     source = Source.objects.get(pk=source_id)
     sync_log = SourceSyncLog.objects.get(pk=sync_log_id)
+    logger.info("Starting sync for source %s of type %s with sync log %s", source.id, source.source_type, sync_log_id)
     try:
         credentials = decrypt_credentials(source.credentials)
         connector = build_connector(source.source_type, credentials)
@@ -67,6 +69,8 @@ def sync_source_task(source_id: int, sync_log_id: int) -> None:
             source.first_synced_at = timezone.now()
             source.save()
         sync_log.save()
+        duration = (sync_log.completed_at - sync_log.started_at).total_seconds()
+        logger.info("Sync completed for source %s of type %s with sync log %s: %s tables synced in %s seconds", source.id, source.source_type, sync_log_id, records_synced, duration)
         content_type = ContentType.objects.get_for_model(Source)
         existing = InsightTarget.objects.filter(content_type=content_type, object_id=source.pk, account=source.account, insight__insight_type='source_overview').select_related('insight').first()
         if existing and existing.insight.status == 'failed':
@@ -81,7 +85,7 @@ def sync_source_task(source_id: int, sync_log_id: int) -> None:
         sync_log.error_message = str(e)
         sync_log.completed_at = timezone.now()
         sync_log.save()
-        logger.exception("Source sync failed for source %s", source_id)
+        logger.exception("Source sync failed for source %s with sync log %s", source_id, sync_log_id)
 
 @shared_task
 def run_scheduled_sync(source_id: int) -> None:

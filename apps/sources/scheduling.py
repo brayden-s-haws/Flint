@@ -1,11 +1,16 @@
 """ Helpers that keep a source's SourceSchedule in sync with its underlying django_celery_beat PeriodicTask/CrontabSchedule. All schedule mutations go through here so the two stay consistent. """
 from __future__ import annotations
 import json
+import logging
 
 from django.conf import settings
 from django_celery_beat.models import CrontabSchedule, PeriodicTask
 
 from .models import Source, SourceSchedule
+
+
+logger = logging.getLogger(__name__)
+
 
 # Translates the user-facing frequency choices into concrete crontab fields (daily/weekly/monthly run at 06:00 in the project timezone).
 FREQUENCY_TO_CRONTAB: dict[str, dict[str, str]] = {

@@ -107,29 +107,39 @@ Everything else below needs a logger added (the module currently has none) or a 
 
 ---
 
-## apps.sources
+## apps.sources 🚧 IN PROGRESS
 
-**Encryption** (`apps/sources/encryption.py` — no logger yet)
+> **Progress (2026-09-06):** ✅ **Encryption**, ✅ **Source create/edit**, ✅ **Connection test**, ✅ **Manual + scheduled sync** done. Still open: Schedule lifecycle, Source deletion cleanup, Connector-level failures (verify).
 
-- ERROR in `_get_fernet()` when `ENCRYPTION_KEY` is missing (before raising `ImproperlyConfigured`).
-- ERROR when `decrypt_credentials` raises (Fernet `InvalidToken`) — log the exception type only.
-> **Note:** these functions receive a credentials dict, not a source, so they can't log a source ID. Log the source ID at the **call sites** (`SourceCreateView`/`SourceUpdateView.form_valid`, `test_connection`, `sync_source_task`) where it's in scope; keep the encryption module's own logs payload-free (operation + outcome, never the dict or ciphertext).
+~~**Encryption** (`apps/sources/encryption.py` — no logger yet)~~ ✅ DONE
 
-**Source create / edit** (`apps/sources/views.py` — has logger)
+> **Done (2026-09-06):** `encryption.py` — ERROR in `_get_fernet()` on missing `ENCRYPTION_KEY` (message trimmed to the key case only); ERROR in `decrypt_credentials` on `InvalidToken`, logging exception type only then bare `raise` (behavior unchanged — no call site catches `InvalidToken`). Module stays payload-free; source IDs logged at call sites instead.
 
-- INFO on successful create (`SourceCreateView.form_valid`) and edit (`SourceUpdateView.form_valid`) — include source ID, source type, account ID.
-- ERROR if credential encryption raises during `form_valid()` — include account ID and exception type.
+- ~~ERROR in `_get_fernet()` when `ENCRYPTION_KEY` is missing (before raising `ImproperlyConfigured`).~~
+- ~~ERROR when `decrypt_credentials` raises (Fernet `InvalidToken`) — log the exception type only.~~
+> ~~**Note:** these functions receive a credentials dict, not a source, so they can't log a source ID. Log the source ID at the **call sites** (`SourceCreateView`/`SourceUpdateView.form_valid`, `test_connection`, `sync_source_task`) where it's in scope; keep the encryption module's own logs payload-free (operation + outcome, never the dict or ciphertext).~~
 
-**Connection test** (`apps/sources/views.py::test_connection` — has logger)
+~~**Source create / edit** (`apps/sources/views.py` — has logger)~~ ✅ DONE
 
-- INFO on success, WARNING on failure — include source ID and source type. (Currently only surfaced to the user via `messages`; add a log line alongside.)
+> **Done (2026-09-06):** `SourceCreateView`/`SourceUpdateView.form_valid` — INFO on create/edit (source ID, source type, account ID); ERROR guard around `encrypt_credentials` logging **account ID** (not source ID — None at create time, before save) + exception type, then re-raise (no dead flash message).
 
-**Manual + scheduled sync** (`apps/sources/tasks.py` — has logger)
+- ~~INFO on successful create (`SourceCreateView.form_valid`) and edit (`SourceUpdateView.form_valid`) — include source ID, source type, account ID.~~
+- ~~ERROR if credential encryption raises during `form_valid()` — include account ID and exception type.~~
 
-- INFO when `sync_source_task` starts — include source ID, sync log ID.
-- INFO when it completes — include source ID, sync log ID, `records_synced`, and duration (derive from `SourceSyncLog.started_at`→`completed_at`). Note `records_synced` currently counts **tables**, not rows — say "tables synced" in the message to avoid ambiguity.
-- ERROR on failure — **already present** (`logger.exception` at the end of `sync_source_task`); keep it, ensure it includes source ID and sync log ID.
-- `run_scheduled_sync` bail-out warnings (no source / no schedule / disabled) — **already present**; keep.
+~~**Connection test** (`apps/sources/views.py::test_connection` — has logger)~~ ✅ DONE
+
+> **Done (2026-09-06):** `test_connection` — INFO on success / WARNING on failure, each logging source ID + source type, alongside the existing `messages`. (405 `Method not allowed` WARNING deferred to the Cross-Cutting Concerns section.)
+
+- ~~INFO on success, WARNING on failure — include source ID and source type. (Currently only surfaced to the user via `messages`; add a log line alongside.)~~
+
+~~**Manual + scheduled sync** (`apps/sources/tasks.py` — has logger)~~ ✅ DONE
+
+> **Done (2026-09-06):** `sync_source_task` — INFO on start (source ID, type, sync log ID) and INFO on completion (source ID, type, sync log ID, `records_synced` worded "tables synced", duration from `started_at`→`completed_at`). Completion log moved out of the `first_synced_at` block so it fires on **every** sync; fixed a latent bug where the old completion line used `len(schema_data.tables)` (dict attr-access `AttributeError` inside the `try` → would mark first syncs failed). Existing ERROR `logger.exception` (source ID + sync log ID) and `run_scheduled_sync` bail-out warnings kept as-is.
+
+- ~~INFO when `sync_source_task` starts — include source ID, sync log ID.~~
+- ~~INFO when it completes — include source ID, sync log ID, `records_synced`, and duration (derive from `SourceSyncLog.started_at`→`completed_at`). Note `records_synced` currently counts **tables**, not rows — say "tables synced" in the message to avoid ambiguity.~~
+- ~~ERROR on failure — **already present** (`logger.exception` at the end of `sync_source_task`); keep it, ensure it includes source ID and sync log ID.~~
+- ~~`run_scheduled_sync` bail-out warnings (no source / no schedule / disabled) — **already present**; keep.~~
 
 **Schedule lifecycle** (`apps/sources/scheduling.py` — no logger yet)
 
