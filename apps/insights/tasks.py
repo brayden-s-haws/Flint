@@ -14,6 +14,7 @@ from apps.insights.models import Insight, InsightTarget
 from apps.insights.services.provider import get_service
 from apps.sources.models import Source
 
+
 logger = logging.getLogger(__name__)
 
 

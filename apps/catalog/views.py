@@ -1,6 +1,7 @@
 """ Provides users with the ability to view the tables in the catalog. Also triggers LLM-powered table descriptions when a user views a table. """
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -14,6 +15,9 @@ from apps.insights.tasks import generate_table_description_task
 from apps.sources.models import Source
 
 from .models import Table, TableStatistics
+
+
+logger = logging.getLogger(__name__)
 
 
 class TableListView(TenantQuerysetMixin, LoginRequiredMixin, ListView):
@@ -62,6 +66,8 @@ class TableDetailView(TenantQuerysetMixin, LoginRequiredMixin, DetailView):
             insight = Insight.objects.create(account=self.request.account, text='', insight_type='table_description', status='pending', insight_prompt=None) # type: ignore[attr-defined]
             InsightTarget.objects.create(account=self.request.account, insight=insight, content_type=ContentType.objects.get_for_model(self.object), object_id=self.object.pk)  # type: ignore[attr-defined]
             generate_table_description_task.delay(insight.pk)
+            logger.debug("Started generating table description for table %s with insight %s", self.object.pk, insight.pk)
             context['insights'] = [insight]
+
         context['statistics'] = TableStatistics.objects.filter(table=self.object).order_by('-created_at').first()
         return context

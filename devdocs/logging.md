@@ -162,17 +162,23 @@ Everything else below needs a logger added (the module currently has none) or a 
 
 ---
 
-## apps.catalog
+## apps.catalog ✅ DONE
 
-**Metadata population** — implemented in `apps/sources/tasks.py::sync_source_task` (there is no separate catalog sync module), so these emit under the `apps.sources` logger, not `apps.catalog`.
+> **Done (2026-09-07):** all points done — emitted under `apps.sources` (metadata) and `apps.catalog` (view) loggers per the naming note.
 
-- DEBUG per schema/table as the discovery loop runs — include source ID and object name (keep at DEBUG; per-object volume is high).
-- INFO on completion of the catalog upsert — include source ID and totals (schemas, tables, columns created/updated). This is the "full metadata sync completed" summary.
-- WARNING when a table/column is skipped or a connector returns empty metadata for a table — include source ID, object name, reason.
+~~**Metadata population** — implemented in `apps/sources/tasks.py::sync_source_task` (there is no separate catalog sync module), so these emit under the `apps.sources` logger, not `apps.catalog`.~~
 
-**Lazy insight trigger** (`apps/catalog/views.py::TableDetailView.get_context_data` — no logger yet)
+> **Done (2026-09-07):** in `sync_source_task`'s discovery loop — DEBUG per schema and per table (source ID + object name). WARNING (no `continue` — purely additive) when a discovered table has **no columns**, chosen over `metadata['row_count'] is None` because Airbyte is schema-only and *always* returns `row_count=None` (that check would spam every Airbyte table); a columnless table is the connector-agnostic "empty metadata" signal. Completion totals: kept the existing completion INFO (tables + duration); schema/column counts deliberately not added.
 
-- DEBUG when a first-view visit creates a pending table-description insight and dispatches the async task — include table ID and insight ID. (Explains the GET-that-writes behavior in the logs.)
+- ~~DEBUG per schema/table as the discovery loop runs — include source ID and object name (keep at DEBUG; per-object volume is high).~~
+- ~~INFO on completion of the catalog upsert — include source ID and totals (schemas, tables, columns created/updated). This is the "full metadata sync completed" summary.~~ *(tables + duration only; schema/column counts skipped by choice)*
+- ~~WARNING when a table/column is skipped or a connector returns empty metadata for a table — include source ID, object name, reason.~~
+
+~~**Lazy insight trigger** (`apps/catalog/views.py::TableDetailView.get_context_data` — no logger yet)~~ ✅ DONE
+
+> **Done (2026-09-07):** DEBUG in `TableDetailView.get_context_data`'s first-view block — table ID (`self.object.pk`, not name) + insight ID, after the `generate_table_description_task.delay()` dispatch.
+
+- ~~DEBUG when a first-view visit creates a pending table-description insight and dispatches the async task — include table ID and insight ID. (Explains the GET-that-writes behavior in the logs.)~~
 
 ---
 

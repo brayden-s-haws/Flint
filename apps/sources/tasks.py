@@ -39,11 +39,15 @@ def sync_source_task(source_id: int, sync_log_id: int) -> None:
                 source=source, name=schema_data['name'],
                 defaults={'account': source.account}
             )
+            logger.debug("Discovered schema %s for source %s", schema_data['name'], source.id)
             for table_data in schema_data['tables']:
                 table, _ = Table.objects.get_or_create(
                     schema=schema, name=table_data['name'],
                     defaults={'account': source.account, 'table_type': table_data['table_type']}
                 )
+                if not table_data['columns']:
+                    logger.warning("No columns discovered for table %s.%s on source %s", schema_data['name'], table_data['name'], source.id)
+                logger.debug("Discovered table %s.%s for source %s", schema_data['name'], table_data['name'], source.id)
                 metadata = connector.get_table_metadata(schema_data['name'], table_data['name'])
                 table.row_count = metadata['row_count']
                 table.table_type = table_data['table_type']
