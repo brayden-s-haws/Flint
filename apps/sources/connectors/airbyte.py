@@ -7,6 +7,7 @@ import airbyte as ab
 
 from .base import BaseConnector
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -50,11 +51,11 @@ class AirbyteConnector(BaseConnector):
             source = self._get_source()
             source.check()
             return True
-        except Exception as e:
+        except Exception as exc:
             try:
                 return bool(source.discovered_catalog.streams) # Since we do not pull actual records, we treat catalog being discoverable as a successful connection
             except Exception:
-                logger.error(f"AirbyteConnector test_connection failed: {e}")
+                logger.error("AirbyteConnector test_connection failed: %s", type(exc).__name__)
                 return False
 
     def discover_catalog(self) -> list[dict[str, Any]]:
@@ -77,8 +78,8 @@ class AirbyteConnector(BaseConnector):
                 ]
                 schema['tables'].append({'name': stream.name, 'table_type': 'BASE TABLE', 'columns': columns})
             return [schema]
-        except Exception as e:
-            logger.error(f"AirbyteConnector discover_catalog failed: {e}")
+        except Exception as exc:
+            logger.error("AirbyteConnector discover_catalog failed: %s", type(exc).__name__)
             return []
 
 

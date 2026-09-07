@@ -107,9 +107,9 @@ Everything else below needs a logger added (the module currently has none) or a 
 
 ---
 
-## apps.sources 🚧 IN PROGRESS
+## apps.sources ✅ DONE
 
-> **Progress (2026-09-06):** ✅ **Encryption**, ✅ **Source create/edit**, ✅ **Connection test**, ✅ **Manual + scheduled sync** done. Still open: Schedule lifecycle, Source deletion cleanup, Connector-level failures (verify).
+> **Progress (2026-09-07):** ✅ all subsections done — Encryption, Source create/edit, Connection test, Manual + scheduled sync, Schedule lifecycle, Source deletion cleanup, and Connector-level failures (verify).
 
 ~~**Encryption** (`apps/sources/encryption.py` — no logger yet)~~ ✅ DONE
 
@@ -141,18 +141,24 @@ Everything else below needs a logger added (the module currently has none) or a 
 - ~~ERROR on failure — **already present** (`logger.exception` at the end of `sync_source_task`); keep it, ensure it includes source ID and sync log ID.~~
 - ~~`run_scheduled_sync` bail-out warnings (no source / no schedule / disabled) — **already present**; keep.~~
 
-**Schedule lifecycle** (`apps/sources/scheduling.py` — no logger yet)
+~~**Schedule lifecycle** (`apps/sources/scheduling.py` — no logger yet)~~ ✅ DONE
 
-- INFO on create/update (`create_or_update_source_schedule`), pause (`disable_source_schedule` / `toggle_source_schedule`→paused), resume (`toggle`→enabled), and delete (`delete_source_schedule`) — include source ID and frequency. These mutate the beat `PeriodicTask`, so log the effect for audit.
+> **Done (2026-09-07):** `scheduling.py` — logger added; INFO on all five mutations (create + update in `create_or_update_source_schedule`, pause in `disable_source_schedule`, pause/resume in `toggle_source_schedule` branched on `was_paused`, delete in `delete_source_schedule`) with source ID + frequency. Toggle logs after `schedule.save()` so the line reflects persisted state.
 
-**Source deletion cleanup** (`apps/sources/signals.py` — no logger yet)
+- ~~INFO on create/update (`create_or_update_source_schedule`), pause (`disable_source_schedule` / `toggle_source_schedule`→paused), resume (`toggle`→enabled), and delete (`delete_source_schedule`) — include source ID and frequency. These mutate the beat `PeriodicTask`, so log the effect for audit.~~
 
-- INFO in `cleanup_insights_on_source_delete` — include source ID, account ID, and the count of insights removed.
-- DEBUG in `delete_periodic_task_on_source_delete` — include the periodic task ID removed.
+~~**Source deletion cleanup** (`apps/sources/signals.py` — no logger yet)~~ ✅ DONE
 
-**Connector-level failures** (`apps/sources/connectors/postgresql.py`, `airbyte.py` — both have loggers)
+> **Done (2026-09-07):** `signals.py` — logger added; INFO in `cleanup_insights_on_source_delete` (source ID, `account_id`, deduped count via `Insight` queryset `.count()` before delete — avoids overcounting from multiple `InsightTarget` rows per insight); DEBUG in `delete_periodic_task_on_source_delete` (periodic task ID + source ID).
 
-- Connection / discovery / metadata errors are **already logged** at ERROR; keep them and make sure messages don't include the credentials dict (Airbyte's error strings can echo config — scrub or log exception type only).
+- ~~INFO in `cleanup_insights_on_source_delete` — include source ID, account ID, and the count of insights removed.~~
+- ~~DEBUG in `delete_periodic_task_on_source_delete` — include the periodic task ID removed.~~
+
+~~**Connector-level failures** (`apps/sources/connectors/postgresql.py`, `airbyte.py` — both have loggers)~~ ✅ DONE (verify — no changes)
+
+> **Verified (2026-09-07):** both connectors already log every ERROR with `type(exc).__name__` only — no credentials dict, no raw exception string (psycopg2/Airbyte messages can echo `host=`/`user=`/config). Nothing to change. (Unrelated typo noted, not fixed: `postgresql.py` "Count not query row counts" → "Could not".)
+
+- ~~Connection / discovery / metadata errors are **already logged** at ERROR; keep them and make sure messages don't include the credentials dict (Airbyte's error strings can echo config — scrub or log exception type only).~~
 
 ---
 

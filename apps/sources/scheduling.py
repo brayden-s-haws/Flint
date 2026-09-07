@@ -41,10 +41,12 @@ def create_or_update_source_schedule(source: Source, frequency: str) -> tuple[So
             pt = PeriodicTask.objects.create(name=f'sync-source-{source.pk}', task='apps.sources.tasks.run_scheduled_sync', crontab=crontab, args=json.dumps([source.pk]), enabled=True)
             existing.periodic_task = pt
         existing.save()
+        logger.info("Updated schedule for source %s, runs %s", source.pk, frequency)
         return existing, False
     else:
         pt = PeriodicTask.objects.create(name=f'sync-source-{source.pk}', task='apps.sources.tasks.run_scheduled_sync', crontab=crontab, args=json.dumps([source.pk]), enabled=True)
         schedule = SourceSchedule.objects.create(source=source, account=source.account, frequency=frequency, is_enabled=True, periodic_task=pt)
+        logger.info("Created schedule for source %s, runs %s", source.pk, frequency)
         return schedule, True
 
 def disable_source_schedule(source: Source) -> None:
@@ -58,6 +60,7 @@ def disable_source_schedule(source: Source) -> None:
         schedule.periodic_task.enabled = False
         schedule.periodic_task.save()
     schedule.save()
+    logger.info("Paused schedule for source %s, was running %s", source.pk, schedule.frequency)
 
 def delete_source_schedule(source: Source) -> None:
     """Remove a source's schedule entirely, deleting its PeriodicTask first. No-op if the source has no schedule."""
@@ -68,6 +71,7 @@ def delete_source_schedule(source: Source) -> None:
     if schedule.periodic_task:
         schedule.periodic_task.delete()
     schedule.delete()
+    logger.info("Deleted schedule for source %s, was running %s", source.pk, schedule.frequency)
 
 def toggle_source_schedule(source: Source) -> tuple[SourceSchedule, bool]:
     """
@@ -78,6 +82,10 @@ def toggle_source_schedule(source: Source) -> tuple[SourceSchedule, bool]:
     was_paused = not schedule.is_enabled
     schedule.is_enabled = not schedule.is_enabled
     schedule.save()
+    if was_paused:
+        logger.info("Resumed schedule for source %s, runs %s", source.pk, schedule.frequency)
+    else:
+        logger.info("Paused schedule for source %s, was running %s", source.pk, schedule.frequency)
     if schedule.periodic_task:
         schedule.periodic_task.enabled = schedule.is_enabled
         schedule.periodic_task.save()

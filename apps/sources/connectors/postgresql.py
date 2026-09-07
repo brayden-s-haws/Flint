@@ -9,6 +9,7 @@ from psycopg2.extras import RealDictCursor
 
 from .base import BaseConnector
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -23,11 +24,11 @@ class PostgreSQLConnector(BaseConnector):
             conn = psycopg2.connect(**self.credentials)
             conn.close()
             return True
-        except psycopg2.OperationalError as e:
-            logger.error(f"Operational error connecting to PostgreSQL: {e}")
+        except psycopg2.OperationalError as exc:
+            logger.error("Operational error connecting to PostgreSQL: %s", type(exc).__name__)
             return False
-        except Exception as e:
-            logger.error(f"Error connecting to PostgreSQL: {e}")
+        except Exception as exc:
+            logger.error("Error connecting to PostgreSQL: %s", type(exc).__name__)
             return False
 
     def discover_catalog(self) -> list[dict[str, Any]]:
@@ -64,8 +65,8 @@ class PostgreSQLConnector(BaseConnector):
                         catalog.append({'name': schema_name, 'tables': table_dicts})
                 return catalog
 
-        except Exception as e:
-            logger.error(f"Error connecting to PostgreSQL: {e}")
+        except Exception as exc:
+            logger.error("Error connecting to PostgreSQL: %s", type(exc).__name__)
             return []
 
     def get_table_metadata(self, schema_name: str, table_name: str) -> dict[str, Any]:
@@ -94,6 +95,6 @@ class PostgreSQLConnector(BaseConnector):
                             'common_values': common_values
                         }
                     return {'row_count': row['row_count'], 'column_stats': stats}
-        except Exception as e:
-            logger.error(f"Count not query row counts: {e}")
+        except Exception as exc:
+            logger.error("Could not query row counts: %s", type(exc).__name__)
             return { 'row_count': None, 'column_stats': {}}

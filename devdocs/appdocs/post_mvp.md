@@ -46,7 +46,8 @@ manage.py test`) until it passes. Multi-tenancy boundary tests (account A cannot
     tests and ensure they cover all necessary scenarios. Before we start make sure testing.md is comprehensive of the entire project and apps in the project
 25. **Address `devdocs/logging.md` in full** — add the `LOGGING` config to `settings.py` and instrument every app per the logging plan (tenant middleware, auth events, sync lifecycle, LLM calls). Never log credentials, tokens, or LLM prompt/response content.
 28. **Update the README** — revise the README drafted in build order item #9 so it reflects the final feature set. Only create with what we have actually built, do not mention the future 
-    development road map. Make sure to update existing diagrams.
+    development road map. Make sure to update existing diagrams. Note that airbyte sources are added through a migration per source. Add notes on how to do a spike to understand the shape of an 
+    airbyte connector (I have the details for this). Also clean up unnecessary folders/docs from repo - like memory and it's files)
 
 > **Ordering note (within Phase 6):** docstrings (#23) go first — pure additions, no behaviour change. Do testing (#24) and logging (#25) once the code they cover is stable, then the bug bash (#26) after the codebase settles. The earlier "do not start cleanup until all feature work is complete" rule is **superseded** by the 2026-08-17 resequence — cleanup runs first now.
 
