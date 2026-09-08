@@ -10,7 +10,9 @@ from apps.insights.models import Insight, InsightTarget
 from apps.insights.services.provider import get_service
 from django.contrib.contenttypes.models import ContentType
 
+
 logger = logging.getLogger(__name__)
+
 
 # Each join opportunity has a confidence score that we use to rank them, rank is used to filter to a smaller set of join opportunities.
 CONFIDENCE_RANK = {

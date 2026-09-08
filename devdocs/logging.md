@@ -182,19 +182,26 @@ Everything else below needs a logger added (the module currently has none) or a 
 
 ---
 
-## apps.insights
+## apps.insights ✅ DONE
 
-**LLM calls** — emitted from `apps/insights/tasks.py` (the four generation tasks), `apps/insights/cross_source_pipeline.py` (the multi-stage pipeline), and the provider layer `apps/insights/services/*`.
+> **Done (2026-09-07):** LLM logging across `tasks.py`, `cross_source_pipeline.py`, and `services/provider.py`.
+> - **Four generation tasks** (`tasks.py`): INFO on start + INFO on completion, each with insight/placeholder ID. Provider **omitted** from messages (always `'anthropic'` today — a constant carries no signal; re-add if a second provider is introduced). Model name + token usage still deferred (service layer discards the response object). Existing `logger.exception` ERRORs kept (intra-source now includes `placeholder_id`). Fixed two bugs introduced mid-pass: a `service`-object repr and a `text.provider` `AttributeError` (would have failed every source overview); both replaced with the omitted-provider approach. Two start logs were also moved above their generation calls.
+> - **Provider selection** (`provider.py::get_service`): DEBUG "Selected provider: %s" per branch; ERROR before the unknown-provider `raise`. `api_key` never logged.
+> - **Cross-source** (`cross_source_pipeline.py`): start + completion-count INFO live in the **task** layer (`run_cross_source_discovery_task`) only — pipeline `run_discovery_for_pair` adds no start/completion, so no double-logging. Per-hypothesis / per-use-case `logger.exception` handlers kept.
+> - **Deliberate exception to "never log LLM content":** `cross_source_pipeline.py` line ~70 logs `hypothesis.get('title')` on a use-case failure. Owner decision (2026-09-07): the title doubles as a system identifier and is treated as harmless non-sensitive LLM output. Intentional and documented — not an oversight; revisit if hypothesis content ever carries source data.
+> - Retry WARNING still deferred (no retry mechanism exists).
 
-- INFO when a generation job starts — include insight ID (or placeholder ID), target type, and provider name. Anchor in each task: `generate_table_description_task`, `generate_source_overview_task`, `generate_intra_source_use_cases_task`, `run_cross_source_discovery_task`.
-- INFO when an LLM call completes — include insight ID, provider, model name, and token usage.
-> **Note (token usage):** the service methods (`openai_service.py` / `anthropic_service.py`) currently return only the parsed text/JSON and **discard the response object**, so token usage is not available to log yet. To log it, surface `response.usage` from the service layer (e.g. return it alongside the result or log it inside the service). Until then, log provider + model without token counts rather than fabricating them.
-- ERROR on failure — **already present** as `logger.exception` in every task and in the pipeline's per-hypothesis/per-use-case handlers; keep, and ensure each includes the insight/placeholder ID.
-- Cross-source pipeline (`cross_source_pipeline.py::run_discovery_for_pair`): INFO at start (source pair, account) and at completion (count of use cases stored). The completion count is already logged by `run_cross_source_discovery_task`; avoid double-logging — pick one layer.
-> **Note (retries):** the plan's "WARNING on retry" has no anchor yet — there is no retry logic in the tasks or services today. Defer retry logging until a retry mechanism exists (Celery `autoretry_for`, or an explicit loop); if/when added, log attempt number and reason at WARNING.
-- Provider selection (`apps/insights/services/provider.py::get_service`): DEBUG on which provider was chosen; ERROR is already raised (not logged) for an unknown provider — add an ERROR log before the `raise`.
+~~**LLM calls** — emitted from `apps/insights/tasks.py` (the four generation tasks), `apps/insights/cross_source_pipeline.py` (the multi-stage pipeline), and the provider layer `apps/insights/services/*`.~~
 
-Never log prompt text or LLM response content at any level.
+- ~~INFO when a generation job starts — include insight ID (or placeholder ID), target type, and provider name. Anchor in each task: `generate_table_description_task`, `generate_source_overview_task`, `generate_intra_source_use_cases_task`, `run_cross_source_discovery_task`.~~
+- ~~INFO when an LLM call completes — include insight ID, provider, model name, and token usage.~~ *(provider omitted — constant; model/token deferred)*
+> ~~**Note (token usage):** the service methods (`openai_service.py` / `anthropic_service.py`) currently return only the parsed text/JSON and **discard the response object**, so token usage is not available to log yet. To log it, surface `response.usage` from the service layer (e.g. return it alongside the result or log it inside the service). Until then, log provider + model without token counts rather than fabricating them.~~
+- ~~ERROR on failure — **already present** as `logger.exception` in every task and in the pipeline's per-hypothesis/per-use-case handlers; keep, and ensure each includes the insight/placeholder ID.~~
+- ~~Cross-source pipeline (`cross_source_pipeline.py::run_discovery_for_pair`): INFO at start (source pair, account) and at completion (count of use cases stored). The completion count is already logged by `run_cross_source_discovery_task`; avoid double-logging — pick one layer.~~
+> ~~**Note (retries):** the plan's "WARNING on retry" has no anchor yet — there is no retry logic in the tasks or services today. Defer retry logging until a retry mechanism exists (Celery `autoretry_for`, or an explicit loop); if/when added, log attempt number and reason at WARNING.~~ *(still deferred)*
+- ~~Provider selection (`apps/insights/services/provider.py::get_service`): DEBUG on which provider was chosen; ERROR is already raised (not logged) for an unknown provider — add an ERROR log before the `raise`.~~
+
+~~Never log prompt text or LLM response content at any level.~~ *(one documented exception — hypothesis title, see note above)*
 
 ---
 
