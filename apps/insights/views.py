@@ -2,6 +2,7 @@
 majority of the functionality here is focused on HTMX partial endpoints, allowing users to interact with insights in a more dynamic and responsive manner."""
 from __future__ import annotations
 
+import logging
 from typing import Any
 from datetime import timedelta
 
@@ -21,6 +22,9 @@ from apps.core.mixins import TenantQuerysetMixin
 from apps.insights.models import Insight, InsightTarget
 from apps.insights.tasks import generate_table_description_task, run_cross_source_discovery_task, generate_intra_source_use_cases_task
 from apps.sources.models import Source
+
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Intra-Source Insights
@@ -163,6 +167,7 @@ def generate_intra_use_case_suggestions(request, source_id: int) -> HttpResponse
         insight__insight_type='source_overview'
         ).exists()
     if not has_overview:
+        logger.info("Use case generation blocked: no overview for source %s", source.pk)
         return HttpResponse("Generate a Source Overview before generating use case suggestions.", status=400)
 
     recent_suggestion = InsightTarget.objects.filter(
@@ -171,6 +176,7 @@ def generate_intra_use_case_suggestions(request, source_id: int) -> HttpResponse
         insight__status='active',
     ).select_related('insight').order_by('-insight__created_at').first()
     if recent_suggestion and recent_suggestion.insight.created_at > timezone.now() - timedelta(hours=24):
+        logger.info("Use case generation rate-limited for source %s", source.pk)
         return HttpResponse("Use case suggestions were generated recently. Try again in 24 hours.", status=400)
 
     placeholder = Insight.objects.create(account=source.account, text='', insight_type='use_case_suggestion', status='pending', structured_data=None)
@@ -191,6 +197,7 @@ def rate_insight(request, insight_id: int) -> HttpResponse:
     rating = request.POST.get('rating')
 
     if rating != 'approved' and rating != 'rejected':
+        logger.warning("Invalid rating value for insight %s", insight.pk)
         return HttpResponse("Invalid rating value", status=400)
 
     if insight.rating == rating:
@@ -217,6 +224,7 @@ def insight_status(request, insight_id: int) -> HttpResponse:
     elif status == 'failed':
         return render(request, 'insights/_insight_failed.html', {'insight': insight})
     else:
+        logger.warning("Invalid insight status for insight %s", insight.pk)
         return HttpResponse("Invalid insight status", status=400)
 
 @login_required
@@ -228,6 +236,7 @@ def insight_retry(request, insight_id: int) -> HttpResponse:
     """
     insight = get_object_or_404(Insight, pk=insight_id, account=request.account)
     if insight.status != 'failed':
+        logger.warning("Retry rejected: insight %s not failed (status: %s)", insight.pk, insight.status)
         return HttpResponse("Cannot retry an insight that has not failed", status=400)
     insight.status = 'pending'
     insight.save()
@@ -290,10 +299,12 @@ def run_cross_source_discovery(request) -> HttpResponse:
     source_a_id = request.POST.get('source_a')
     source_b_id = request.POST.get('source_b')
     if source_a_id == source_b_id:
+        logger.warning("Cross-source discovery rejected: source %s paired with itself", source_a_id)
         return HttpResponse("Cannot pair a source with itself", status=400)
     source_a = get_object_or_404(Source, pk=source_a_id, account=request.account)
     source_b = get_object_or_404(Source, pk=source_b_id, account=request.account)
     if source_a.first_synced_at is None or source_b.first_synced_at is None:
+        logger.warning("Cross-source discovery rejected: sources %s and %s must be synced", source_a_id, source_b_id)
         return HttpResponse("Sources must be synced before running discovery", status=400)
     source_ct = ContentType.objects.get_for_model(Source)
     cutoff = timezone.now() - timedelta(hours=24)
@@ -309,6 +320,7 @@ def run_cross_source_discovery(request) -> HttpResponse:
         .exists()
     )
     if recent_pair_run:
+        logger.info("Cross-source rate-limited for source %s and source %s", source_a_id, source_b_id)
         return HttpResponse("Cross-source discovery is rate-limited to once per 24h for this pair", status=400)
     result = run_cross_source_discovery_task.delay(request.account.id, source_a.id, source_b.id)
     return render(request, 'insights/_cross_source_discovery_results.html', build_cross_source_results_context(request, task_id=result.id, running=True))
@@ -331,6 +343,7 @@ def accept_agent_insight(request, insight_id: int) -> HttpResponse:
     """
     insight = get_object_or_404(Insight, pk=insight_id, account=request.account, insight_type='cross_source_use_case',)
     if insight.status != 'pending_review':
+        logger.warning("Accept rejected: insight %s is not pending review (status %s)", insight.pk, insight.status)
         return HttpResponse("Only pending insights can be accepted", status=400)
     insight.status = 'active'
     insight.save()
@@ -345,6 +358,7 @@ def dismiss_agent_insight(request, insight_id: int) -> HttpResponse:
     """
     insight = get_object_or_404(Insight, pk=insight_id, account=request.account, insight_type='cross_source_use_case',)
     if insight.status != 'pending_review':
+        logger.warning("Dismiss rejected: insight %s is not pending review (status %s)", insight.pk, insight.status)
         return HttpResponse("Only pending insights can be dismissed", status=400)
     insight.status = 'dismissed'
     insight.save()

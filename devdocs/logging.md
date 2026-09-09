@@ -205,20 +205,28 @@ Everything else below needs a logger added (the module currently has none) or a 
 
 ---
 
-## Cross-Cutting Concerns
+## Cross-Cutting Concerns ✅ DONE
 
-**Multi-tenancy boundary** (`apps/core/mixins.py::TenantQuerysetMixin.get_queryset` — no logger yet)
+> **Done (2026-09-08):** all three items complete.
 
-- WARNING before raising `PermissionDenied` when `request.account` is `None` — include user ID. This should never happen in normal flow, so it's a real signal. (The `raise` already exists; add the log line above it.)
+~~**Multi-tenancy boundary** (`apps/core/mixins.py::TenantQuerysetMixin.get_queryset` — no logger yet)~~ ✅ DONE
 
-**Unhandled exceptions**
+> **Done (2026-09-08):** WARNING with user ID above the existing `PermissionDenied` raise when `request.account is None`. (Unauthenticated `AnonymousUser.id` is `None` — safe, no `AttributeError`; in practice pairs with `LoginRequiredMixin` so it's the authenticated-no-membership case.)
 
-- Django's default 500 handler logs tracebacks automatically — don't duplicate it.
-- For HTMX partial views that return an error `HttpResponse(status=400/404/405)` instead of raising (e.g. the guard responses in `apps/insights/views.py` and the `Method not allowed` returns in `apps/sources/views.py`), log WARNING with the context that triggered the degraded response so these non-2xx responses aren't invisible.
+- ~~WARNING before raising `PermissionDenied` when `request.account` is `None` — include user ID. This should never happen in normal flow, so it's a real signal. (The `raise` already exists; add the log line above it.)~~
 
-**Startup checks** (`AppConfig.ready()`)
+~~**Unhandled exceptions**~~ ✅ DONE
 
-- Log an ENCRYPTION_KEY presence check at startup (presence only, never the key). No such check exists today; `apps/sources/apps.py::ready()` currently only imports signals — this is where it would go (or `settings.py` validation).
+> **Done (2026-09-08):** **Refactored** the six manual `if request.method != 'POST'` / 405 returns in `apps/sources/views.py` to the `@require_POST` decorator (matching `insights/views.py`) — these now return a proper `HttpResponseNotAllowed` and are **auto-logged at WARNING by `django.request`** (verified via RequestFactory: all six GET→405 with `Allow: POST`, each emitting a `django.request` WARNING). Remaining degraded responses logged manually: the one 404 in `schedule_toggle` (source ID, WARNING) and the ten business-rule 400s in `insights/views.py` — WARNING for "shouldn't happen" states (invalid rating/status, retry-non-failed, pair-with-self, accept/dismiss non-pending-review), INFO for routine rate-limits and preconditions. All log IDs/status enums only, no content.
+
+- ~~Django's default 500 handler logs tracebacks automatically — don't duplicate it.~~
+- ~~For HTMX partial views that return an error `HttpResponse(status=400/404/405)` instead of raising (e.g. the guard responses in `apps/insights/views.py` and the `Method not allowed` returns in `apps/sources/views.py`), log WARNING with the context that triggered the degraded response so these non-2xx responses aren't invisible.~~
+
+~~**Startup checks** (`AppConfig.ready()`)~~ ✅ DONE
+
+> **Done (2026-09-08):** `SourcesConfig.ready()` logs an `ENCRYPTION_KEY` presence check — INFO when set, WARNING when missing, **presence only, never the value**. (Runs on every `manage.py` invocation; cheap and presence-only, so fine. Verified: `manage.py check` emits the INFO line.)
+
+- ~~Log an ENCRYPTION_KEY presence check at startup (presence only, never the key). No such check exists today; `apps/sources/apps.py::ready()` currently only imports signals — this is where it would go (or `settings.py` validation).~~
 
 ---
 

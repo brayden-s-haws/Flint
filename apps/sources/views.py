@@ -14,6 +14,7 @@ from django.contrib import messages
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Max, QuerySet, Q
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
 from django.views.generic import ListView, CreateView, DetailView, UpdateView, DeleteView
 from django.urls import reverse_lazy, reverse
 from django.http import HttpResponse, HttpRequest
@@ -212,10 +213,9 @@ class SourceDetailView(LoginRequiredMixin, TenantQuerysetMixin, DetailView):
         return context
 
 @login_required
+@require_POST
 def test_connection(request: HttpRequest, pk: int) -> HttpResponse:
     """Decrypts the source's credentials, builds its connector, runs test_connection, and redirects to the detail page with a success/failure flash message."""
-    if request.method != 'POST':
-        return HttpResponse('Method not allowed', status=405)
     source = get_object_or_404(Source, pk=pk, account=request.account) # type: ignore[attr-defined]
     credentials = decrypt_credentials(source.credentials)
     connector = build_connector(source.source_type, credentials)
@@ -229,10 +229,9 @@ def test_connection(request: HttpRequest, pk: int) -> HttpResponse:
     return redirect('sources:detail', pk=pk)
 
 @login_required
+@require_POST
 def sync_source(request: HttpRequest, pk:int) -> HttpResponse:
-    """POST-only. Opens a running sync log and dispatches sync_source_task. Returns the sync-status partial for HTMX requests (to start the poll), or redirects to detail otherwise."""
-    if request.method != 'POST':
-        return HttpResponse('Method not allowed', status=405)
+    """Opens a running sync log and dispatches sync_source_task. Returns the sync-status partial for HTMX requests (to start the poll), or redirects to detail otherwise."""
     source = get_object_or_404(Source, pk=pk, account=request.account) # type: ignore[attr-defined]
     sync_log = source.sourcesynclog_set.create(account=source.account, status='running', started_at=timezone.now())
     sync_source_task.delay(source.pk, sync_log.pk)
@@ -257,10 +256,9 @@ def sync_status(request: HttpRequest, pk:int) -> HttpResponse:
     return render(request, 'sources/_sync_status_response.html', {'sync_log': sync_log, 'source': source, 'sync_logs': sync_logs})
 
 @login_required
+@require_POST
 def schedule_create(request: HttpRequest, pk:int) -> HttpResponse:
     """Creates or updates the source's schedule from the submitted frequency; kicks off an immediate sync when the schedule is newly created or resumed from paused. Redirects to detail with a flash message."""
-    if request.method != 'POST':
-        return HttpResponse('Method not allowed', status=405)
     source = get_object_or_404(Source, pk=pk, account=request.account) # type: ignore[attr-defined]
     try:
         was_paused = not source.schedule.is_enabled
@@ -279,14 +277,14 @@ def schedule_create(request: HttpRequest, pk:int) -> HttpResponse:
     return redirect('sources:detail', pk=pk)
 
 @login_required
+@require_POST
 def schedule_toggle(request: HttpRequest, pk: int) -> HttpResponse:
     """Pauses or resumes the source's schedule; on resume, triggers an immediate sync. 404 if the source has no schedule. Redirects to detail with a flash message."""
-    if request.method != 'POST':
-        return HttpResponse('Method not allowed', status=405)
     source = get_object_or_404(Source, pk=pk, account=request.account) # type: ignore[attr-defined]
     try:
         schedule, was_paused = toggle_source_schedule(source)
     except SourceSchedule.DoesNotExist:
+        logger.warning("No schedule to toggle for source %s", source.pk)
         return HttpResponse('No schedule to toggle', status=404)
     if was_paused:
         run_scheduled_sync.delay(source.pk)
@@ -296,20 +294,18 @@ def schedule_toggle(request: HttpRequest, pk: int) -> HttpResponse:
     return redirect('sources:detail', pk=pk)
 
 @login_required
+@require_POST
 def schedule_delete(request: HttpRequest, pk: int) -> HttpResponse:
     """Removes the source's schedule (and its backing periodic task) and redirects to detail with a flash message."""
-    if request.method != 'POST':
-        return HttpResponse('Method not allowed', status=405)
     source = get_object_or_404(Source, pk=pk, account=request.account) # type: ignore[attr-defined]
     delete_source_schedule(source)
     messages.success(request, 'Schedule deleted.')
     return redirect('sources:detail', pk=pk)
 
 @login_required
+@require_POST
 def load_demo_data(request: HttpRequest) -> HttpResponse:
     """Provisions the built-in demo sources (Sales scenario) for the account, idempotently via get_or_create, with encrypted scenario credentials. The user syncs each one afterwards to populate the catalog."""
-    if request.method != 'POST':
-        return HttpResponse('Method not allowed', status=405)
     demo_sources = [
         {'source_type_name': 'HubSpot (Demo)', 'source_name': 'HubSpot (Demo)', 'scenario': 'sales', 'source': 'hubspot'},
         {'source_type_name': 'Google Analytics (Demo)', 'source_name': 'Google Analytics (Demo)', 'scenario': 'sales', 'source': 'ga'},
