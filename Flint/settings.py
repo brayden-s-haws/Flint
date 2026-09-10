@@ -238,3 +238,13 @@ LOGGING = {
         },
     },
 }
+
+#Testing configuration
+TESTING = 'test' in sys.argv
+
+if TESTING:
+    CELERY_TASK_ALWAYS_EAGER = True
+    CELERY_TASK_EAGER_PROPAGATES = True
+    ENCRYPTION_KEY = os.getenv('TESTING_ENCRYPTION_KEY')
+    ALLOWED_HOSTS = ['testserver']
+    PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
