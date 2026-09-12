@@ -1,3 +1,4 @@
+""" Tests for the core functionality of the app including: base models (TimeStampedModel, TenantAwareModel), tenant resolution (TenantMiddleware, TenantQuerysetMixin), and main dashboard view. """
 from __future__ import annotations
 
 from django.contrib.auth.models import AnonymousUser
@@ -17,11 +18,17 @@ from apps.sources.models import Source, SourceType
 
 
 class TenantFixtureTest(TenantTestCase):
+    """
+    Verifies that the two tenant fixtures create two distinct accounts.
+    """
     def test_accounts_are_distinct(self) -> None:
         self.assertNotEqual(self.account_a.pk, self.account_b.pk)
 
-# Test core base models
+
 class TimeStampedModelTest(TenantTestCase):
+    """
+    TimeStampedModel stamps created_at/updated_at and automatically updates updated_at on save.
+    """
     def test_timestamps_set_on_create(self) -> None:
         self.assertIsNotNone(self.account_a.created_at)
         self.assertIsNotNone(self.account_a.updated_at)
@@ -40,8 +47,11 @@ class TimeStampedModelTest(TenantTestCase):
         self.account_a.refresh_from_db()
         self.assertEqual(self.account_a.created_at, old_ts)
 
-# Test tenant models
+
 class TenantModelTest(TenantTestCase):
+    """
+    TenantAwareModel requires an account to be set.
+    """
     def test_account_is_required(self) -> None:
         with self.assertRaises(IntegrityError):
             with transaction.atomic():
@@ -50,8 +60,11 @@ class TenantModelTest(TenantTestCase):
                     invited_by=self.owner_a,
                 )
 
-# Test tenant middleware
+
 class TenantMiddlewareTest(TenantTestCase):
+    """
+    TenantMiddleware resolves request.account from membership and from nothing else.
+    """
     def setUp(self) -> None:
         self.rf = RequestFactory()
         self.mw = TenantMiddleware(lambda req: HttpResponse())
@@ -63,7 +76,7 @@ class TenantMiddlewareTest(TenantTestCase):
         self.assertEqual(request.account, self.account_a)
 
     def test_no_membership_is_none(self) -> None:
-        AccountMembership.objects.filter(user=self.owner_a).delete()
+        AccountMembership.objects.filter(user=self.owner_a).delete() # Strip the signal-created membership to simulate a membership-less but authenticated user
         request = self.rf.get('/')
         request.user = self.owner_a
         self.mw(request)
@@ -76,24 +89,29 @@ class TenantMiddlewareTest(TenantTestCase):
         self.assertIsNone(request.account)
 
 
-# Test tenant queryset mixin
 class _Base:
     def get_queryset(self) -> QuerySet[AccountInvitation]:
         return AccountInvitation.objects.all()
 
 
 class _DummyView(TenantQuerysetMixin, _Base):
+    """
+    Minimal stand-in view: TenantQuerysetMixin.get_queryset() calls super().get_queryset(), so it needs a class behind it that returns a real queryset.
+    """
     pass
 
 
 class TenantQuerysetMixinTest(TenantTestCase):
+    """
+    Mixin raises without an account and otherwise filters to it.
+    """
     def setUp(self) -> None:
         self.rf = RequestFactory()
 
     def test_none_account_raises(self) -> None:
         view = _DummyView()
         request = self.rf.get('/')
-        request.user = self.owner_a
+        request.user = self.owner_a # User must be set because mixin requires request.user.id
         request.account = None
         view.request = request
         with self.assertRaises(PermissionDenied):
@@ -111,8 +129,10 @@ class TenantQuerysetMixinTest(TenantTestCase):
         self.assertNotIn(inv_b, qs)
 
 
-#Test dashboard views
 class DashboardViewTest(TenantTestCase):
+    """
+    Dashboard requires login and scopes its counts and insights to the account.
+    """
     def test_requires_login(self) -> None:
         response = self.client.get(reverse('core:dashboard'))
         self.assertEqual(response.status_code, 302)
@@ -129,8 +149,8 @@ class DashboardViewTest(TenantTestCase):
 
     def test_insight_counts_are_account_scoped(self) -> None:
         Insight.objects.create(account=self.account_a, text='a', insight_type='manual', status='active')
-        Insight.objects.create(account=self.account_b, text='b', insight_type='manual', status='active')
-        Insight.objects.create(account=self.account_a, text='c', insight_type='manual', status='pending')
+        Insight.objects.create(account=self.account_b, text='b', insight_type='manual', status='active') # Excluded: wrong account
+        Insight.objects.create(account=self.account_a, text='c', insight_type='manual', status='pending') # Excluded: wrong status
         self.client.force_login(self.owner_a)
         response = self.client.get(reverse('core:dashboard'))
         self.assertEqual(response.status_code, 200)

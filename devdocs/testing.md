@@ -10,8 +10,8 @@ Use Django's `TestCase` and `Client` throughout. No external testing libraries n
 
 > **▶ START HERE (#24 execution order):**
 > 1. ~~**Test settings first**~~ — ✅ **DONE.** Config wired in `Flint/settings.py` under a `TESTING = 'test' in sys.argv` block (`CELERY_TASK_ALWAYS_EAGER`/`EAGER_PROPAGATES`, `ENCRYPTION_KEY` from `TESTING_ENCRYPTION_KEY`, `ALLOWED_HOSTS=['testserver']`, MD5 password hasher). Two-tenant base `TenantTestCase` lives in `apps/core/test_utils.py`. Also added the missing `apps/__init__.py` (test discovery crashed on the namespace package). Smoke test in `apps/core/tests.py` passes.
-> 2. **`apps.core` next** — ⏳ IN PROGRESS. The tenancy machinery (`TenantMiddleware`, `TenantQuerysetMixin`, base models) that every downstream boundary test reuses. Starting with **base models**.
-> 3. Then **`apps.users` → `apps.accounts`** (auth + invitations), **`apps.sources`** (biggest: encryption, sync, connectors, schedules), and finally **`apps.catalog` → `apps.insights`** (which lean on the mock-LLM + eager-Celery patterns).
+> 2. ~~**`apps.core`**~~ — ✅ **DONE.** `apps/core/tests.py` covers base models (`TimeStampedModel`/`TenantAwareModel`), `TenantMiddleware` (all three branches), `TenantQuerysetMixin` (raise + filter), and `DashboardView` (login-required + account-scoped counts). 13 tests passing; module/class docstrings + intent comments added.
+> 3. **`apps.users` next** — ⏳ IN PROGRESS. Then **`apps.accounts`** (invitations), **`apps.sources`** (biggest: encryption, sync, connectors, schedules), and finally **`apps.catalog` → `apps.insights`** (which lean on the mock-LLM + eager-Celery patterns).
 >
 > The app sections below stay in reading order (users→…→core); this note is the execution order.
 
@@ -256,9 +256,6 @@ _Tenancy boundary (required)_
 - The business-rule guards return their documented status (400/404) — covered in each view's section above.
 
 ---
-
-## Follow Up
-- Do we need to add docstrings to each of the test files (including test_utils.py)?
 
 
 ## Notes
