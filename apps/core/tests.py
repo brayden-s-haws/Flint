@@ -11,6 +11,7 @@ from django.urls import reverse
 
 from apps.accounts.middleware import TenantMiddleware
 from apps.accounts.models import AccountInvitation, AccountMembership
+from apps.catalog.models import Schema, Table
 from apps.core.mixins import TenantQuerysetMixin
 from apps.core.test_utils import TenantTestCase
 from apps.insights.models import Insight
@@ -155,3 +156,13 @@ class DashboardViewTest(TenantTestCase):
         response = self.client.get(reverse('core:dashboard'))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context['insight_count'], 1)
+
+    def test_table_counts_are_account_scoped(self) -> None:
+        st = SourceType.objects.create(name='PostgreSQL')
+        for account, name in ((self.account_a, 'srcA'), (self.account_b, 'srcB')):
+            source = Source.objects.create(account=account, source_type=st, name=name, credentials='creds')
+            schema = Schema.objects.create(source=source, name='public', account=account)
+            Table.objects.create(schema=schema, name='t', table_type='BASE TABLE', account=account)
+        self.client.force_login(self.owner_a)
+        response = self.client.get(reverse('core:dashboard'))
+        self.assertEqual(response.context['table_count'], 1)  # B's table excluded
