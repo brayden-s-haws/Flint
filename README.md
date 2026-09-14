@@ -51,9 +51,9 @@ Today Flint features:
 You can see Flint in action in this demo walkthrough:
 
 <p align="center">
-  <video src="https://github.com/brayden-s-haws/Flint/raw/main/devdocs/doc_images/flint_demo.mp4" controls width="75%">
+  <video src="devdocs/doc_images/flint_demo.mp4" controls muted width="75%">
     Your browser can't play this video inline —
-    <a href="https://github.com/brayden-s-haws/Flint/raw/main/devdocs/doc_images/flint_demo.mp4">download or view flint_demo.mp4</a>.
+    <a href="devdocs/doc_images/flint_demo.mp4">download or view flint_demo.mp4</a>.
   </video>
 </p>
 
