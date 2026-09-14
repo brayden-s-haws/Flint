@@ -48,7 +48,7 @@ Today Flint features:
   </tr>
 </table>
 
-You can see Flint in action in this [demo walkthrough](https://cln.sh/x5j47dk1).
+You can see Flint in action in this <a href="https://cln.sh/x5j47dk1" target="_blank" rel="noopener noreferrer">demo walkthrough</a>.
 
 ---
 
