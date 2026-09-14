@@ -48,14 +48,7 @@ Today Flint features:
   </tr>
 </table>
 
-You can see Flint in action in this demo walkthrough:
-
-<p align="center">
-  <video src="devdocs/doc_images/flint_demo.mp4" controls muted width="75%">
-    Your browser can't play this video inline —
-    <a href="devdocs/doc_images/flint_demo.mp4">download or view flint_demo.mp4</a>.
-  </video>
-</p>
+You can see Flint in action in this [demo walkthrough](https://cln.sh/x5j47dk1).
 
 ---
 
