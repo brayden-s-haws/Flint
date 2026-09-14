@@ -1,6 +1,6 @@
 # Flint
 
-#### Current status: MVP complete; actively developing post-MVP features
+#### Current status: MVP complete
 
 ___
 
@@ -20,9 +20,11 @@ Data catalogs like Atlan and Amundsen describe *what* data exists. Flint describ
 
 Flint connects to your databases and SaaS tools, discovers their schemas, and uses LLMs to generate human-readable descriptions, source overviews, and suggested analyses. Flint inspects and stores schema structure (table names, columns, types), derived statistics (row-count estimates, per-column null rates), and the insights it generates; it does not copy, query, or store your bulk row-level data.
 
-![Flint dashboard showing connected sources, catalog size, and recent activity](devdocs/doc_images/flint_dashboard.png)
-
-*The dashboard: connected sources, catalog size, and recent activity at a glance.*
+<p align="center">
+  <img src="devdocs/doc_images/flint_dashboard.png" alt="Flint dashboard showing connected sources, catalog size, and recent activity" width="75%">
+  <br>
+  <em>The dashboard: connected sources, catalog size, and recent activity at a glance.</em>
+</p>
 
 Today Flint features:
 
@@ -35,13 +37,25 @@ Today Flint features:
 - Run cross-source discovery: pick two synced sources, and an LLM pipeline finds join opportunities and proposes cross-source use cases
 - Support: multi-tenant accounts with team invites (owner / member roles) and an account settings page
 
-![Flint source detail page with source overview, schema, suggested use cases, and sync schedule](devdocs/doc_images/flint_source.png)
+<table>
+  <tr>
+    <td width="50%"><img src="devdocs/doc_images/flint_source.png" alt="Flint source detail page with source overview, schema, suggested use cases, and sync schedule" width="100%"></td>
+    <td width="50%"><img src="devdocs/doc_images/flint_cross_source.png" alt="Flint cross-source discovery page proposing cross-source use cases with accept/dismiss actions" width="100%"></td>
+  </tr>
+  <tr>
+    <td><em>A source detail page: the LLM source overview, discovered schema, suggested use cases, and the sync schedule/history.</em></td>
+    <td><em>Cross-source discovery: pick two synced sources and review the AI-proposed cross-source use cases.</em></td>
+  </tr>
+</table>
 
-*A source detail page: the LLM source overview, discovered schema, suggested use cases, and the sync schedule/history.*
+You can see Flint in action in this demo walkthrough:
 
-![Flint cross-source discovery page proposing cross-source use cases with accept/dismiss actions](devdocs/doc_images/flint_cross_source.png)
-
-*Cross-source discovery: pick two synced sources and review the AI-proposed cross-source use cases.*
+<p align="center">
+  <video src="https://github.com/brayden-s-haws/Flint/raw/main/devdocs/doc_images/flint_demo.mp4" controls width="75%">
+    Your browser can't play this video inline —
+    <a href="https://github.com/brayden-s-haws/Flint/raw/main/devdocs/doc_images/flint_demo.mp4">download or view flint_demo.mp4</a>.
+  </video>
+</p>
 
 ---
 
