@@ -492,3 +492,7 @@ Flint is actively developed; this README documents only what's built today. The 
 - [`devdocs/models.md`](devdocs/models.md): complete model reference
 - [`devdocs/appdocs/`](devdocs/appdocs/): per-app checklists and status
 - [`devdocs/featuredocs/`](devdocs/featuredocs/): per-feature implementation notes
+
+## License
+
+This project is open source and available under the [MIT License](LICENSE).
